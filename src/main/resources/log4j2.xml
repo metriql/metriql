@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" packages="org.apache.logging.log4j.core,io.sentry.log4j2">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %highlight{%level}{FATAL=bg_red, ERROR=red, WARN=yellow, INFO=green, DEBUG=blue} %logger{36} - $${ctx:dd.trace_id:-0} $${ctx:dd.span_id:-0} - $${ctx:auth.project_id:-0} $${ctx:auth.user_id:-0} - %m%n"/>
+        </Console>
+        <Sentry name="Sentry" />
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="Sentry"/>
+            <AppenderRef ref="Console"/>
+        </Root>
+        <logger name="com.metriql" level="debug" />
+        <logger name="io.netty" level="info" />
+    </Loggers>
+</Configuration>

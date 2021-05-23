@@ -1,0 +1,45 @@
+{% if has_view_models %}, {% else %}WITH {% endif %}
+    FIRST_ACTION AS (
+        SELECT
+            {{retention.firstStep.eventTimestamp}} as DATE,
+            HLL_ACCUMULATE({{retention.firstStep.connector}}) as HLL_USER
+        FROM {{retention.firstStep.model}}
+        {% if retention.firstStep.filters|length %}WHERE {% for filter in retention.firstStep.filters %} ({{filter}}) {% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+        GROUP BY 1
+    ),
+    RETURNING_ACTION AS (
+        SELECT
+            {{retention.firstStep.eventTimestamp}} as DATE,
+            HLL_ACCUMULATE({{retention.returningStep.connector}}) as HLL_USER
+        FROM {{retention.returningStep.model}}
+        WHERE {{retention.returningStep.connector}} in (select {{retention.firstStep.connector}} from {{retention.firstStep.model}})
+        {% if retention.returningStep.filters|length %} AND {% for filter in retention.returningStep.filters %} ({{filter}}) {% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+        GROUP BY 1
+    ),
+    NEXT_PERIODS AS (
+      SELECT FA.DATE AS DATE,
+           DATEDIFF('{{retention.dateUnit}}', FA.DATE, RA.DATE) AS PERIOD,
+           HLL_ESTIMATE(FA.HLL_USER) AS FA_USER_COUNT,
+           HLL_ESTIMATE(RA.HLL_USER) AS RA_USER_COUNT,
+           ARRAY_CONSTRUCT(HLL_EXPORT(FA.HLL_USER), HLL_EXPORT(RA.HLL_USER)) as FA_RA_HLL_USER
+        FROM FIRST_ACTION FA
+        JOIN RETURNING_ACTION RA ON (FA.DATE <= RA.DATE)
+    )
+
+SELECT * FROM (
+    SELECT
+        DATE,
+        NULL,
+        HLL_ESTIMATE(HLL_USER)
+    FROM FIRST_ACTION
+
+    UNION ALL
+
+    SELECT
+        DATE,
+        PERIOD,
+        GREATEST(0, (MAX(FA_USER_COUNT) + MAX(RA_USER_COUNT)) - HLL_ESTIMATE(HLL_COMBINE(HLL_IMPORT(V.VALUE))))
+    FROM NEXT_PERIODS, LATERAL FLATTEN (INPUT => FA_RA_HLL_USER) V
+    GROUP BY 1, 2
+)
+ORDER BY 1, 2 ASC NULLS FIRST

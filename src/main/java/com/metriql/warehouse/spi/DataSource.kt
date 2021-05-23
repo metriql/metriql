@@ -1,0 +1,56 @@
+package com.metriql.warehouse.spi
+
+import com.metriql.jinja.SQLRenderable
+import com.metriql.model.Model
+import com.metriql.report.QueryTask
+import com.metriql.task.Task
+
+interface DataSource {
+    open val warehouse: Warehouse<*>
+    open val config: Warehouse.Config
+
+    // Database Related
+    fun listDatabaseNames(): List<DatabaseName>
+
+    // Schema Related
+    fun listSchema(database: String?, schema: String?, tables: Collection<String>?): Collection<TableSchema>
+
+    fun listSchemaNames(database: String?): List<SchemaName>
+
+    fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> = throw UnsupportedOperationException()
+
+    // Table Related
+    fun listTableNames(database: String?, schema: String?): List<TableName>
+    fun getTable(database: String?, schema: String?, table: String): TableSchema
+    fun getTable(sql: String): TableSchema
+
+    fun connectionTest(userId: Int): Boolean
+
+    fun sqlReferenceForTarget(
+        target: Model.Target,
+        aliasName: String,
+        columnName: String
+    ): String
+
+    fun sqlReferenceForTarget(
+        target: Model.Target,
+        aliasName: String,
+        renderable: (SQLRenderable) -> String
+    ): String
+
+    fun fillDefaultsToTarget(target: Model.Target): Model.Target
+
+    fun dbtSettings(): DbtSettings {
+        throw IllegalStateException("Model `persist` is not supported for this database.")
+    }
+
+    // Query execution
+    fun createQueryTask(
+        auth: WarehouseAuth,
+        query: String,
+        defaultSchema: String?,
+        defaultDatabase: String?,
+        limit: Int?,
+        isBackgroundTask: Boolean
+    ): QueryTask
+}

@@ -1,0 +1,33 @@
+{% if has_view_models %}, {% else %}WITH {% endif %}
+{% for step in funnel.steps %}
+e{{ step.index }} AS (
+  {% if step.index == 1 %}
+    SELECT {{ step.connector }} AS user_id ,{{ step.eventTimestamp }} AS _time
+            {% if step.dimension %},{{ step.dimension }} as dimension {% endif %}
+    FROM {{ step.model }}
+    {% if step.filters|length %}WHERE {% for filter in step.filters %}({{filter}}){% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+  {% else %}
+    SELECT {{ step.connector }} AS user_id, ({{ step.eventTimestamp }}) AS _time
+    FROM {{ step.model }}
+    INNER JOIN e{{ step.index - 1}} ON (e{{ step.index - 1 }}.user_id = {{ step.connector }}
+                                    AND {{ step.eventTimestamp }} < e{{ step.index - 1 }}._time
+                                    {% if funnel.windowInSeconds %}AND e{{ step.index - 1 }}._time < {{ step.eventTimestamp }} + INTERVAL '{{ funnel.windowInSeconds }} seconds' {% endif %}
+                                    )
+    {% if step.filters|length %}WHERE {% for filter in step.filters %}({{filter}}){% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+  {% endif %}
+){% if not loop.last %},{% endif %}
+{% endfor %}
+
+
+SELECT
+{% if funnel.hasDimension %}e1.dimension, {% endif %}
+{% for step in funnel.steps %}
+count(DISTINCT e{{ step.index }}.user_id) as step_{{ step.index }} {% if not loop.last %},{% endif %}
+{% endfor %}
+FROM e1
+{% for step in funnel.steps %}
+    {% if step.index != 1 %}
+        LEFT JOIN e{{ step.index }} ON e{{ step.index - 1 }}.user_id = e{{ step.index }}.user_id
+    {% endif %}
+{% endfor %}
+{% if funnel.hasDimension %}GROUP BY e1.dimension ORDER BY step_1 DESC{% endif %}

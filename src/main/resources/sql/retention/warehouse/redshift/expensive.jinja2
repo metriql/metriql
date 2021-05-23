@@ -1,0 +1,20 @@
+{% if has_view_models %}, {% else %}WITH {% endif %} first_action AS (
+SELECT {% if retention.firstStep.dimension %} {{retention.firstStep.dimension}} as dimension, {% endif %}
+{{retention.firstStep.connector}} as connector,
+min(date_trunc('{{retention.dateUnit}}', cast({{retention.firstStep.eventTimestamp}} as date))) as date
+FROM {{retention.firstStep.model}}
+{% if retention.firstStep.filters|length %}WHERE {% for filter in retention.firstStep.filters %} ({{filter}}) {% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+GROUP BY 1 {% if retention.firstStep.dimension %}, 2 {% endif %}
+),
+
+returning_action AS (
+SELECT distinct {{retention.returningStep.connector}} as connector,
+date_trunc('{{retention.dateUnit}}', cast({{retention.returningStep.eventTimestamp}} as date)) as date
+FROM {{retention.returningStep.model}}
+{% if retention.returningStep.filters|length %}WHERE {% for filter in retention.returningStep.filters %} ({{filter}}) {% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+)
+SELECT {% if retention.firstStep.dimension %} dimension {% else %} first_action.date {% endif %}, null as next_period, COUNT(DISTINCT first_action.connector) as users from first_action group by 1
+UNION ALL
+SELECT {% if retention.firstStep.dimension %} dimension {% else %} first_action.date {% endif %}, DATEDIFF('{{retention.dateUnit}}', first_action.date, returning_action.date), COUNT(DISTINCT returning_action.connector) AS users
+FROM first_action JOIN returning_action ON DATE_DIFF('{{retention.dateUnit}}', first_action.date, returning_action.date) between 0 and 10 AND first_action.connector = returning_action.connector
+GROUP BY 1, 2 ORDER BY 1, 2

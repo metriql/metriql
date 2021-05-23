@@ -1,0 +1,31 @@
+{% if report.firstStep.dimension %}
+    SELECT dimension, public.collect_retention(bits) FROM (
+    SELECT dimension, (case when not is_first THEN
+    public.generate_timeline(timeline[1], timeline, cast(86400000 as bigint), 15) else null end) as bits FROM (
+    select dimension, {{retention.firstStep.connector}}, true as is_first, array[min(cast(_time as date))] as timeline from (
+    select {{retention.firstStep.eventTimestamp}}, {{retention.firstStep.dimension}} as dimension, {{retention.firstStep.connector}} from
+    {{modelTarget report.firstStep.modelName}} where {{retention.firstStep.eventTimestamp}} between timestamp '{{retention.start}}' and timestamp '{{retention.end}}' AND {{filter report.firstStep}}) t group by 1 , 2
+    UNION ALL
+    select dimension, {{retention.returningStep.connector}}, false as is_first, array_agg(cast({{retention.returningStep.eventTimestamp}} as date) order by cast({{retention.returningStep.eventTimestamp}} as date)) as timeline from (
+    select {{retention.returningStep.eventTimestamp}}, {{retention.returningStep.connector}} as dimension, {{retention.returningStep.connector}}
+    from {{modelTarget report.returningStep.modelName}} where {{retention.returningStep.eventTimestamp}} between timestamp '{{retention.start}}' and timestamp '{{retention.end}}'
+    ) t group by 1 , 2) t
+    ) t
+    group by 1 order by 1 asc
+{% else %}
+    select CAST(date AS DATE), public.collect_retention(bits) from (
+    select date, (case when (not is_first and dates.date = any(timeline)) then
+    public.generate_timeline(cast(dates.date as date), timeline, cast(86400000 as bigint), 15) else null end) as bits from (
+    select  {{retention.firstStep.connector}}, true as is_first, array_agg(cast({{retention.firstStep.eventTimestamp}} as date) order by cast({{retention.firstStep.eventTimestamp}} as date)) as timeline from (select {{retention.firstStep.eventTimestamp}}, cast({{retention.firstStep.connector}} as varchar) as {{retention.firstStep.connector}}
+    from {{modelTarget report.firstStep.modelName}} where {{retention.firstStep.eventTimestamp}}
+        between timestamp '{{retention.start}}' and timestamp '{{retention.end}}') t group by 1
+    UNION ALL
+    select {{retention.returningStep.connector}}, false as is_first, array_agg(cast({{retention.returningStep.eventTimestamp}} as date) order by cast({{retention.returningStep.eventTimestamp}} as date)) as timeline from (
+    select {{retention.returningStep.eventTimestamp}}, cast({{retention.returningStep.connector}} as varchar) as {{retention.returningStep.connector}}
+    from {{modelTarget report.returningStep.modelName}} where {{retention.returningStep.eventTimestamp}} between timestamp '{{retention.start}}' and timestamp '{{retention.end}}' AND {{filter report.returningStep}}
+    ) t group by 1 ) t
+
+    cross join (select generate_series(date_trunc('day', date '{{retention.start}}'), date_trunc('day', date '{{retention.end}}'), interval '1' day) date) dates
+    ) t
+    group by 1 order by 1 asc
+{% endif %}

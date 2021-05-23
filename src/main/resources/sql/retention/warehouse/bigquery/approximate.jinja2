@@ -1,0 +1,63 @@
+{% if has_view_models %}, {% else %}WITH {% endif %}
+    FIRST_ACTION AS (
+        SELECT
+            {% if retention.firstStep.dimension %}  {{retention.firstStep.dimension}} as DIMENSION, {% endif %}
+            DATE_TRUNC(CAST({{retention.firstStep.eventTimestamp}} as DATE), {{retention.dateUnit}}) as DATE,
+            HLL_COUNT.INIT(CAST({{retention.firstStep.connector}} AS STRING)) as USER_ID_SET
+        FROM {{retention.firstStep.model}}
+        {% if retention.firstStep.filters|length %}WHERE {% for filter in retention.firstStep.filters %} ({{filter}}) {% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+        GROUP BY 1 {% if retention.firstStep.dimension %}, 2 {% endif %}
+    ),
+    RETURNING_ACTION AS (
+        SELECT
+            DATE_TRUNC(CAST({{retention.returningStep.eventTimestamp}} as DATE), {{retention.dateUnit}}) as DATE,
+            HLL_COUNT.INIT(CAST({{retention.returningStep.connector}} AS STRING)) as USER_ID_SET
+        FROM {{retention.returningStep.model}}
+        {% if retention.returningStep.filters|length %}WHERE {% for filter in retention.returningStep.filters %} ({{filter}}) {% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+        GROUP BY 1
+    ),
+    DET AS (
+        SELECT
+            {% if retention.firstStep.dimension %} FA.DIMENSION {% else %} FA.DATE {% endif %} as DIMENSION,
+            DATE_DIFF(RA.DATE, FA.DATE, {{retention.dateUnit}}) AS DIFF,
+            HLL_COUNT.EXTRACT(FA.USER_ID_SET) AS FA_USER_COUNT,
+            HLL_COUNT.EXTRACT(RA.USER_ID_SET) AS RA_USER_COUNT,
+            ARRAY[FA.USER_ID_SET, RA.USER_ID_SET] AS USER_ID_ARRAY
+        FROM FIRST_ACTION FA
+        JOIN RETURNING_ACTION RA
+        ON (FA.DATE <= RA.DATE)
+    ),
+    AGG AS (
+        SELECT
+            DET.DIMENSION,
+            DET.DIFF,
+            FA_USER_COUNT,
+            RA_USER_COUNT,
+            V as VALUE
+        FROM DET, UNNEST(DET.USER_ID_ARRAY) V
+    )
+
+SELECT * FROM (
+SELECT
+     {% if retention.firstStep.dimension %} DIMENSION {% else %} DATE {% endif %},
+      NULL,
+      HLL_COUNT.EXTRACT(USER_ID_SET)
+  FROM FIRST_ACTION
+
+  UNION ALL
+  SELECT
+    DIMENSION,
+    DIFF,
+    (FA_USER_COUNT + RA_USER_COUNT) - HLL_COUNT.EXTRACT(SIM)
+  FROM (
+    SELECT
+        AGG.DIMENSION,
+        AGG.DIFF,
+        FA_USER_COUNT,
+        RA_USER_COUNT,
+        HLL_COUNT.MERGE_PARTIAL(VALUE) AS SIM
+    FROM AGG
+    GROUP BY 1, 2, 3, 4
+  )
+)
+ORDER BY 1, 2 ASC

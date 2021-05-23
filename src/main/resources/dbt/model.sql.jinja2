@@ -1,0 +1,7 @@
+{{ '{{' }}
+  config(
+   {% for key, value in configs.items() %}
+    {{key}} = {{value|toJson}},{% endfor %}
+    tags = ['{{ tagName }}']
+  )
+{{ '}}' }}

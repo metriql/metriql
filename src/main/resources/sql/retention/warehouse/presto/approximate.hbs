@@ -1,0 +1,47 @@
+{{#if report.dimension}}
+    with first_action as (
+    select date, dimension, approx_set(user_id) as user_id_set from (select cast(date_trunc('{{report.dateUnit}}', data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.firstStep}}) as date) as date, {{formatColumn report.dimension report.firstStep.collection report.firstStep.tableType}} as dimension, data.{{mappingColumn columnTypes.USER_ID report.firstStep}} as user_id from {{formatTableName report.firstStep.collection report.firstStep.tableType}} as data  where data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.firstStep}} between date '{{variables.dateRange.start}}' and date '{{plusDate variables.dateRange.end "days" 1}}' AND {{formatExpression report.firstStep.filter report.firstStep}} ) group by 1, 2
+    ),
+    returning_action as (
+    select date, dimension, approx_set(user_id) as user_id_set from (select cast(date_trunc('{{report.dateUnit}}', data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.returningStep}}) as date) as date, {{formatColumn report.dimension report.returningStep.collection report.returningStep.tableType}} as dimension, data.{{mappingColumn columnTypes.USER_ID report.firstStep}} as user_id from {{formatTableName report.returningStep.collection report.returningStep.tableType}} as data  where data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.returningStep}} between date '{{variables.dateRange.start}}' and date '{{plusDate variables.dateRange.end "days" 1}}' AND {{formatExpression report.returningStep.filter report.returningStep}} ) group by 1, 2
+    )
+
+    SELECT data.dimension, array_agg(data.count) FROM (
+    SELECT data.dimension, cast(null as bigint) as lead, cardinality(merge(user_id_set)) count from first_action data GROUP BY 1
+
+    UNION ALL
+
+    SELECT * FROM (
+    SELECT data.dimension, date_diff('{{report.dateUnit}}', data.date, returning_action.date) - 1, greatest(0, cardinality_intersection(merge(data.user_id_set), merge(returning_action.user_id_set))) count
+    FROM first_action data
+    JOIN returning_action on (data.date < returning_action.date AND data.date + interval '{{dateDiffDay variables.dateRange}}' day >= returning_action.date)
+    GROUP BY 1, 2
+    )
+    ORDER BY 1, 2 NULLS FIRST
+    ) as data
+    GROUP BY 1
+    ORDER BY 1
+{{else}}
+    with first_action as (
+    select date, approx_set(user_id) as user_id_set from (select cast(date_trunc('{{report.dateUnit}}', data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.firstStep}}) as date) as date,  data.{{mappingColumn columnTypes.USER_ID report.firstStep}} as user_id from {{formatTableName report.firstStep.collection report.firstStep.tableType}} as data  where data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.firstStep}} between date '{{variables.dateRange.start}}' and date '{{plusDate variables.dateRange.end "days" 1}}' AND {{formatExpression report.firstStep.filter report.firstStep}} ) group by 1
+    ),
+    returning_action as (
+    select date, approx_set(user_id) as user_id_set from (select cast(date_trunc('{{report.dateUnit}}', data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.returningStep}}) as date) as date,  data.{{mappingColumn columnTypes.USER_ID report.firstStep}} as user_id from {{formatTableName report.returningStep.collection report.returningStep.tableType}} as data  where data.{{mappingColumn columnTypes.EVENT_TIMESTAMP report.returningStep}} between date '{{variables.dateRange.start}}' and date '{{plusDate variables.dateRange.end "days" 1}}' AND {{formatExpression report.returningStep.filter report.returningStep}} ) group by 1
+    )
+
+    SELECT data.date, array_agg(data.count) FROM (
+    SELECT data.date, cast(null as bigint) as lead, cardinality(merge(user_id_set)) count from first_action data GROUP BY 1
+
+    UNION ALL
+
+    SELECT * FROM (
+    SELECT data.date, date_diff('{{report.dateUnit}}', data.date, returning_action.date) - 1, greatest(0, cardinality_intersection(merge(data.user_id_set), merge(returning_action.user_id_set))) count
+    FROM first_action data
+    JOIN returning_action on (data.date < returning_action.date AND data.date + interval '{{dateDiffDay variables.dateRange}}' day >= returning_action.date)
+    GROUP BY 1, 2
+    )
+    ORDER BY 1, 2 NULLS FIRST
+    ) as data
+    GROUP BY 1
+    ORDER BY 1
+{{/if}}

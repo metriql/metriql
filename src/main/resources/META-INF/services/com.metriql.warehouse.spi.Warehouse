@@ -1,0 +1,12 @@
+com.metriql.warehouse.bigquery.BigQueryWarehouseProxy
+com.metriql.warehouse.postgresql.PostgresqlWarehouseProxy
+com.metriql.warehouse.mssqlserver.MSSQLWarehouseProxy
+com.metriql.warehouse.azure.AzureWarehouseProxy
+com.metriql.warehouse.mysql.MySQLWarehouseProxy
+com.metriql.warehouse.presto.PrestoWarehouseProxy
+com.metriql.warehouse.redshift.RedshiftWarehouseProxy
+com.metriql.warehouse.snowflake.SnowflakeWarehouseProxy
+
+
+
+

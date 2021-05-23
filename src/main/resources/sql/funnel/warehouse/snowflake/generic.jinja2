@@ -1,0 +1,139 @@
+SELECT
+{% if funnel.hasDimension %} dimension, {% endif %}
+{% for step in funnel.steps %}
+    {% if loop.first %}
+        APPROX_COUNT_DISTINCT(CASE WHEN e1 IS NOT NULL
+        THEN connector END) {% if funnel.excludedSteps|length %}
+        -  APPROX_COUNT_DISTINCT(CASE WHEN e1 IS NOT NULL
+        {% for step in funnel.excludedSteps %}
+            {% if not step.start or step.start == 1 %}
+                AND ex_e{{ loop.index }} IS NOT NULL
+            {% endif %}
+        {% endfor %}
+        THEN connector END)
+        {% endif %} AS step1,
+
+        APPROX_COUNT_DISTINCT(CASE WHEN e1 IS NOT NULL
+        THEN e1 END) {% if funnel.excludedSteps|length %}
+        -  APPROX_COUNT_DISTINCT(CASE WHEN e1 IS NOT NULL
+        {% for step in funnel.excludedSteps %}
+            {% if not step.start or step.start == 1 %}
+                AND ex_e{{ loop.index }} IS NOT NULL
+            {% endif %}
+        {% endfor %}
+        THEN e1 END)
+        {% endif %} AS total_step1
+
+    {% else %}
+        {% set loopStep = loop.index %}
+        {% set loopStart = loop.index %}
+        {% if ordered %} {% set loopStart = loop.index - 1 %} {% endif %}
+
+        APPROX_COUNT_DISTINCT(CASE WHEN(
+        {% for i in range(loopStart) %}
+            e{{ loop.index }} {% if ordered %} < e{{ loop.index + 1 }} {% else %} IS NOT NULL {% endif %}
+            {% if loop.length > 1 and not loop.last %} AND {% endif %}
+        {% endfor %}
+        {% if funnel.windowInSeconds %} AND TIMEDIFF(seconds, e1, e{{ loop.index }}) < {{ funnel.windowInSeconds }} {% endif %}
+        )THEN connector END)
+        {% if funnel.excludedSteps|length %}
+            -  APPROX_COUNT_DISTINCT(CASE WHEN(
+            {% for i in range(loopStart) %}
+                e{{ loop.index }} {% if ordered %} < e{{ loop.index + 1 }} {% else %} IS NOT NULL {% endif %}
+                {% if loop.length > 1 and not loop.last %} AND {% endif %}
+            {% endfor %}
+            {% if funnel.windowInSeconds %} AND TIMEDIFF(seconds, e1, e{{ loop.index }}) < {{ funnel.windowInSeconds }} {% endif %}
+            {% for step in funnel.excludedSteps %}
+                {% if not step.start or step.start == 1 %}
+                    AND ex_e{{ loop.index }} IS NOT NULL
+                {% endif %}
+            {% endfor %}
+            )THEN connector END)
+        {% endif %}
+        step{{ loop.index }},
+
+        APPROX_COUNT_DISTINCT(CASE WHEN(
+        {% for i in range(loopStart) %}
+            e{{ loop.index }} {% if ordered %} < e{{ loop.index + 1 }} {% else %} IS NOT NULL {% endif %}
+            {% if loop.length > 1 and not loop.last %} AND {% endif %}
+        {% endfor %}
+        {% if funnel.windowInSeconds %} AND TIMEDIFF(seconds, e1, e{{ loop.index }}) < {{ funnel.windowInSeconds }} {% endif %}
+        )THEN e{{ loop.index }} END)
+        {% if funnel.excludedSteps|length %}
+            -  APPROX_COUNT_DISTINCT(CASE WHEN(
+            {% for i in range(loopStart) %}
+                e{{ loop.index }} {% if ordered %} < e{{ loop.index + 1 }} {% else %} IS NOT NULL {% endif %}
+                {% if loop.length > 1 and not loop.last %} AND {% endif %}
+            {% endfor %}
+            {% if funnel.windowInSeconds %} AND TIMEDIFF(seconds, e1, e{{ loop.index }}) < {{ funnel.windowInSeconds }} {% endif %}
+            {% for step in funnel.excludedSteps %}
+                {% if not step.start or step.start == 1 %}
+                    AND ex_e{{ loop.index }} IS NOT NULL
+                {% endif %}
+            {% endfor %}
+            )THEN e{{ loop.index }} END)
+        {% endif %}
+        total_step{{ loop.index }}
+    {% endif %}
+    {% if not loop.last %},{% endif %}
+{% endfor %}
+FROM
+(
+SELECT connector,
+{% if funnel.hasDimension %}COALESCE(dimension, LAG(dimension) IGNORE NULLS OVER (PARTITION BY connector ORDER BY event_timestamp)) as dimension ,{% endif %}
+{% for step in funnel.steps %}
+    COALESCE(ts_event{{ loop.index }}, LAG(ts_event{{ loop.index }}) IGNORE NULLS OVER (PARTITION BY connector ORDER BY event_timestamp)) as e{{ loop.index }}{% if not loop.last %}, {% endif %}
+{% endfor %}
+{% if funnel.excludedSteps|length %}, {% endif %}
+{% for step in funnel.excludedSteps %}
+    COALESCE(ex_ts_event{{ loop.index }}, LAG(ex_ts_event{{ loop.index }}) IGNORE NULLS OVER (PARTITION BY connector ORDER BY event_timestamp)) as ex_e{{ loop.index }}{% if not loop.last %}, {% endif %}
+{% endfor %}
+FROM
+(
+SELECT {% if funnel.hasDimension %} dimension, {% endif %}
+connector,
+event_timestamp,
+{% for step in funnel.steps %}
+    CASE WHEN (step = {{ loop.index }}) THEN event_timestamp END ts_event{{ loop.index }}
+    {% if not loop.last %},{% endif %}
+{% endfor %}
+
+{% if funnel.excludedSteps|length %}, {% endif %}
+{% for step in funnel.excludedSteps %}
+    CASE WHEN (step = -{{ loop.index }}) THEN event_timestamp END ex_ts_event{{ loop.index }}{% if not loop.last %},{% endif %}
+{% endfor %}
+FROM
+(
+{% for step in funnel.steps %}
+    SELECT {{ loop.index }} as step,
+    {{ step.connector }} as connector,
+    {{ step.eventTimestamp }} as event_timestamp,
+    {% if step.dimension %} {{ step.dimension }} {% else %} null {% endif %} as dimension
+    FROM {{step.model}}
+    {% if step.filters|length %}WHERE {% for filter in step.filters %}({{filter}}){% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+    {% if not loop.last %}
+        UNION ALL
+    {% endif %}
+{% endfor %}
+
+{% if funnel.excludedSteps|length %} UNION ALL {% endif %}
+
+{% for step in funnel.excludedSteps %}
+    SELECT -{{ loop.index }} as step,
+    {{ step.step.connector }} as connector,
+    {{ step.step.eventTimestamp }} as event_timestamp,
+    {% if step.step.dimension %} {{ step.step.dimension }} {% else %} null {% endif %} as dimension
+    FROM {{step.step.model}}
+    {% if step.step.filters|length %}WHERE {% for filter in step.step.filters %}({{filter}}){% if not loop.last %} AND {% endif %} {% endfor %} {% endif %}
+    {% if not loop.last and funnel.excludedSteps|length > 1 %}
+        UNION ALL
+    {% endif %}
+{% endfor %}
+) as events_chunk
+) as events_agg
+) as events_window
+{% if funnel.hasDimension %}
+    WHERE dimension IS NOT NULL
+    GROUP BY dimension
+    ORDER BY {{ funnel.sorting }} DESC
+{% endif %}

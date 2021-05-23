@@ -1,0 +1,60 @@
+WITH
+    FIRST_ACTION AS (
+        SELECT
+            DATE_TRUNC('{{report.dateUnit}}', CAST({{mapping columnTypes.EVENT_TIMESTAMP report.returningStep.modelName}} as DATE)) as DATE,
+            MINHASH(100, {{connectors query.connectors report.firstStep.modelName}}) as USER_ID_SET,
+            APPROX_COUNT_DISTINCT({{mapping columnTypes.USER_ID report.firstStep.modelName}}) as USER_COUNT
+        FROM {{modelTarget report.returningStep.modelName}}
+        WHERE {{mapping columnTypes.EVENT_TIMESTAMP report.returningStep.modelName}} BETWEEN CAST('{{variables.dateRange.start}}' AS TIMESTAMPTZ) AND CAST('{{variables.dateRange.end}}' AS TIMESTAMPTZ)
+                AND ({{filter report.firstStep}})
+        GROUP BY 1
+    ),
+    RETURNING_ACTION AS (
+        SELECT
+            DATE_TRUNC('{{report.dateUnit}}', CAST({{mapping columnTypes.EVENT_TIMESTAMP report.returningStep.modelName}} as DATE)) as DATE,
+            MINHASH(100, {{connectors query.connectors report.firstStep.modelName}}) as USER_ID_SET
+        FROM {{modelTarget report.returningStep}}
+        WHERE {{mapping columnTypes.EVENT_TIMESTAMP report.returningStep.modelName}} BETWEEN CAST('{{variables.dateRange.start}}' AS TIMESTAMPTZ) AND CAST('{{variables.dateRange.end}}' AS TIMESTAMPTZ)
+                AND ({{filter report.returningStep}})
+        GROUP BY 1
+    ),
+    DET AS (
+        SELECT
+            FA.DATE,
+            DATEDIFF('{{report.dateUnit}}', FA.DATE, RA.DATE) - 1 AS DIFF,
+            ARRAY_CONSTRUCT(FA.USER_ID_SET, RA.USER_ID_SET) AS USER_ID_ARRAY
+        FROM FIRST_ACTION FA
+        JOIN RETURNING_ACTION RA
+        ON (FA.DATE < RA.DATE AND
+            DATEADD('{{report.dateUnit}}', DATEDIFF('{{report.dateUnit}}', '{{variables.dateRange.start}}', '{{variables.dateRange.end}}') - 1, FA.DATE) >= RA.DATE)
+        GROUP BY 1, 2, 3
+    ),
+    AGG AS (
+        SELECT
+            DET.DATE,
+            DET.DIFF,
+            V.VALUE
+        FROM DET, LATERAL FLATTEN (INPUT => DET.USER_ID_ARRAY) V
+    )
+
+SELECT * FROM (
+SELECT
+      DATE,
+      NULL,
+      USER_COUNT AS USER_COUNT_IF_NULL_ELSE_SIMILARITY
+  FROM FIRST_ACTION
+
+  UNION ALL
+
+  SELECT DATE, DIFF, CAST(USER_COUNT * SIM AS INT) FROM (
+    SELECT
+        AGG.DATE,
+        AGG.DIFF,
+        FA.USER_COUNT,
+        APPROXIMATE_SIMILARITY(VALUE) AS SIM
+    FROM AGG
+    JOIN FIRST_ACTION FA ON (FA.DATE = AGG.DATE)
+    GROUP BY 1, 2, 3
+  )
+)
+ORDER BY 1, 2 ASC NULLS FIRST
