@@ -62,7 +62,7 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
         val customProperties = dataSourceProperties.clone() as Properties
 
         val timezone = checkLiteral(timezone.getDisplayName(TextStyle.NARROW, Locale.ENGLISH))
-        customProperties["connectionInitSql"] = "${customProperties["connectionInitSql"]}, TIMEZONE = $timezone"
+        customProperties["connectionInitSql"] = "${customProperties["connectionInitSql"]}, TIMEZONE = '$timezone'"
         return customProperties
     }
 

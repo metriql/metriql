@@ -1,5 +1,6 @@
 package com.metriql.report
 
+import com.metriql.dashboard.Dashboard
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.time.Instant
@@ -12,7 +13,7 @@ data class Report(
     val createdAt: Instant,
     val description: String?,
     val category: String?,
-    val sharedEveryone: Boolean?,
+    val permission: Dashboard.Permission,
     val modelCategory: String?,
     @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class)
     val options: ServiceReportOptions
