@@ -19,11 +19,10 @@ open class ReportService(
     protected val modelService: IModelService,
     protected val rendererService: JinjaRendererService,
     protected val queryTaskGenerator: ISqlQueryTaskGenerator,
-    protected val userAttributeFetcher: UserAttributeFetcher
+    protected val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>,
+    protected val userAttributeFetcher: UserAttributeFetcher,
 ) {
-    private val services = ReportType.values().map { it to it.serviceClass.java }.toMap()
-
-    fun getServiceForReportType(reportType: ReportType) = services.get(reportType) as IAdHocService<in ServiceReportOptions>
+    fun getServiceForReportType(reportType: ReportType) = services.getValue(reportType) as IAdHocService<in ServiceReportOptions>
 
     fun createContext(auth: ProjectAuth, dataSource: DataSource): QueryGeneratorContext {
         return QueryGeneratorContext(
