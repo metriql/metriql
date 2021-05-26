@@ -1,6 +1,6 @@
 package com.metriql.db.postgresql
 
-import com.metriql.model.Model
+import com.metriql.service.model.Model
 import com.metriql.tests.TestWarehouse
 import com.metriql.warehouse.postgresql.PostgresqlDataSource
 import org.testng.annotations.BeforeSuite

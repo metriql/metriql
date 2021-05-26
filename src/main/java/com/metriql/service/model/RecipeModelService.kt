@@ -1,7 +1,7 @@
-package com.metriql.model
+package com.metriql.service.model
 
-import com.metriql.Recipe
-import com.metriql.auth.ProjectAuth
+import com.metriql.report.Recipe
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 
 class RecipeModelService(val modelService: IModelService?, val recipe: Recipe, val recipeId: Int, val bridge: WarehouseMetriqlBridge) : IModelService {
@@ -13,8 +13,9 @@ class RecipeModelService(val modelService: IModelService?, val recipe: Recipe, v
         return recipe.models?.map { it.toModel(recipe.packageName ?: "", bridge, recipeId) } ?: listOf()
     }
 
-    override fun getModel(auth: ProjectAuth, modelName: String): Model? {
-        return list(auth).find { it.name == modelName } ?: modelService?.getModel(auth, modelName)
+    override fun getModel(auth: ProjectAuth, modelName: ModelName): Model? {
+        val regex = modelName.toRegex()
+        return list(auth).find { regex.matches(it.name) } ?: modelService?.getModel(auth, modelName)
     }
 
     override fun delete(auth: ProjectAuth, id: List<Int>) = throw UnsupportedOperationException()

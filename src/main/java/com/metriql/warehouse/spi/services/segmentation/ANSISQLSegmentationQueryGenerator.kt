@@ -1,7 +1,7 @@
 package com.metriql.warehouse.spi.services.segmentation
 
-import com.metriql.auth.ProjectAuth
 import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceSupport
 

@@ -1,12 +1,12 @@
 package com.metriql.report.flow
 
-import com.metriql.Recipe
-import com.metriql.auth.ProjectAuth
-import com.metriql.model.ModelName
 import com.metriql.report.IAdHocService
+import com.metriql.report.Recipe
 import com.metriql.report.ReportFilter
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.ModelName
 import com.metriql.util.ValidationUtil.checkLiteral
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceType

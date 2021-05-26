@@ -1,7 +1,7 @@
-package com.metriql.task
+package com.metriql.service.task
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.metriql.auth.ProjectAuth
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.UppercaseEnum
 import java.time.Duration
 import java.time.Instant

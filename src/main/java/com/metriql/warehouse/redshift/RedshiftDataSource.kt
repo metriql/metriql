@@ -14,7 +14,9 @@ class RedshiftDataSource(override val config: PostgresqlWarehouse.PostgresqlConf
         properties["driverClassName"] = "com.amazon.redshift.jdbc42.Driver"
 
         properties["dataSource.user"] = config.user
-        properties["dataSource.password"] = config.password
+        if (config.password != null) {
+            properties["dataSource.password"] = config.password
+        }
         config.connectionParameters?.map { (k, v) ->
             properties[k] = v
         }

@@ -1,10 +1,10 @@
 package com.metriql.report
 
-import com.metriql.auth.ProjectAuth
-import com.metriql.model.Model
-import com.metriql.model.ModelName
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.sql.SqlReportOptions
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.Model
+import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions

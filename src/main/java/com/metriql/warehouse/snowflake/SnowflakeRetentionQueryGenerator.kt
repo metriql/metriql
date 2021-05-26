@@ -1,8 +1,8 @@
 package com.metriql.warehouse.snowflake
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.metriql.auth.ProjectAuth
 import com.metriql.report.retention.RetentionReportOptions
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext

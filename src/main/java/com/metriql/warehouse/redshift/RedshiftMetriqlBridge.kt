@@ -1,6 +1,6 @@
 package com.metriql.warehouse.redshift
 
-import com.metriql.model.Model
+import com.metriql.service.model.Model
 import com.metriql.warehouse.postgresql.BasePostgresqlMetriqlBridge
 import com.metriql.warehouse.postgresql.PostgresqlFilters
 import com.metriql.warehouse.spi.DBTType

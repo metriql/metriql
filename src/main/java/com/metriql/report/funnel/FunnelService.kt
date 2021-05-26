@@ -1,11 +1,6 @@
 package com.metriql.report.funnel
 
-import com.metriql.auth.ProjectAuth
 import com.metriql.db.QueryResult
-import com.metriql.model.IModelService
-import com.metriql.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.model.Model.MappingDimensions.CommonMappings.USER_ID
-import com.metriql.model.ModelName
 import com.metriql.report.Dataset
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportFilter
@@ -13,6 +8,11 @@ import com.metriql.report.ReportMetric
 import com.metriql.report.getUsedModels
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.IModelService
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.warehouse.spi.DataSource

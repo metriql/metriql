@@ -1,7 +1,7 @@
 package com.metriql.warehouse.spi.services.funnel
 
-import com.metriql.auth.ProjectAuth
 import com.metriql.report.funnel.FunnelReportOptions
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class ANSISQLFunnelQueryGenerator(private val template: String? = null, private val partitionSuffix: String? = null) : FunnelQueryGenerator {

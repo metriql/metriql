@@ -1,7 +1,7 @@
 package com.metriql.warehouse.spi
 
-import com.metriql.Recipe
 import com.metriql.db.FieldType
+import com.metriql.report.Recipe
 
 typealias DatabaseName = String
 typealias SchemaName = String

@@ -2,10 +2,10 @@ package com.metriql.tests
 
 import com.metriql.any
 import com.metriql.db.TestingServer
-import com.metriql.model.DimensionName
-import com.metriql.model.Model
-import com.metriql.model.ModelDimension
-import com.metriql.model.ModelName
+import com.metriql.service.model.DimensionName
+import com.metriql.service.model.Model
+import com.metriql.service.model.ModelDimension
+import com.metriql.service.model.ModelName
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import org.mockito.Matchers

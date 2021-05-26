@@ -3,15 +3,22 @@ package com.metriql
 import com.google.common.cache.CacheBuilderSpec
 import com.google.common.collect.ImmutableMap
 import com.google.common.net.HostAndPort
-import com.metriql.cache.InMemoryCacheService
-import com.metriql.model.IModelService
-import com.metriql.task.TaskExecutorService
-import com.metriql.task.TaskHttpService
-import com.metriql.task.TaskQueueService
+import com.metriql.report.IAdHocService
+import com.metriql.report.ReportType
+import com.metriql.report.funnel.FunnelService
+import com.metriql.report.retention.RetentionService
+import com.metriql.report.segmentation.SegmentationService
+import com.metriql.report.sql.SqlService
+import com.metriql.service.cache.InMemoryCacheService
+import com.metriql.service.model.IModelService
+import com.metriql.service.task.TaskExecutorService
+import com.metriql.service.task.TaskHttpService
+import com.metriql.service.task.TaskQueueService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.logging.LogService
 import com.metriql.warehouse.spi.DataSource
+import com.metriql.warehouse.spi.services.ServiceReportOptions
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.JwsHeader
 import io.jsonwebtoken.Jwts
@@ -40,16 +47,36 @@ import java.util.Base64
 import javax.crypto.spec.SecretKeySpec
 
 object HttpServer {
-    private fun getServices(modelService: IModelService, dataSource: DataSource): Set<HttpService> {
+    private fun getServices(modelService: IModelService, dataSource: DataSource, timezone: ZoneId?): Set<HttpService> {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
         val cacheConfig = CacheBuilderSpec.parse("")
-        val apiService = QueryHttpService(modelService, dataSource, InMemoryCacheService(cacheConfig), taskQueueService)
+        val apiService = QueryHttpService(modelService, dataSource, InMemoryCacheService(cacheConfig), taskQueueService, getReportServices(modelService), timezone)
         return setOf(BaseHttpService(), TaskHttpService(taskQueueService), apiService)
     }
 
-    fun start(address: HostAndPort, apiSecret: String?, numberOfThreads: Int, isDebug: Boolean, origin: String?, modelService: IModelService, dataSource: DataSource) {
+    private fun getReportServices(modelService: IModelService): Map<ReportType, IAdHocService<out ServiceReportOptions>> {
+        // we don't use a dependency injection system to speed up the initial start
+        val segmentationService = SegmentationService()
+        return mapOf(
+            ReportType.SEGMENTATION to segmentationService,
+            ReportType.FUNNEL to FunnelService(modelService, segmentationService),
+            ReportType.RETENTION to RetentionService(modelService, segmentationService),
+            ReportType.SQL to SqlService()
+        )
+    }
+
+    fun start(
+        address: HostAndPort,
+        apiSecret: String?,
+        numberOfThreads: Int,
+        isDebug: Boolean,
+        origin: String?,
+        modelService: IModelService,
+        dataSource: DataSource,
+        timezone: ZoneId?
+    ) {
         val eventExecutors: EventLoopGroup = if (Epoll.isAvailable()) {
             EpollEventLoopGroup(numberOfThreads)
         } else {
@@ -57,7 +84,7 @@ object HttpServer {
         }
 
         val httpServer = HttpServerBuilder()
-            .setHttpServices(getServices(modelService, dataSource))
+            .setHttpServices(getServices(modelService, dataSource, timezone))
             .setMaximumBody(104_857_600)
             .setEventLoopGroup(eventExecutors)
             .setMapper(JsonHelper.getMapper())

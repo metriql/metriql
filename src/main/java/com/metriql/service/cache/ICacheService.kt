@@ -1,4 +1,4 @@
-package com.metriql.cache
+package com.metriql.service.cache
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.metriql.util.JsonHelper

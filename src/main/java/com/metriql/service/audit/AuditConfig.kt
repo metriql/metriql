@@ -1,4 +1,4 @@
-package com.metriql.audit
+package com.metriql.service.audit
 
 import io.airlift.configuration.Config
 

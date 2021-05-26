@@ -1,13 +1,13 @@
 package com.metriql.report
 
-import com.metriql.audit.MetriqlEvents
-import com.metriql.auth.ProjectAuth
-import com.metriql.auth.UserAttributeFetcher
 import com.metriql.db.QueryResult
-import com.metriql.jinja.JinjaRendererService
-import com.metriql.model.IModelService
 import com.metriql.report.sql.SqlReportOptions
-import com.metriql.task.Task
+import com.metriql.service.audit.MetriqlEvents
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.auth.UserAttributeFetcher
+import com.metriql.service.jinja.JinjaRendererService
+import com.metriql.service.model.IModelService
+import com.metriql.service.task.Task
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -18,7 +18,7 @@ import com.metriql.warehouse.spi.services.ServiceReportOptions
 open class ReportService(
     protected val modelService: IModelService,
     protected val rendererService: JinjaRendererService,
-    protected val queryTaskGenerator: ISqlQueryTaskGenerator,
+    protected val queryTaskGenerator: SqlQueryTaskGenerator,
     protected val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>,
     protected val userAttributeFetcher: UserAttributeFetcher,
 ) {
@@ -75,7 +75,7 @@ open class ReportService(
             query,
             queryOptions,
             isBackgroundTask,
-            context = Pair(MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.ADHOC_REPORT, MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.AdhocReport(reportType, options)),
+            info = Pair(MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.ADHOC_REPORT, MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.AdhocReport(reportType, options)),
             postProcessors = postProcessors
         )
     }

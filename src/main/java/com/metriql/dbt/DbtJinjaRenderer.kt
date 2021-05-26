@@ -6,6 +6,7 @@ import com.hubspot.jinjava.JinjavaConfig
 import com.hubspot.jinjava.el.ext.NamedParameter
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
 import com.hubspot.jinjava.interpret.RenderResult
+import com.metriql.service.model.ModelName
 import com.metriql.util.CryptUtil
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil
@@ -15,10 +16,12 @@ import jinjava.javax.el.ELException
 import java.io.File
 import java.lang.reflect.Method
 
-class DbtJinjaRenderer(macros: String = "") {
+const val IS_LABEL = "_label"
+const val IS_MATCH = "_match"
+
+class DbtJinjaRenderer() {
     val jinjava = Jinjava(
         JinjavaConfig.newBuilder()
-            .withFailOnUnknownTokens(false)
             .build()
     )
 
@@ -27,8 +30,6 @@ class DbtJinjaRenderer(macros: String = "") {
         methods.forEach {
             jinjava.globalContext.registerFunction(com.hubspot.jinjava.lib.fn.ELFunctionDefinition("", it.name, it))
         }
-
-        jinjava.render(macros, mapOf<String, Any>())
     }
 
     companion object {
@@ -38,12 +39,23 @@ class DbtJinjaRenderer(macros: String = "") {
         val delimiter: String = CryptUtil.generateRandomKey(16)
     }
 
+    fun renderModelNameRegex(dataset: ModelName): ModelName {
+        return if (dataset.startsWith("ref(") || dataset.startsWith("source(")) {
+            jinjava.render(
+                "{{$dataset}}",
+                mapOf(IS_MATCH to true)
+            )
+        } else {
+            dataset
+        }
+    }
+
     fun getReferenceLabel(content: String, packageName: String): String {
         return jinjava.render(
             content,
             mapOf(
                 "_package_name" to packageName,
-                "_label" to true,
+                IS_LABEL to true,
             )
         )
     }
@@ -121,20 +133,21 @@ class DbtJinjaRenderer(macros: String = "") {
         @JvmStatic
         fun source(vararg args: String?): String {
             val context = JinjavaInterpreter.getCurrent().context
-            val packageName = context["_package_name"] as String
+            var packageName = if (args.size > 2) args[0]!! else context["_package_name"] as String?
 
-            val name = args[1]!!
-            val sourceName = args[0]!!
+            val hasPackageNameAsArgument = args.size > 2
+            val name = if (hasPackageNameAsArgument) args[2]!! else args[1]!!
+            val sourceName = "${if (hasPackageNameAsArgument) args[1]!! else args[0]!!}_$name"
 
-            if (context["_label"] == true) {
-                return name
+            return when {
+                context[IS_LABEL] == true -> name
+                context[IS_MATCH] == true -> {
+                    DbtManifest.getModelNameRegex("source", sourceName, packageName)
+                }
+                else -> {
+                    DbtManifest.getModelName("source", packageName!!, sourceName)
+                }
             }
-
-            val modelName = DbtManifest.getModelName("source", packageName, "${sourceName}_$name")
-
-            return modelName
-            // ugly hack in order to find out we're compiling jinja files
-//            return if (context["_project_path"] != null) "{.{model.$modelName}}" else modelName
         }
 
         @JvmStatic
@@ -165,17 +178,23 @@ class DbtJinjaRenderer(macros: String = "") {
         @JvmStatic
         fun ref(vararg args: String?): String {
             val context = JinjavaInterpreter.getCurrent().context
-            val packageName = context["_package_name"] as String
+            val packageName = if (args.size > 1) args[0]!! else context["_package_name"] as String?
 
-            val model = args[0]!!
-            if (context["_label"] == true) {
+            val model = if (args.size == 1) args[0]!! else args[1]!!
+
+            if (context[IS_LABEL] == true) {
                 return model
             }
 
-            val modelName = DbtManifest.getModelName("model", packageName, model)
-            return modelName
-            // ugly hack in order to find out we're compiling jinja files
-//            return if (context["_project_path"] != null) "{{model.$modelName}}" else modelName
+            return when {
+                context[IS_LABEL] == true -> model
+                context[IS_MATCH] == true -> {
+                    DbtManifest.getModelNameRegex("model", model, packageName)
+                }
+                else -> {
+                    DbtManifest.getModelName("model", packageName!!, model)
+                }
+            }
         }
 
         @JvmStatic

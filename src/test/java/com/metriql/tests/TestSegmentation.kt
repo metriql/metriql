@@ -1,17 +1,10 @@
 package com.metriql.tests
 
 import com.google.common.cache.CacheBuilderSpec
-import com.metriql.auth.ProjectAuth
-import com.metriql.cache.InMemoryCacheService
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.db.TestingServer
 import com.metriql.interfaces.TestModelService
-import com.metriql.jinja.JinjaRendererService
-import com.metriql.model.Model
-import com.metriql.model.Model.Dimension.DimensionValue.Column
-import com.metriql.model.Model.Dimension.Type.COLUMN
-import com.metriql.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
 import com.metriql.report.ReportFilter
 import com.metriql.report.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.ReportMetric
@@ -22,6 +15,13 @@ import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.report.sql.SqlReportOptions
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.cache.InMemoryCacheService
+import com.metriql.service.jinja.JinjaRendererService
+import com.metriql.service.model.Model
+import com.metriql.service.model.Model.Dimension.DimensionValue.Column
+import com.metriql.service.model.Model.Dimension.Type.COLUMN
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DataSource

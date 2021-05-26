@@ -2,10 +2,10 @@ package com.metriql.report.segmentation
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.metriql.Recipe
-import com.metriql.model.ModelName
+import com.metriql.report.Recipe
 import com.metriql.report.ReportFilter
 import com.metriql.report.ReportMetric
+import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.RPeriod

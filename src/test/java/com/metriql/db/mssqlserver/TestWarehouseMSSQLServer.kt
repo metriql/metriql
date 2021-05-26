@@ -1,6 +1,6 @@
 package com.metriql.db.mssqlserver
 
-import com.metriql.model.Model
+import com.metriql.service.model.Model
 import com.metriql.tests.TestWarehouse
 import org.testng.annotations.BeforeSuite
 import org.testng.annotations.Test

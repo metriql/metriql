@@ -1,9 +1,9 @@
-package com.metriql.auth
+package com.metriql.service.auth
 
 import com.metriql.warehouse.spi.WarehouseAuth
 import java.time.ZoneId
 
-data class ProjectAuth(
+open class ProjectAuth(
     val userId: Int,
     val projectId: Int,
     val isOwner: Boolean,

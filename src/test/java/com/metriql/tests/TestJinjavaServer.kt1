@@ -3,10 +3,10 @@ package com.metriql
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.cache.CacheBuilderSpec
 import com.google.common.net.HostAndPort
-import com.metriql.cache.InMemoryCacheService
-import com.metriql.model.IModelService
-import com.metriql.task.TaskExecutorService
-import com.metriql.task.TaskQueueService
+import com.metriql.services.cache.InMemoryCacheService
+import com.metriql.service.model.IModelService
+import com.metriql.service.task.TaskExecutorService
+import com.metriql.service.task.TaskQueueService
 import com.metriql.util.JsonHelper
 import com.metriql.warehouse.spi.DataSource
 import io.javalin.Javalin

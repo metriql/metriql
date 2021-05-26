@@ -1,6 +1,6 @@
 package com.metriql.report
 
-import com.metriql.auth.ProjectAuth
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.services.RecipeQuery
 
 interface ReportExecutor {

@@ -1,9 +1,9 @@
-package com.metriql.jinja
+package com.metriql.service.jinja
 
 import com.hubspot.jinjava.el.ext.NamedParameter
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
-import com.metriql.auth.ProjectAuth
 import com.metriql.report.ReportType
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr

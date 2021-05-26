@@ -1,4 +1,4 @@
-package com.metriql.jinja
+package com.metriql.service.jinja
 
 import com.hubspot.jinjava.Jinjava
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
@@ -6,8 +6,8 @@ import com.hubspot.jinjava.lib.fn.ELFunctionDefinition
 import com.hubspot.jinjava.lib.tag.Tag
 import com.hubspot.jinjava.tree.TagNode
 import com.hubspot.jinjava.util.LengthLimitingStringBuilder
-import com.metriql.auth.ProjectAuth
-import com.metriql.model.ModelName
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.warehouse.spi.DataSource

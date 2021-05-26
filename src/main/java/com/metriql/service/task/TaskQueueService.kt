@@ -1,8 +1,8 @@
-package com.metriql.task
+package com.metriql.service.task
 
-import com.metriql.auth.ProjectAuth
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.MetriqlException
 import com.metriql.util.Scheduler
 import com.metriql.util.logging.ContextLogger

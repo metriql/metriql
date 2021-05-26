@@ -1,7 +1,7 @@
-package com.metriql.task
+package com.metriql.service.task
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.metriql.audit.MetriqlEvents
+import com.metriql.service.audit.MetriqlEvents
 import com.metriql.util.MetriqlEventBus
 import io.sentry.Sentry
 import io.sentry.SpanStatus

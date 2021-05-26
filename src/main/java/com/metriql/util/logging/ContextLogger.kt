@@ -1,6 +1,6 @@
 package com.metriql.util.logging
 
-import com.metriql.auth.ProjectAuth
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.WarehouseAuth
 import java.util.logging.Level
 import java.util.logging.Logger

@@ -4,10 +4,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.DatabindContext
 import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver
-import com.metriql.Recipe
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
-import com.metriql.model.Model
+import com.metriql.service.model.Model
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr

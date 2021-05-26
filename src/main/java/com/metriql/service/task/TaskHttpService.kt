@@ -1,4 +1,4 @@
-package com.metriql.task
+package com.metriql.service.task
 
 import com.metriql.util.SuccessMessage
 import org.rakam.server.http.HttpService

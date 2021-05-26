@@ -1,12 +1,7 @@
 package com.metriql.report.retention
 
-import com.metriql.auth.ProjectAuth
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
-import com.metriql.model.IModelService
-import com.metriql.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.model.Model.MappingDimensions.CommonMappings.USER_ID
-import com.metriql.model.ModelName
 import com.metriql.report.Dataset
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportFilter
@@ -17,6 +12,11 @@ import com.metriql.report.retention.RetentionReportOptions.DateUnit.MONTH
 import com.metriql.report.retention.RetentionReportOptions.DateUnit.WEEK
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.IModelService
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.util.serializableName

@@ -1,4 +1,4 @@
-package com.metriql.cache
+package com.metriql.service.cache
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.node.ObjectNode

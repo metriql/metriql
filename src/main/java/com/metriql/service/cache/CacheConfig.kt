@@ -1,4 +1,4 @@
-package com.metriql.cache
+package com.metriql.service.cache
 
 import io.airlift.configuration.Config
 

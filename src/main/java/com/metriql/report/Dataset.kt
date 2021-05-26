@@ -3,8 +3,8 @@ package com.metriql.report
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.metriql.Recipe
-import com.metriql.model.ModelName
+import com.metriql.dbt.DbtJinjaRenderer
+import com.metriql.service.model.ModelName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 data class Dataset(
@@ -28,7 +28,8 @@ data class RecipeDataset(
 ) {
     @JsonIgnore
     fun toDataset(context: IQueryGeneratorContext): Dataset {
-        return Dataset(dataset, filters?.map { it.toReportFilter(context, dataset) } ?: listOf(), dimension?.toDimension(dataset, dimension.getType(context::getModel, dataset)))
+        val modelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
+        return Dataset(modelName, filters?.map { it.toReportFilter(context, modelName) } ?: listOf(), dimension?.toDimension(dataset, dimension.getType(context::getModel, modelName)))
     }
 }
 

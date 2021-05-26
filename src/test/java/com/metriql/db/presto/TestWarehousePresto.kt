@@ -1,6 +1,6 @@
 package com.metriql.db.presto
 
-import com.metriql.model.Model
+import com.metriql.service.model.Model
 import com.metriql.tests.TestWarehouse
 import com.metriql.warehouse.presto.PrestoDataSource
 import org.testng.annotations.BeforeSuite

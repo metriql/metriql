@@ -1,13 +1,13 @@
-package com.metriql.jinja
+package com.metriql.service.jinja
 
 import com.hubspot.jinjava.interpret.TemplateStateException
-import com.metriql.auth.UserAttributeValues
-import com.metriql.model.Model
-import com.metriql.model.ModelDimension
-import com.metriql.model.ModelMeasure
-import com.metriql.model.ModelName
-import com.metriql.model.ModelRelation
 import com.metriql.report.ReportFilter
+import com.metriql.service.auth.UserAttributeValues
+import com.metriql.service.model.Model
+import com.metriql.service.model.ModelDimension
+import com.metriql.service.model.ModelMeasure
+import com.metriql.service.model.ModelName
+import com.metriql.service.model.ModelRelation
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.UppercaseEnum

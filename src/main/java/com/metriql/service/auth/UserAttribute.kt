@@ -1,4 +1,4 @@
-package com.metriql.auth
+package com.metriql.service.auth
 
 import com.metriql.db.JSONBSerializable
 import com.metriql.util.PolymorphicTypeStr

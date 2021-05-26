@@ -2,11 +2,11 @@ package com.metriql.report.funnel
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.metriql.Recipe
-import com.metriql.model.DimensionName
-import com.metriql.model.RelationName
 import com.metriql.report.Dataset
+import com.metriql.report.Recipe
 import com.metriql.report.ReportMetric
+import com.metriql.service.model.DimensionName
+import com.metriql.service.model.RelationName
 import com.metriql.util.RPeriod
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.WarehouseQueryTask

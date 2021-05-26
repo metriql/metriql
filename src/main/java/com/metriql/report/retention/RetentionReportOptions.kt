@@ -1,7 +1,7 @@
 package com.metriql.report.retention
 
-import com.metriql.model.DimensionName
 import com.metriql.report.Dataset
+import com.metriql.service.model.DimensionName
 import com.metriql.util.RPeriod
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.WarehouseQueryTask

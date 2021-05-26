@@ -1,9 +1,9 @@
-package com.metriql.model
+package com.metriql.service.model
 
 import com.metriql.db.FieldType
-import com.metriql.model.Model.MappingDimensions.CommonMappings.DEVICE_ID
-import com.metriql.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.model.Model.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.DEVICE_ID
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.util.MetriqlException
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.DataSource

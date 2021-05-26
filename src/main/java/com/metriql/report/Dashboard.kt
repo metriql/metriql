@@ -3,11 +3,11 @@ package com.metriql.dashboard
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver
-import com.metriql.Recipe.DimensionReference
-import com.metriql.Recipe.ExportDashboard.RecipeFilterSchema
-import com.metriql.Recipe.MetricReference
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
+import com.metriql.report.Recipe.DimensionReference
+import com.metriql.report.Recipe.ExportDashboard.RecipeFilterSchema
+import com.metriql.report.Recipe.MetricReference
 import com.metriql.report.Report.ReportUser
 import com.metriql.report.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.ReportFilter.FilterValue.MetricFilter.Filter.OperatorTypeResolver

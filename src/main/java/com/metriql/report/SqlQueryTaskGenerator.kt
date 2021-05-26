@@ -1,14 +1,14 @@
 package com.metriql.report
 
-import com.metriql.audit.MetriqlEvents.AuditLog.SQLExecuteEvent
-import com.metriql.audit.MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext
-import com.metriql.auth.ProjectAuth
-import com.metriql.cache.ICacheService
-import com.metriql.cache.ICacheService.EntityType.SQL_QUERY
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats
 import com.metriql.report.sql.SqlReportOptions
-import com.metriql.task.Task
+import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent
+import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.cache.ICacheService
+import com.metriql.service.cache.ICacheService.EntityType.SQL_QUERY
+import com.metriql.service.task.Task
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlEventBus
 import com.metriql.warehouse.WarehouseQueryTask
@@ -20,20 +20,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 typealias QueryTask = Task<QueryResult, QueryStats>
-
-interface ISqlQueryTaskGenerator {
-    fun createTask(
-        auth: ProjectAuth,
-        queryGeneratorContext: IQueryGeneratorContext,
-        dataSource: DataSource,
-        rawSqlQuery: String,
-        queryOptions: SqlReportOptions.QueryOptions,
-        isBackgroundTask: Boolean,
-        postProcessors: List<PostProcessor> = listOf(),
-        context: Pair<SQLContext, Any>? = null,
-    ): QueryTask
-}
-
 typealias PostProcessor = (QueryResult) -> QueryResult
 
 /*
@@ -45,7 +31,7 @@ typealias PostProcessor = (QueryResult) -> QueryResult
 *   In sql type models, we append their query using WITH alias as (SELECT ..)
 *   so that the query is more organized.
 * */
-class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICacheService) : ISqlQueryTaskGenerator {
+class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICacheService) {
     private val runningTasks = ConcurrentHashMap<QueryIdentifierForRunningTasks, QueryTask>()
 
     data class QueryIdentifierForCache(
@@ -59,15 +45,15 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
         val options: SqlReportOptions.QueryOptions,
     )
 
-    override fun createTask(
+    fun createTask(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         dataSource: DataSource,
         rawSqlQuery: String,
         queryOptions: SqlReportOptions.QueryOptions,
         isBackgroundTask: Boolean,
-        postProcessors: List<(QueryResult) -> QueryResult>,
-        info: Pair<SQLContext, Any>?,
+        postProcessors: List<PostProcessor> = listOf(),
+        info: Pair<SQLContext, Any>? = null,
     ): QueryTask {
         val limit = if (queryOptions.limit != null && queryOptions.limit > WarehouseQueryTask.MAX_LIMIT) {
             WarehouseQueryTask.MAX_LIMIT

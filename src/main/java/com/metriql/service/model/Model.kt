@@ -1,13 +1,13 @@
-package com.metriql.model
+package com.metriql.service.model
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.CaseFormat
-import com.metriql.Recipe
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
+import com.metriql.report.Recipe
 import com.metriql.report.ReportFilter
 import com.metriql.report.ReportMetric
 import com.metriql.report.ReportType

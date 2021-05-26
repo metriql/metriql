@@ -3,12 +3,12 @@ package com.metriql.dbt
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.metriql.Recipe
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AcceptedValues
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AnyValue
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.Relationships
-import com.metriql.jinja.SQLRenderable
-import com.metriql.model.Model
+import com.metriql.report.Recipe
+import com.metriql.service.jinja.SQLRenderable
+import com.metriql.service.model.Model
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.TextUtil
@@ -251,6 +251,10 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
 
         fun getModelName(type: String, projectName: String, name: String): String {
             return "${type}_${projectName}_$name"
+        }
+
+        fun getModelNameRegex(type: String, name: String, packageName: String?): String {
+            return "${type}\\_${packageName ?: "[a-z0-9_]+"}\\_$name"
         }
     }
 }

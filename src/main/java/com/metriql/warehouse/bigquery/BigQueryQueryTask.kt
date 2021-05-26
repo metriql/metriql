@@ -15,10 +15,10 @@ import com.google.cloud.bigquery.LegacySQLTypeName
 import com.google.cloud.bigquery.QueryJobConfiguration
 import com.google.cloud.bigquery.Schema
 import com.google.cloud.bigquery.TableResult
-import com.metriql.audit.MetriqlEvents
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats
 import com.metriql.report.QueryTask
+import com.metriql.service.audit.MetriqlEvents
 import com.metriql.util.MetriqlEventBus
 import com.metriql.util.MetriqlException
 import com.metriql.util.`try?`

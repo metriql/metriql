@@ -1,7 +1,7 @@
-package com.metriql.audit
+package com.metriql.service.audit
 
 import com.google.common.eventbus.Subscribe
-import com.metriql.auth.ProjectAuth
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.MetriqlEventBus
 import com.metriql.util.logging.ContextLogger
 import java.util.logging.Level

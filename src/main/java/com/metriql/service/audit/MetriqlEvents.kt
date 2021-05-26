@@ -1,12 +1,12 @@
-package com.metriql.audit
+package com.metriql.service.audit
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.metriql.auth.ProjectAuth
 import com.metriql.db.QueryResult
-import com.metriql.model.DimensionName
-import com.metriql.model.ModelName
 import com.metriql.report.ReportType
-import com.metriql.task.Task
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.DimensionName
+import com.metriql.service.model.ModelName
+import com.metriql.service.task.Task
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import org.rakam.server.http.RakamHttpRequest
 

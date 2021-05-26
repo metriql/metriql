@@ -1,4 +1,4 @@
-package com.metriql.auth
+package com.metriql.service.auth
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonValue

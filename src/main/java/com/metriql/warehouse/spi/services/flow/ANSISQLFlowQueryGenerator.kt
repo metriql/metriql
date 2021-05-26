@@ -1,7 +1,7 @@
 package com.metriql.warehouse.spi.services.flow
 
-import com.metriql.auth.ProjectAuth
 import com.metriql.report.flow.FlowReportOptions
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class ANSISQLFlowQueryGenerator : FlowQueryGenerator {

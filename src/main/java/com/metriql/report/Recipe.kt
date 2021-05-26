@@ -1,4 +1,4 @@
-package com.metriql
+package com.metriql.report
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonCreator
@@ -14,16 +14,13 @@ import com.metriql.db.JSONBSerializable
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifest
 import com.metriql.dbt.DbtManifest.Companion.extractFields
-import com.metriql.jinja.SQLRenderable
-import com.metriql.model.DimensionName
-import com.metriql.model.Model
-import com.metriql.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.model.ModelName
-import com.metriql.model.RelationName
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportMetric
-import com.metriql.report.ReportType
 import com.metriql.report.segmentation.SegmentationRecipeQuery
+import com.metriql.service.jinja.SQLRenderable
+import com.metriql.service.model.DimensionName
+import com.metriql.service.model.Model
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.service.model.ModelName
+import com.metriql.service.model.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -422,13 +419,17 @@ data class Recipe(
 
             val modelRelations = relations?.map { (relationName, relation) -> relation.toRelation(packageName, relationName) } ?: listOf()
 
-            val modelTarget = if (sql != null) {
-                Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql(sql))
-            } else if (dataset != null) {
-                val modelName = DbtJinjaRenderer.renderer.renderReference(dataset, packageName)
-                Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql("select * from {{model.$modelName}}"))
-            } else {
-                Model.Target(Model.Target.Type.TABLE, target!!)
+            val modelTarget = when {
+                sql != null -> {
+                    Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql(sql))
+                }
+                dataset != null -> {
+                    val modelName = DbtJinjaRenderer.renderer.renderReference(dataset, packageName)
+                    Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql("select * from {{model.$modelName}}"))
+                }
+                else -> {
+                    Model.Target(Model.Target.Type.TABLE, target!!)
+                }
             }
 
             val (dbtMeasures, dbtDimensions) = extractFields(columns?.map { it.name to it }?.toMap() ?: mapOf())
@@ -922,7 +923,13 @@ data class Recipe(
         fun toDimension(modelName: ModelName, type: FieldType): ReportMetric.ReportDimension {
             return ReportMetric.ReportDimension(
                 name.name, modelName, name.relation,
-                if (timeframe != null) ReportMetric.PostOperation.fromFieldType(type, timeframe) else null,
+                if (timeframe != null)
+                    try {
+                        ReportMetric.PostOperation.fromFieldType(type, timeframe)
+                    } catch (e: IllegalArgumentException) {
+                        throw MetriqlException("Error constructing dimension $this: ${e.message}", BAD_REQUEST)
+                    }
+                else null,
                 null
             )
         }

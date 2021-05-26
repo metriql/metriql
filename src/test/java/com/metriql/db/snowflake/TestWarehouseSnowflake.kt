@@ -1,6 +1,6 @@
 package com.metriql.db.snowflake
 
-import com.metriql.model.Model
+import com.metriql.service.model.Model
 import com.metriql.tests.TestWarehouse
 import com.metriql.warehouse.snowflake.SnowflakeDataSource
 import org.testng.annotations.BeforeSuite

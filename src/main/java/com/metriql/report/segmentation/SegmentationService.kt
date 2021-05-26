@@ -1,16 +1,16 @@
 package com.metriql.report.segmentation
 
-import com.metriql.auth.ProjectAuth
 import com.metriql.db.FieldType
-import com.metriql.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.model.Model.Target.TargetValue.Table
-import com.metriql.model.ModelName
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportFilter
 import com.metriql.report.ReportFilter.Companion.extractDateRangeForEventTimestamp
 import com.metriql.report.ReportMetric
 import com.metriql.report.ReportType
 import com.metriql.report.segmentation.SegmentationQueryReWriter.MaterializeTableCache
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.service.model.Model.Target.TargetValue.Table
+import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge

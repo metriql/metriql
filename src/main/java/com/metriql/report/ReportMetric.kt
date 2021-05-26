@@ -2,12 +2,11 @@ package com.metriql.report
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.metriql.Recipe
-import com.metriql.model.DimensionName
-import com.metriql.model.MeasureName
-import com.metriql.model.Model
-import com.metriql.model.ModelName
-import com.metriql.model.RelationName
+import com.metriql.service.model.DimensionName
+import com.metriql.service.model.MeasureName
+import com.metriql.service.model.Model
+import com.metriql.service.model.ModelName
+import com.metriql.service.model.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -17,6 +16,7 @@ import com.metriql.warehouse.spi.function.DatePostOperation
 import com.metriql.warehouse.spi.function.TimePostOperation
 import com.metriql.warehouse.spi.function.TimestampPostOperation
 import io.netty.handler.codec.http.HttpResponseStatus
+import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 
 // legacy properties
@@ -117,10 +117,10 @@ sealed class ReportMetric {
                     com.metriql.db.FieldType.TIMESTAMP -> Type.TIMESTAMP
                     com.metriql.db.FieldType.DATE -> Type.DATE
                     com.metriql.db.FieldType.UNKNOWN -> {
-                        throw MetriqlException("Post operation can only be used when the `type` is defined", HttpResponseStatus.BAD_REQUEST)
+                        throw IllegalArgumentException("Post operation can only be used when the `type` is defined")
                     }
                     else -> {
-                        throw MetriqlException("{${type.name} type does not have $name operation}", HttpResponseStatus.BAD_REQUEST)
+                        throw IllegalArgumentException("{${type.name} type does not have $name operation}")
                     }
                 }
 

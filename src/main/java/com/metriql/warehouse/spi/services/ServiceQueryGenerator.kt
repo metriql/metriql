@@ -2,9 +2,9 @@ package com.metriql.warehouse.spi.services
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.hubspot.jinjava.Jinjava
-import com.metriql.auth.ProjectAuth
 import com.metriql.db.JSONBSerializable
-import com.metriql.model.ModelName
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext

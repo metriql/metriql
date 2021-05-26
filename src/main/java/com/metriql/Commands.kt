@@ -7,15 +7,16 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.google.common.net.HostAndPort
-import com.metriql.Recipe.Dependencies.DbtDependency
-import com.metriql.auth.ProjectAuth
 import com.metriql.dbt.DbtManifestParser
 import com.metriql.dbt.DbtModelService
 import com.metriql.dbt.DbtProfiles
 import com.metriql.dbt.FileHandler
 import com.metriql.dbt.ProjectYaml
-import com.metriql.jinja.JinjaRendererService
-import com.metriql.model.RecipeModelService
+import com.metriql.report.Recipe
+import com.metriql.report.Recipe.Dependencies.DbtDependency
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.jinja.JinjaRendererService
+import com.metriql.service.model.RecipeModelService
 import com.metriql.util.JsonHelper
 import com.metriql.util.UnirestHelper
 import com.metriql.util.YamlHelper
@@ -25,6 +26,7 @@ import com.metriql.warehouse.spi.DataSource
 import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.time.ZoneId
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Logger
@@ -191,7 +193,8 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         private val threads by option("--threads", help = "Specify number of threads to use serving requests. The default is [number of processors * 2]", envvar = "THREADS").int()
             .defaultLazy { Runtime.getRuntime().availableProcessors() * 2 }
         val port by option("--port", envvar = "METRIQL_RUN_PORT", help = "").int().default(3030)
-        val host by option("--host", "-h", envvar = "METRIQL_RUN_HOST", help = "The binding host for the ").default("127.0.0.1")
+        val host by option("--host", "-h", envvar = "METRIQL_RUN_HOST", help = "The binding host for the REST API").default("127.0.0.1")
+        val timezone by option("--timezone", envvar = "METRIQL_TIMEZONE", help = "The timezone that will be used running queries on your data warehouse")
         private val apiSecretBase64 by option(
             "--api-auth-secret-base64", envvar = "METRIQL_API_AUTH_SECRET_BASE64",
             help = "Your JWT secret key in Base64 format. metriql supports various algorithms such as HS256 and RS256 and identifies the key parsing the content."
@@ -219,8 +222,8 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val dataSource = this.getDataSource()
 
-            val modelService = RecipeModelService(null, this.parseRecipe(manifestJson), 0, dataSource.warehouse.bridge)
-            HttpServer.start(HostAndPort.fromParts(host, port), apiSecret, threads, debug, origin, modelService, dataSource)
+            val modelService = RecipeModelService(null, this.parseRecipe(manifestJson), -1, dataSource.warehouse.bridge)
+            HttpServer.start(HostAndPort.fromParts(host, port), apiSecret, threads, debug, origin, modelService, dataSource, timezone?.let { ZoneId.of(it) })
         }
     }
 

@@ -1,7 +1,7 @@
 package com.metriql.util.logging
 
 import com.google.common.eventbus.Subscribe
-import com.metriql.audit.MetriqlEvents
+import com.metriql.service.audit.MetriqlEvents
 import com.metriql.util.MetriqlEventBus
 import com.metriql.util.MetriqlException
 import com.metriql.util.serializableName

@@ -1,9 +1,10 @@
 package com.metriql.interfaces
 
-import com.metriql.Recipe
-import com.metriql.auth.ProjectAuth
-import com.metriql.model.IModelService
-import com.metriql.model.Model
+import com.metriql.report.Recipe
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.IModelService
+import com.metriql.service.model.Model
+import com.metriql.service.model.ModelName
 
 open class TestModelService(private var models: List<Model> = listOf()) : IModelService {
 
@@ -13,7 +14,7 @@ open class TestModelService(private var models: List<Model> = listOf()) : IModel
 
     override fun list(auth: ProjectAuth) = models
 
-    override fun getModel(auth: ProjectAuth, modelName: String) = models.find { it.name == modelName }
+    override fun getModel(auth: ProjectAuth, modelName: ModelName) = models.find { modelName.toRegex().matches(it.name) }
 
     override fun delete(auth: ProjectAuth, id: List<Int>) {
         TODO("not implemented") // To change body of created functions use File | Settings | File Templates.

@@ -1,3 +1,3 @@
-package com.metriql.jinja
+package com.metriql.service.jinja
 
 typealias SQLRenderable = String

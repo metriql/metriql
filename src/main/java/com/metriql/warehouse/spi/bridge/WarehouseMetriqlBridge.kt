@@ -1,13 +1,13 @@
 package com.metriql.warehouse.spi.bridge
 
-import com.metriql.model.DimensionName
-import com.metriql.model.MeasureName
-import com.metriql.model.Model
-import com.metriql.model.ModelName
-import com.metriql.model.ModelRelation
-import com.metriql.model.RelationName
 import com.metriql.report.ReportFilter
 import com.metriql.report.ReportMetric
+import com.metriql.service.model.DimensionName
+import com.metriql.service.model.MeasureName
+import com.metriql.service.model.Model
+import com.metriql.service.model.ModelName
+import com.metriql.service.model.ModelRelation
+import com.metriql.service.model.RelationName
 import com.metriql.util.MetriqlException
 import com.metriql.util.serializableName
 import com.metriql.warehouse.WarehouseSupports

@@ -1,10 +1,10 @@
 package com.metriql.tests
 
 import com.metriql.db.FieldType
-import com.metriql.model.ModelName
 import com.metriql.report.ReportFilter
 import com.metriql.report.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.ReportMetric.ReportDimension
+import com.metriql.service.model.ModelName
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.filter.BooleanOperatorType
 import com.metriql.warehouse.spi.filter.DateOperatorType

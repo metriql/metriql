@@ -1,9 +1,10 @@
 package com.metriql.report.segmentation
 
 import com.fasterxml.jackson.annotation.JsonAlias
-import com.metriql.Recipe
-import com.metriql.model.ModelName
+import com.metriql.dbt.DbtJinjaRenderer
+import com.metriql.report.Recipe
 import com.metriql.report.segmentation.SegmentationReportOptions.Order.Type.MEASURE
+import com.metriql.service.model.ModelName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.MaterializeQuery
 import com.metriql.warehouse.spi.services.RecipeQuery
@@ -19,15 +20,16 @@ data class SegmentationRecipeQuery(
     val orders: Map<Recipe.MetricReference, Recipe.OrderType>? = null
 ) : RecipeQuery {
     override fun toReportOptions(context: IQueryGeneratorContext): SegmentationReportOptions {
+        val modelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
         return SegmentationReportOptions(
-            dataset,
-            dimensions?.map { it.toDimension(dataset, it.getType(context::getModel, dataset)) },
-            measures.map { it.toMeasure(dataset) },
-            filters?.map { it.toReportFilter(context, dataset) },
+            modelName,
+            dimensions?.map { it.toDimension(modelName, it.getType(context::getModel, modelName)) },
+            measures.map { it.toMeasure(modelName) },
+            filters?.map { it.toReportFilter(context, modelName) },
             reportOptions,
             limit = limit,
             orders = orders?.entries?.map {
-                SegmentationReportOptions.Order(MEASURE, it.key.toMeasure(dataset), it.value == Recipe.OrderType.ASC)
+                SegmentationReportOptions.Order(MEASURE, it.key.toMeasure(modelName), it.value == Recipe.OrderType.ASC)
             }
         )
     }

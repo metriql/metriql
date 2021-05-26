@@ -1,11 +1,11 @@
 package com.metriql.warehouse
 
-import com.metriql.audit.MetriqlEvents
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
-import com.metriql.jinja.SQLRenderable
-import com.metriql.model.Model
 import com.metriql.report.QueryTask
+import com.metriql.service.audit.MetriqlEvents
+import com.metriql.service.jinja.SQLRenderable
+import com.metriql.service.model.Model
 import com.metriql.util.JdbcUtil
 import com.metriql.util.JdbcUtil.fromGenericJDBCTypeFieldType
 import com.metriql.util.MetriqlEventBus
