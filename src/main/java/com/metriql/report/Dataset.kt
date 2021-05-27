@@ -29,7 +29,9 @@ data class RecipeDataset(
     @JsonIgnore
     fun toDataset(context: IQueryGeneratorContext): Dataset {
         val modelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
-        return Dataset(modelName, filters?.map { it.toReportFilter(context, modelName) } ?: listOf(), dimension?.toDimension(dataset, dimension.getType(context::getModel, modelName)))
+        val filters = filters?.map { it.toReportFilter(context, modelName) } ?: listOf()
+        val dimension = dimension?.toDimension(dataset, dimension.getType(context::getModel, modelName))
+        return Dataset(modelName, filters, dimension)
     }
 }
 

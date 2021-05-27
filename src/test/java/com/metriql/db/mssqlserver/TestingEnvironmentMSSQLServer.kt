@@ -1,12 +1,11 @@
 package com.metriql.db.mssqlserver
 
-import com.metriql.DockerContainer
 import com.metriql.db.TestingServer
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.mssqlserver.MSSQLDataSource
 import com.metriql.warehouse.mssqlserver.MSSQLWarehouse
+import org.testcontainers.containers.MSSQLServerContainer
 import java.sql.Connection
-import java.sql.DriverManager
 import java.sql.ResultSet
 
 object TestingEnvironmentMSSQLServer : TestingServer<Unit, Connection>() {
@@ -15,24 +14,20 @@ object TestingEnvironmentMSSQLServer : TestingServer<Unit, Connection>() {
     private const val MSSQL_ROOT_USER = "sa"
     private const val MSSQL_DATABASE = "model"
 
-    private val dockerContainer: DockerContainer by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
-        DockerContainer(
-            "mcr.microsoft.com/mssql/server:2017-latest",
-            listOf(MSSQL_PORT),
-            mapOf(
-                "ACCEPT_EULA" to "true",
-                "TZ" to "UTC",
-                "MSSQL_PID" to "Developer",
-                "MSSQL_SA_PASSWORD" to MSSQL_PASSWORD
-            )
-        ) {
-            runQueryAsRoot(it, "SELECT 1")
+    private val dockerContainer: MSSQLServerContainer<Nothing> by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
+        val server = MSSQLServerContainer<Nothing>("mcr.microsoft.com/mssql/server:2017-CU12").apply {
+            withEnv("TZ", "UTC")
+            withEnv("MSSQL_PID", "Developer")
+            withPassword(MSSQL_PASSWORD)
         }
+        server.acceptLicense()
+
+        server
     }
 
     override val config = MSSQLWarehouse.MSSQLServerConfig(
         "127.0.0.1",
-        dockerContainer.getHostPort(MSSQL_PORT),
+        dockerContainer.getMappedPort(MSSQL_PORT),
         MSSQL_DATABASE,
         "rakam_test",
         MSSQL_ROOT_USER,
@@ -61,14 +56,6 @@ object TestingEnvironmentMSSQLServer : TestingServer<Unit, Connection>() {
             stmt.execute("DROP SCHEMA IF EXISTS rakam_test")
             stmt.execute("CREATE SCHEMA rakam_test")
         }
-    }
-
-    private fun getJdbcUrl(hostPortProvider: DockerContainer.HostPortProvider, user: String, password: String): String? {
-        return "jdbc:sqlserver://localhost:${hostPortProvider.getHostPort(MSSQL_PORT)};user=$MSSQL_ROOT_USER;password=$password;databaseName=$MSSQL_DATABASE"
-    }
-
-    private fun runQueryAsRoot(hostPortProvider: DockerContainer.HostPortProvider, query: String) {
-        DriverManager.getConnection(getJdbcUrl(hostPortProvider, MSSQL_ROOT_USER, MSSQL_PASSWORD)).use { conn -> conn.createStatement().use { stmt -> stmt.execute(query) } }
     }
 
     override fun resultSetFor(query: String): ResultSet {

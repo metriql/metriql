@@ -17,4 +17,4 @@ SELECT {% if retention.firstStep.dimension %} dimension {% else %} first_action.
  UNION ALL
  SELECT {% if retention.firstStep.dimension %} dimension {% else %} first_action.date {% endif %}, cast(extract('day' from returning_action.date - first_action.date) {% if retention.dateUnit == 'week' %} / 7 {% elif retention.dateUnit == 'month' %} / 30 {% endif %} as integer), COUNT(DISTINCT returning_action.connector) AS users
 FROM first_action JOIN returning_action ON returning_action.date - first_action.date between '0 {{retention.dateUnit}}'::interval and '10 {{retention.dateUnit}}'::interval AND first_action.connector = returning_action.connector
-GROUP BY 1 {% if not retention.firstStep.dimension %} DESC {% endif %} , 2 ORDER BY 1, 2
+GROUP BY 1, 2 ORDER BY 1, 2

@@ -1,11 +1,11 @@
 package com.metriql.db.mysql
 
-import com.metriql.DockerContainer
-import com.metriql.DockerContainer.HostPortProvider
+import com.metriql.HostPortProvider
 import com.metriql.db.TestingServer
 import com.metriql.util.MetriqlExceptions
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.mysql.MySQLWarehouse
+import org.testcontainers.containers.MySQLContainer
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.ResultSet
@@ -18,24 +18,20 @@ object TestingEnvironmentMySQL : TestingServer<Unit, Connection>() {
     private const val MYSQL_DATABASE = "metriql"
     private const val MYSQL_PORT = 3306
 
-    private val dockerContainer: DockerContainer by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
-        DockerContainer(
-            "mysql:8.0.15",
-            listOf(MYSQL_PORT),
-            mapOf(
-                "MYSQL_ROOT_PASSWORD" to MYSQL_ROOT_PASSWORD,
-                "MYSQL_USER" to MYSQL_USER,
-                "MYSQL_PASSWORD" to MYSQL_ROOT_PASSWORD,
-                "MYSQL_DATABASE" to MYSQL_DATABASE
-            )
-        ) {
-            runQueryAsRoot(it, "SELECT 1")
+    private val dockerContainer: MySQLContainer<Nothing> by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
+        val server = MySQLContainer<Nothing>("mysql:5.7.22").apply {
+            withDatabaseName(MYSQL_DATABASE)
+            withPassword(MYSQL_ROOT_PASSWORD)
+            withUsername(MYSQL_USER)
+            withReuse(true)
         }
+        server.start()
+        server
     }
 
     override val config = MySQLWarehouse.MysqlConfig(
         "127.0.0.1",
-        dockerContainer.getHostPort(MYSQL_PORT),
+        dockerContainer.getMappedPort(MYSQL_PORT),
         MYSQL_DATABASE,
         MYSQL_USER,
         MYSQL_ROOT_PASSWORD,
@@ -53,14 +49,14 @@ object TestingEnvironmentMySQL : TestingServer<Unit, Connection>() {
     override fun createConnection(): Connection {
         return try {
             Class.forName("com.mysql.jdbc.Driver").newInstance()
-            DriverManager.getConnection(getJdbcUrl(dockerContainer::getHostPort, MYSQL_USER, MYSQL_ROOT_PASSWORD))
+            DriverManager.getConnection(getJdbcUrl(dockerContainer::getMappedPort, MYSQL_USER, MYSQL_ROOT_PASSWORD))
         } catch (e: SQLException) {
             throw MetriqlExceptions.SYSTEM_EXCEPTION_FROM_CAUSE.exceptionFromObject(e)
         }
     }
 
     override fun init() {
-        runQueryAsRoot(dockerContainer::getHostPort, "GRANT ALL PRIVILEGES ON *.* TO '$MYSQL_USER'")
+        runQueryAsRoot(dockerContainer::getMappedPort, "GRANT ALL PRIVILEGES ON *.* TO '$MYSQL_USER'")
 
         createConnection().use { connection ->
             val stmt = connection.createStatement()

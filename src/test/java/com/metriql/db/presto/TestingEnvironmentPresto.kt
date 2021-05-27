@@ -1,10 +1,11 @@
 package com.metriql.db.presto
 
 import com.facebook.presto.jdbc.PrestoConnection
-import com.metriql.DockerContainer
+import com.metriql.HostPortProvider
 import com.metriql.db.TestingServer
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.presto.PrestoWarehouse
+import org.testcontainers.containers.TrinoContainer
 import java.sql.DriverManager
 import java.sql.ResultSet
 import java.util.Properties
@@ -15,21 +16,14 @@ object TestingEnvironmentPresto : TestingServer<Unit, PrestoConnection>() {
     private const val PRESTO_USER = "metriql_user"
     private const val PRESTO_PORT = 8080
 
-    private val dockerContainer: DockerContainer by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
-        DockerContainer(
-            "starburstdata/presto:350-e.2",
-            listOf(PRESTO_PORT),
-            mapOf()
-        ) {
-            runQueryAsRoot(it, "SELECT 1")
-        }
+    private val dockerContainer: TrinoContainer by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
+        val server = TrinoContainer("trinodb/trino")
+            .withExposedPorts(PRESTO_PORT)
+        server.start()
+        server
     }
 
-    private fun runQueryAsRoot(hostPortProvider: DockerContainer.HostPortProvider, query: String) {
-        DriverManager.getConnection(getJdbcUrl(hostPortProvider)).use { conn -> conn.createStatement().use { stmt -> stmt.execute(query) } }
-    }
-
-    private fun getJdbcUrl(hostPortProvider: DockerContainer.HostPortProvider): String? {
+    private fun getJdbcUrl(hostPortProvider: HostPortProvider): String? {
         return "jdbc:presto://localhost:${hostPortProvider.getHostPort(PRESTO_PORT)}/$PRESTO_CATALOG?user=$PRESTO_USER"
     }
 
@@ -51,7 +45,7 @@ object TestingEnvironmentPresto : TestingServer<Unit, PrestoConnection>() {
             setProperty("SSL", "false")
         }
 
-        val connection = DriverManager.getConnection(getJdbcUrl(dockerContainer::getHostPort), properties)
+        val connection = DriverManager.getConnection(getJdbcUrl(dockerContainer::getMappedPort), properties)
         return connection.unwrap(PrestoConnection::class.java)
     }
 
