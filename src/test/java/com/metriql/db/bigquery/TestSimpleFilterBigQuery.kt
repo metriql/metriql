@@ -17,7 +17,6 @@ import java.util.UUID
 class TestSimpleFilterBigQuery : TestSimpleFilter() {
     override val warehouseBridge = BigQueryMetriqlBridge
     override val testingServer = TestingEnvironmentBigQuery
-    override val aq = '`'
 
     @BeforeSuite
     fun setup() {

@@ -13,7 +13,6 @@ import org.testng.annotations.BeforeSuite
 class TestSimpleFilterPresto : TestSimpleFilter() {
     override val warehouseBridge = PrestoMetriqlBridge
     override val testingServer = TestingEnvironmentPresto
-    override val aq = '"'
 
     @BeforeSuite
     fun setup() {

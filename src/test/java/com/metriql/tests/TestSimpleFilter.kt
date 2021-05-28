@@ -24,7 +24,6 @@ abstract class TestSimpleFilter {
     abstract val testingServer: TestingServer<*, *>
     abstract fun populate()
 
-    abstract val aq: Char
     private val context = mock(IQueryGeneratorContext::class.java).let {
         `when`(it.getModelDimension(Matchers.anyString(), Matchers.anyString())).thenAnswer { p0 ->
             val dimensionName = p0!!.arguments!!.first() as DimensionName
@@ -48,7 +47,7 @@ abstract class TestSimpleFilter {
             )
         }
 
-        `when`(it.getSQLReference(any(), Matchers.anyString(), Matchers.anyString())).thenAnswer { p0 ->
+        `when`(it.getSQLReference(any(), Matchers.anyString(), Matchers.anyString(), Matchers.anyListOf(String::class.java), Matchers.anyObject())).thenAnswer { p0 ->
             val modelTarget = p0!!.arguments!!.first() as Model.Target
             // val modelName = p0.arguments!![1]
             val columnName = p0.arguments!![2]
@@ -67,7 +66,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
         val query =
-            "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_string$aq"
+            "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -82,7 +81,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
-        val query = "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -97,7 +96,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
-        val query = "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -113,7 +112,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
         val query =
-            "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_string$aq"
+            "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -129,7 +128,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
         val query =
-            "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_string$aq"
+            "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -144,7 +143,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
-        val query = "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -160,7 +159,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
         val query =
-            "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_string$aq"
+            "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -176,7 +175,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
         val query =
-            "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_string$aq"
+            "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -192,7 +191,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
         val query =
-            "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_string$aq"
+            "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -222,7 +221,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Int>()
-        val query = "SELECT ${aq}test_int$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_int FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getInt(1))
@@ -237,7 +236,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Double>()
-        val query = "SELECT ${aq}test_double$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_double FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getDouble(1))
@@ -252,8 +251,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Int>()
-        val query =
-            "SELECT ${aq}test_int$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_int$aq"
+        val query = "SELECT test_int FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_int"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getInt(1))
@@ -269,7 +267,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Double>()
         val query =
-            "SELECT ${aq}test_double$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_double$aq"
+            "SELECT test_double FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_double"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getDouble(1))
@@ -284,7 +282,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Int>()
-        val query = "SELECT ${aq}test_int$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_int FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getInt(1))
@@ -299,7 +297,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Double>()
-        val query = "SELECT ${aq}test_double$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_double FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getDouble(1))
@@ -315,7 +313,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Int>()
         val query =
-            "SELECT ${aq}test_double$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_double$aq"
+            "SELECT test_double FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_double"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getInt(1))
@@ -331,7 +329,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Double>()
         val query =
-            "SELECT ${aq}test_double$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY ${aq}test_double$aq"
+            "SELECT test_double FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_double"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getDouble(1))
@@ -347,7 +345,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Timestamp>()
         val query =
-            "SELECT ${aq}test_timestamp$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+            "SELECT test_timestamp FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getTimestamp(1))
@@ -363,7 +361,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Timestamp>()
         val query =
-            "SELECT ${aq}test_timestamp$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+            "SELECT test_timestamp FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getTimestamp(1))
@@ -379,7 +377,7 @@ abstract class TestSimpleFilter {
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Timestamp>()
         val query =
-            "SELECT ${aq}test_timestamp$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+            "SELECT test_timestamp FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getTimestamp(1))
@@ -394,7 +392,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Date>()
-        val query = "SELECT ${aq}test_date$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_date FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getDate(1))
@@ -409,7 +407,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Date>()
-        val query = "SELECT ${aq}test_date$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_date FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getDate(1))
@@ -427,7 +425,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<Date>()
-        val query = "SELECT ${aq}test_date$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_date FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getDate(1))
@@ -445,7 +443,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
-        val query = "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))
@@ -460,7 +458,7 @@ abstract class TestSimpleFilter {
             .map { warehouseBridge.renderFilter(it, table, context, null) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val results = mutableListOf<String>()
-        val query = "SELECT ${aq}test_string$aq FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         val rs = testingServer.resultSetFor(query)
         while (rs.next()) {
             results.add(rs.getString(1))

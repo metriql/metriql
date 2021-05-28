@@ -8,7 +8,6 @@ import org.testng.annotations.BeforeSuite
 class TestSimpleFilterMSSQLServer : TestSimpleFilter() {
     override val warehouseBridge = MSSQLMetriqlBridge
     override val testingServer = TestingEnvironmentMSSQLServer
-    override val aq = warehouseBridge.aliasQuote
 
     @BeforeSuite
     fun setup() {

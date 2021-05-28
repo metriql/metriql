@@ -8,7 +8,6 @@ import org.testng.annotations.BeforeSuite
 class TestSimpleFilterMySQL : TestSimpleFilter() {
     override val warehouseBridge = MySQLMetriqlBridge
     override val testingServer = TestingEnvironmentMySQL
-    override val aq = '`'
 
     @BeforeSuite
     fun setup() {

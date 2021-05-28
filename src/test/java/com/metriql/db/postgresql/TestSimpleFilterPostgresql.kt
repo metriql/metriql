@@ -8,7 +8,6 @@ import org.testng.annotations.BeforeSuite
 class TestSimpleFilterPostgresql : TestSimpleFilter() {
     override val warehouseBridge = PostgresqlMetriqlBridge
     override val testingServer = TestingEnvironmentPostgresql
-    override val aq = '"'
 
     @BeforeSuite
     fun setup() {

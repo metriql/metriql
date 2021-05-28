@@ -8,7 +8,6 @@ import org.testng.annotations.BeforeSuite
 class TestSimpleFilterSnowflake : TestSimpleFilter() {
     override val warehouseBridge = SnowflakeMetriqlBridge
     override val testingServer = TestingEnvironmentSnowflake
-    override val aq = '"'
 
     @BeforeSuite
     fun setup() {
