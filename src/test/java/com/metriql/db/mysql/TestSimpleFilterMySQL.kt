@@ -2,12 +2,13 @@ package com.metriql.db.mysql
 
 import com.metriql.tests.SimpleFilterTests
 import com.metriql.tests.TestSimpleFilter
-import com.metriql.warehouse.mysql.MySQLMetriqlBridge
+import com.metriql.warehouse.mysql.MySQLDataSource
 import org.testng.annotations.BeforeSuite
+import java.time.ZoneOffset
 
 class TestSimpleFilterMySQL : TestSimpleFilter() {
-    override val warehouseBridge = MySQLMetriqlBridge
     override val testingServer = TestingEnvironmentMySQL
+    override val dataSource = MySQLDataSource(testingServer.config)
 
     @BeforeSuite
     fun setup() {
@@ -18,7 +19,9 @@ class TestSimpleFilterMySQL : TestSimpleFilter() {
     override fun populate() {
         testingServer.createConnection().use { connection ->
             // Create table
-            connection.createStatement().execute(
+            val stmt = connection.createStatement()
+            stmt.execute("SET time_zone = 'UTC'")
+            stmt.execute(
                 """
                 CREATE TABLE ${testingServer.getTableReference(table)} (
                     test_int INTEGER,
@@ -40,11 +43,11 @@ class TestSimpleFilterMySQL : TestSimpleFilter() {
                     ${SimpleFilterTests.testDouble[index]},
                     CAST('${SimpleFilterTests.testDate[index]}' AS DATE),
                     ${SimpleFilterTests.testBool[index]},
-                    FROM_UNIXTIME(${SimpleFilterTests.testTimestamp[index].toEpochMilli()}/1000)
+                    FROM_UNIXTIME(${SimpleFilterTests.testTimestamp[index].toEpochSecond(ZoneOffset.UTC)})
                     )
                 """.trimIndent()
             }
-            connection.createStatement().execute(
+            stmt.execute(
                 """
                 INSERT INTO ${testingServer.getTableReference(table)} (
                 test_int,

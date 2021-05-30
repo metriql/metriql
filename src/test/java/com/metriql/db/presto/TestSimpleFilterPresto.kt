@@ -7,12 +7,12 @@ import com.metriql.tests.SimpleFilterTests.testInt
 import com.metriql.tests.SimpleFilterTests.testString
 import com.metriql.tests.SimpleFilterTests.testTimestamp
 import com.metriql.tests.TestSimpleFilter
-import com.metriql.warehouse.presto.PrestoMetriqlBridge
+import com.metriql.warehouse.presto.PrestoDataSource
 import org.testng.annotations.BeforeSuite
 
 class TestSimpleFilterPresto : TestSimpleFilter() {
-    override val warehouseBridge = PrestoMetriqlBridge
     override val testingServer = TestingEnvironmentPresto
+    override val dataSource = PrestoDataSource(testingServer.config)
 
     @BeforeSuite
     fun setup() {

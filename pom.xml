@@ -37,8 +37,10 @@
         <dep.slice.version>0.32</dep.slice.version>
         <air.maven.version>3.3.9</air.maven.version>
 
+        <javalin.version>3.13.7</javalin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.11</junit.version>
+        <odata.version>4.8.0</odata.version>
         <presto.version>0.253</presto.version>
         <redshift.version>2.0.0.4</redshift.version>
         <postgresql.version>42.2.8</postgresql.version>
@@ -56,6 +58,12 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>4.0</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
@@ -101,6 +109,11 @@
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-bigquery</artifactId>
             <version>1.93.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>9.4.40.v20210413</version>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -259,18 +272,18 @@
             </exclusions>
         </dependency>
 
-        <!--        <dependency>-->
-        <!--            <groupId>io.javalin</groupId>-->
-        <!--            <artifactId>javalin</artifactId>-->
-        <!--            <version>3.13.7</version>-->
-        <!--        </dependency>-->
+        <dependency>
+            <groupId>io.javalin</groupId>
+            <artifactId>javalin</artifactId>
+            <version>${javalin.version}</version>
+        </dependency>
 
 
-        <!--        <dependency>-->
-        <!--            <groupId>io.javalin</groupId>-->
-        <!--            <artifactId>javalin-openapi</artifactId>-->
-        <!--            <version>3.13.7</version>-->
-        <!--        </dependency>-->
+        <dependency>
+            <groupId>io.javalin</groupId>
+            <artifactId>javalin-openapi</artifactId>
+            <version>${javalin.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.testng</groupId>

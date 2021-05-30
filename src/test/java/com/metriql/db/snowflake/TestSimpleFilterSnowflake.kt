@@ -2,12 +2,14 @@ package com.metriql.db.snowflake
 
 import com.metriql.tests.SimpleFilterTests
 import com.metriql.tests.TestSimpleFilter
-import com.metriql.warehouse.snowflake.SnowflakeMetriqlBridge
+import com.metriql.warehouse.snowflake.SnowflakeDataSource
 import org.testng.annotations.BeforeSuite
 
 class TestSimpleFilterSnowflake : TestSimpleFilter() {
-    override val warehouseBridge = SnowflakeMetriqlBridge
     override val testingServer = TestingEnvironmentSnowflake
+    override val dataSource = SnowflakeDataSource(testingServer.config)
+
+    override val doubleType = "SMALLINT"
 
     @BeforeSuite
     fun setup() {
@@ -21,12 +23,12 @@ class TestSimpleFilterSnowflake : TestSimpleFilter() {
             it.createStatement().execute(
                 """
                 CREATE TABLE ${testingServer.getTableReference(table)} (
-                    "test_int" INTEGER,
-                    "test_string" VARCHAR,
-                    "test_double" DOUBLE,
-                    "test_date" DATE,
-                    "test_bool" BOOLEAN,
-                    "test_timestamp" TIMESTAMP_TZ
+                    test_int INTEGER,
+                    test_string VARCHAR,
+                    test_double DOUBLE,
+                    test_date DATE,
+                    test_bool BOOLEAN,
+                    test_timestamp TIMESTAMP_TZ
                 )
                 """.trimIndent()
             )

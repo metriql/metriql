@@ -9,7 +9,6 @@ import com.google.cloud.bigquery.QueryJobConfiguration
 import com.google.cloud.bigquery.StandardSQLTypeName
 import com.metriql.db.TestingServer
 import com.metriql.util.JsonHelper
-import com.metriql.util.`try?`
 import com.metriql.warehouse.bigquery.BigQueryWarehouse
 import com.mockrunner.mock.jdbc.MockResultSet
 import net.snowflake.client.jdbc.internal.amazonaws.util.StringInputStream
@@ -45,7 +44,7 @@ object TestingEnvironmentBigQuery : TestingServer<Unit, BigQuery>() {
     @Synchronized
     override fun init() {
         // delete if exists
-        `try?` { bigQuery.delete(DatasetId.of(config.project, config.dataset)) }
+        bigQuery.delete(DatasetId.of(config.project, config.dataset), BigQuery.DatasetDeleteOption.deleteContents())
         bigQuery.create(DatasetInfo.newBuilder(config.project, config.dataset).build())
     }
 

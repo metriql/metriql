@@ -10,13 +10,14 @@ import com.google.cloud.bigquery.TableInfo
 import com.metriql.tests.SimpleFilterTests
 import com.metriql.tests.TestSimpleFilter
 import com.metriql.util.`try?`
-import com.metriql.warehouse.bigquery.BigQueryMetriqlBridge
+import com.metriql.warehouse.bigquery.BigQueryDataSource
 import org.testng.annotations.BeforeSuite
 import java.util.UUID
 
 class TestSimpleFilterBigQuery : TestSimpleFilter() {
-    override val warehouseBridge = BigQueryMetriqlBridge
     override val testingServer = TestingEnvironmentBigQuery
+    override val doubleType = "FLOAT64"
+    override val dataSource = BigQueryDataSource(testingServer.config)
 
     @BeforeSuite
     fun setup() {

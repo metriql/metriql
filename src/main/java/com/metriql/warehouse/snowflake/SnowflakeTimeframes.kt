@@ -64,7 +64,7 @@ class SnowflakeTimeframes : WarehouseTimeframes {
     )
 
     override val timePostOperations: Map<TimePostOperation, String> = mapOf(
-        TimePostOperation.MINUTE to "CAST(extract(hour FROM %s) || ':' || extract(minute FROM %s) || ':00' AS TIME)",
+        TimePostOperation.MINUTE to "CAST(extract(hour FROM %1\$s) || ':' || extract(minute FROM %1\$s) || ':00' AS TIME)",
         TimePostOperation.HOUR to "CAST(lpad(cast(extract(hour FROM %s) as text), 2, '0')||':00' AS TIME)"
     )
 }

@@ -216,6 +216,7 @@ class BigQueryQueryTask(
                     }
                     null, Field.Mode.NULLABLE, Field.Mode.REQUIRED -> {
                         when (field.type) {
+                            LegacySQLTypeName.INTEGER -> listOf(row.longValue.toInt())
                             LegacySQLTypeName.NUMERIC, LegacySQLTypeName.INTEGER -> listOf(row.numericValue)
                             LegacySQLTypeName.FLOAT -> listOf(row.doubleValue)
                             LegacySQLTypeName.BOOLEAN -> listOf(row.booleanValue)

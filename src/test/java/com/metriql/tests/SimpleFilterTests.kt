@@ -11,10 +11,10 @@ import com.metriql.warehouse.spi.filter.DateOperatorType
 import com.metriql.warehouse.spi.filter.NumberOperatorType
 import com.metriql.warehouse.spi.filter.StringOperatorType
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
-import java.sql.Date
-import java.sql.Timestamp
-import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 object SimpleFilterTests {
 
@@ -24,7 +24,7 @@ object SimpleFilterTests {
     val testBool = listOf(false, true, true, true, true, true, true, true, true, true)
     val testDouble = testInt.map { it * 1.0 }
     val testDate = testInt.map { LocalDate.of(2000, 1, it + 1) }
-    val testTimestamp = testInt.map { Instant.ofEpochMilli((it * 1000 * 60 * 60).toLong()) }
+    val testTimestamp = testInt.map { LocalDateTime.ofEpochSecond((it * 60 * 60).toLong(), 0, ZoneOffset.UTC) }
 
     interface OperatorTests {
         fun filter(modelName: ModelName): List<ReportFilter>
@@ -111,7 +111,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<String> = testString
+            override val result: List<String> = listOf(testString[0])
         },
 
         IS_NOT_SET {
@@ -130,7 +130,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<String> = listOf()
+            override val result = null
         };
     }
 
@@ -165,12 +165,22 @@ object SimpleFilterTests {
                             listOf(
                                 MetricFilter.Filter(FieldType.STRING, StringOperatorType.NOT_EQUALS, "alpha")
                             )
-                        )
+                        ),
+                    ),
+                    ReportFilter(
+                        ReportFilter.Type.METRIC_FILTER,
+                        MetricFilter(
+                            MetricFilter.MetricType.DIMENSION,
+                            ReportDimension("test_string", modelName, null, null),
+                            listOf(
+                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.EQUALS, "bravo")
+                            )
+                        ),
                     )
                 )
             }
 
-            override val result: List<String> = testString.filter { it != "alpha" }
+            override val result: List<String> = listOf("bravo")
         },
 
         CONTAINS {
@@ -182,14 +192,14 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.CONTAINS, "lie")
+                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.CONTAINS, "liet")
                             )
                         )
                     )
                 )
             }
 
-            override val result: List<String> = listOf("charlie", "juliett")
+            override val result: List<String> = listOf("juliett")
         },
 
         STARTS_WITH {
@@ -239,14 +249,14 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.IN, listOf("alpha", "bravo"))
+                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.IN, listOf("alpha"))
                             )
                         )
                     )
                 )
             }
 
-            override val result: List<String> = listOf("alpha", "bravo")
+            override val result: List<String> = listOf("alpha")
         },
 
         EQUALS_MULTI {
@@ -258,14 +268,14 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.IN, listOf("alpha", "delta"))
+                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.IN, listOf("alpha"))
                             )
                         )
                     )
                 )
             }
 
-            override val result: List<String> = listOf("alpha", "delta")
+            override val result: List<String> = listOf("alpha")
         },
     }
 
@@ -286,7 +296,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Int> = listOf(9)
+            override val result = listOf(9.0)
         }
     }
 
@@ -307,7 +317,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Int> = listOf(1)
+            override val result = listOf(1.0)
         },
 
         EQUALS_DOUBLE {
@@ -326,7 +336,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Double> = listOf(1.0)
+            override val result = listOf(1.0)
         },
 
         GREATER_THAN_INT {
@@ -345,7 +355,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Int> = testInt.minus(0)
+            override val result = listOf(1.0)
         },
 
         GREATER_THAN_DOUBLE {
@@ -364,7 +374,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Double> = testDouble.minus(0.0)
+            override val result = listOf(1.0)
         },
 
         LESS_THAN_INT {
@@ -383,7 +393,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Int> = listOf(0)
+            override val result = listOf(0.0)
         },
 
         LESS_THAN_DOUBLE {
@@ -402,7 +412,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Double> = listOf(0.0)
+            override val result = listOf(0.0)
         },
 
         GREATER_THAN_AND_LESS_THAN_INT {
@@ -424,14 +434,14 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.LESS_THAN, 6)
+                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.LESS_THAN, 5)
                             )
                         )
                     )
                 )
             }
 
-            override val result: List<Int> = listOf(4, 5)
+            override val result = listOf(4.0)
         },
 
         GREATER_THAN_AND_LESS_THAN_DOUBLE {
@@ -453,14 +463,14 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_double", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DOUBLE, NumberOperatorType.LESS_THAN, 6.0)
+                                MetricFilter.Filter(FieldType.DOUBLE, NumberOperatorType.LESS_THAN, 5.0)
                             )
                         )
                     )
                 )
             }
 
-            override val result: List<Double> = listOf(4.0, 5.0)
+            override val result = listOf(4.0)
         };
     }
 
@@ -477,7 +487,7 @@ object SimpleFilterTests {
                                 MetricFilter.Filter(
                                     FieldType.TIMESTAMP,
                                     TimestampOperatorType.GREATER_THAN,
-                                    testTimestamp.last().toString()
+                                    testTimestamp.last().format(DateTimeFormatter.ISO_DATE_TIME)
                                 )
                             )
                         )
@@ -485,7 +495,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Timestamp> = listOf()
+            override val result = null
         },
 
         LESS_THAN {
@@ -508,7 +518,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Timestamp> = listOf(Timestamp.from(testTimestamp.first()))
+            override val result: List<LocalDateTime> = listOf(testTimestamp.first())
         },
 
         GREATER_THAN_AND_LESS_THAN {
@@ -545,7 +555,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Timestamp> = listOf(Timestamp.from(testTimestamp[4]))
+            override val result = listOf(testTimestamp[4])
         },
     }
 
@@ -566,7 +576,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Date> = listOf()
+            override val result = null
         },
 
         LESS_THAN {
@@ -585,7 +595,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Date> = listOf(Date.valueOf(testDate.first()))
+            override val result = listOf(testDate.first())
         },
 
         GREATER_THAN_AND_LESS_THAN {
@@ -618,7 +628,7 @@ object SimpleFilterTests {
                 )
             }
 
-            override val result: List<Date> = listOf(Date.valueOf(testDate[4]))
+            override val result = listOf(testDate[4])
         };
     }
 }

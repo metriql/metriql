@@ -2,12 +2,13 @@ package com.metriql.db.mssqlserver
 
 import com.metriql.tests.SimpleFilterTests
 import com.metriql.tests.TestSimpleFilter
-import com.metriql.warehouse.mssqlserver.MSSQLMetriqlBridge
+import com.metriql.warehouse.mssqlserver.MSSQLDataSource
 import org.testng.annotations.BeforeSuite
+import java.time.ZoneOffset
 
 class TestSimpleFilterMSSQLServer : TestSimpleFilter() {
-    override val warehouseBridge = MSSQLMetriqlBridge
     override val testingServer = TestingEnvironmentMSSQLServer
+    override val dataSource = MSSQLDataSource(testingServer.config)
 
     @BeforeSuite
     fun setup() {
@@ -40,7 +41,7 @@ class TestSimpleFilterMSSQLServer : TestSimpleFilter() {
                     ${SimpleFilterTests.testDouble[index]},
                     CAST('${SimpleFilterTests.testDate[index]}' AS DATE),
                     ${if (SimpleFilterTests.testBool[index]) 1 else 0},
-                    DATEADD(s, ${SimpleFilterTests.testTimestamp[index].toEpochMilli() / 1000}, '19700101')
+                    DATEADD(s, ${SimpleFilterTests.testTimestamp[index].toEpochSecond(ZoneOffset.UTC)}, '19700101')
                     )
                 """.trimIndent()
             }

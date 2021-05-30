@@ -2,12 +2,12 @@ package com.metriql.db.postgresql
 
 import com.metriql.tests.SimpleFilterTests
 import com.metriql.tests.TestSimpleFilter
-import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
+import com.metriql.warehouse.postgresql.PostgresqlDataSource
 import org.testng.annotations.BeforeSuite
 
 class TestSimpleFilterPostgresql : TestSimpleFilter() {
-    override val warehouseBridge = PostgresqlMetriqlBridge
     override val testingServer = TestingEnvironmentPostgresql
+    override val dataSource = PostgresqlDataSource(testingServer.config)
 
     @BeforeSuite
     fun setup() {
@@ -17,8 +17,11 @@ class TestSimpleFilterPostgresql : TestSimpleFilter() {
 
     override fun populate() {
         testingServer.createConnection().use { connection ->
+
             // Create table
-            connection.createStatement().execute(
+            val stmt = connection.createStatement()
+            stmt.execute("SET TIME ZONE 'UTC'")
+            stmt.execute(
                 """
                 CREATE TABLE ${testingServer.getTableReference(table)} (
                     test_int INTEGER,
@@ -43,7 +46,7 @@ class TestSimpleFilterPostgresql : TestSimpleFilter() {
                     )
                 """.trimIndent()
             }
-            connection.createStatement().execute(
+            stmt.execute(
                 """
                 INSERT INTO ${testingServer.getTableReference(table)} (
                 test_int,

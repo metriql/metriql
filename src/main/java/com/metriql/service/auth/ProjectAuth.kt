@@ -15,7 +15,7 @@ open class ProjectAuth(
     fun warehouseAuth() = WarehouseAuth(projectId, userId, timezone)
 
     companion object {
-        fun systemUser(projectId: Int, userId: Int = -1): ProjectAuth {
+        fun systemUser(projectId: Int, userId: Int = -1, timezone: ZoneId? = null): ProjectAuth {
             return ProjectAuth(
                 userId,
                 projectId,
@@ -23,12 +23,12 @@ open class ProjectAuth(
                 isSuperuser = true,
                 email = null,
                 permissions = null,
-                timezone = null
+                timezone = timezone
             )
         }
 
-        fun singleProject(): ProjectAuth {
-            return systemUser(-1)
+        fun singleProject(timezone: ZoneId? = null): ProjectAuth {
+            return systemUser(-1, timezone = timezone)
         }
     }
 }

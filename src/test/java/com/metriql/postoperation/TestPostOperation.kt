@@ -1,7 +1,8 @@
 package com.metriql.postoperation
 
 import com.metriql.db.TestingServer
-import com.metriql.util.`try?`
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.function.DatePostOperation
 import com.metriql.warehouse.spi.function.TimePostOperation
@@ -9,12 +10,15 @@ import com.metriql.warehouse.spi.function.TimestampPostOperation
 import org.testng.annotations.Test
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 abstract class TestPostOperation {
     abstract val testingServer: TestingServer<*, *>
-    abstract val warehouseBridge: WarehouseMetriqlBridge
+    abstract val dataSource: DataSource
 
     val timestamp = Instant.ofEpochSecond(1286705410)
     val date = LocalDate.of(2010, 10, 10)
@@ -24,6 +28,29 @@ abstract class TestPostOperation {
     abstract val dateColumn: String
     abstract val timeColumn: String
 
+    protected val warehouseBridge: WarehouseMetriqlBridge
+        get() = dataSource.warehouse.bridge
+
+    private fun runQuery(query: String): List<Any?>? {
+        val task = dataSource.createQueryTask(
+            ProjectAuth.singleProject(ZoneId.of("UTC")).warehouseAuth(),
+            query,
+            null,
+            null,
+            null,
+            false
+        ).runAndWaitForResult()
+        if (task.error != null) {
+            fail("Error running query: $query \n ${task.error}")
+        }
+
+        return if (task.result?.isEmpty() == true) {
+            null
+        } else {
+            task.result?.get(0)
+        }
+    }
+
     @Test
     open fun `test timestamp post operation hour`() {
         val template = warehouseBridge.timeframes.timestampPostOperations[TimestampPostOperation.HOUR]
@@ -32,10 +59,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getTimestamp(1)
-        assertEquals(result.toInstant().toString(), "2010-10-10T10:00:00Z")
+        assertEquals(runQuery(query)?.get(0), LocalDateTime.parse("2010-10-10T10:00"))
     }
 
     @Test
@@ -46,10 +70,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = `try?` { rs.getDate(1).toLocalDate().toString() } ?: LocalDate.parse(rs.getString(1)).toString()
-        assertEquals("2010-10-10", result)
+        assertEquals(LocalDate.parse("2010-10-10"), runQuery(query)?.get(0))
     }
 
     @Test
@@ -60,10 +81,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = `try?` { rs.getDate(1).toLocalDate().toString() } ?: LocalDate.parse(rs.getString(1)).toString()
-        assertEquals("2010-10-10", result)
+        assertEquals(LocalDate.parse("2010-10-10"), runQuery(query)?.get(0))
     }
 
     @Test
@@ -74,10 +92,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = `try?` { rs.getDate(1).toLocalDate().toString() } ?: LocalDate.parse(rs.getString(1)).toString()
-        assertEquals("2010-10-01", result)
+        assertEquals(LocalDate.parse("2010-10-01"), runQuery(query)?.get(0))
     }
 
     @Test
@@ -88,10 +103,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = `try?` { rs.getDate(1).toLocalDate().toString() } ?: LocalDate.parse(rs.getString(1)).toString()
-        assertEquals("2010-01-01", result)
+        assertEquals(LocalDate.parse("2010-01-01"), runQuery(query)?.get(0))
     }
 
     @Test
@@ -102,10 +114,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(LocalTime.parse(result), LocalTime.of(10, 0, 0))
+        assertEquals(runQuery(query)?.get(0), LocalTime.of(10, 0, 0))
     }
 
     @Test
@@ -116,10 +125,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(result, "Sunday")
+        assertEquals(runQuery(query)?.get(0), "Sunday")
     }
 
     @Test
@@ -130,10 +136,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getInt(1)
-        assertEquals(result, 10)
+        assertEquals((runQuery(query)?.get(0) as? Number)?.toInt(), 10)
     }
 
     @Test
@@ -144,10 +147,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getInt(1)
-        assertEquals(40, result)
+        assertEquals(40, (runQuery(query)?.get(0) as? Number)?.toInt())
     }
 
     @Test
@@ -158,10 +158,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(result, "October")
+        assertEquals(runQuery(query)?.get(0), "October")
     }
 
     @Test
@@ -172,10 +169,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timestampColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(result, "Q4")
+        assertEquals(runQuery(query)?.get(0), "Q4")
     }
 
     @Test
@@ -186,10 +180,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = `try?` { rs.getDate(1).toLocalDate().toString() } ?: LocalDate.parse(rs.getString(1)).toString()
-        assertEquals("2010-10-04", result)
+        assertEquals(LocalDate.parse("2010-10-04"), runQuery(query)?.get(0))
     }
 
     @Test
@@ -200,10 +191,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = `try?` { rs.getDate(1).toLocalDate().toString() } ?: LocalDate.parse(rs.getString(1)).toString()
-        assertEquals("2010-10-01", result)
+        assertEquals(LocalDate.parse("2010-10-01"), runQuery(query)?.get(0))
     }
 
     @Test
@@ -214,10 +202,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = `try?` { rs.getDate(1).toLocalDate().toString() } ?: LocalDate.parse(rs.getString(1)).toString()
-        assertEquals("2010-01-01", result)
+        assertEquals(LocalDate.parse("2010-01-01"), runQuery(query)?.get(0))
     }
 
     @Test
@@ -228,10 +213,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(result, "Sunday")
+        assertEquals(runQuery(query)?.get(0), "Sunday")
     }
 
     @Test
@@ -242,10 +224,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getInt(1)
-        assertEquals(result, 10)
+        assertEquals((runQuery(query)?.get(0) as? Number)?.toInt(), 10)
     }
 
     @Test
@@ -256,10 +235,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getInt(1)
-        assertEquals(40, result)
+        assertEquals(40, (runQuery(query)?.get(0) as? Number)?.toInt())
     }
 
     @Test
@@ -270,10 +246,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(result, "October")
+        assertEquals(runQuery(query)?.get(0), "October")
     }
 
     @Test
@@ -284,10 +257,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, dateColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(result, "Q4")
+        assertEquals(runQuery(query)?.get(0), "Q4")
     }
 
     @Test
@@ -298,10 +268,7 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timeColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(LocalTime.parse(result), LocalTime.of(11, 12, 0))
+        assertEquals(runQuery(query)?.get(0), LocalTime.of(11, 12, 0))
     }
 
     @Test
@@ -312,9 +279,6 @@ abstract class TestPostOperation {
             return
         }
         val query = "SELECT ${String.format(template, timeColumn)}"
-        val rs = testingServer.resultSetFor(query)
-        rs.next()
-        val result = rs.getString(1)
-        assertEquals(LocalTime.parse(result), LocalTime.of(11, 0, 0))
+        assertEquals(runQuery(query)?.get(0), LocalTime.of(11, 0, 0))
     }
 }

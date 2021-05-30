@@ -1,7 +1,7 @@
 package com.metriql.db.bigquery
 
 import com.metriql.postoperation.TestPostOperation
-import com.metriql.warehouse.bigquery.BigQueryMetriqlBridge
+import com.metriql.warehouse.bigquery.BigQueryDataSource
 import com.metriql.warehouse.spi.function.TimestampPostOperation
 import org.testng.annotations.Test
 import java.time.Instant
@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 
 class TestPostOperationBigQuery : TestPostOperation() {
     override val testingServer = TestingEnvironmentBigQuery
-    override val warehouseBridge = BigQueryMetriqlBridge
+    override val dataSource = BigQueryDataSource(testingServer.config)
 
     override val timestampColumn = "CAST('$timestamp' AS TIMESTAMP)"
     override val dateColumn = "CAST('${date.format(DateTimeFormatter.ISO_DATE)}' AS DATE)"
@@ -27,6 +27,7 @@ class TestPostOperationBigQuery : TestPostOperation() {
         val rs = testingServer.resultSetFor(query)
         rs.next()
         val result = rs.getString(1)
+
         assertEquals(Instant.parse(result).toString(), "2010-10-10T10:00:00Z")
     }
 }
