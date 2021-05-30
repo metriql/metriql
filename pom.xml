@@ -15,6 +15,13 @@
     <artifactId>metriql</artifactId>
     <version>0.1-SNAPSHOT</version>
 
+    <scm>
+        <connection>scm:git:https://github.com/metriql/metriql.git</connection>
+        <developerConnection>scm:git:https://github.com/metriql/metriql.git</developerConnection>
+        <url>https://github.com/metriql/metriql</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <properties>
         <project.scm.id>github</project.scm.id>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -658,13 +665,6 @@
             </plugin>
         </plugins>
     </build>
-
-    <scm>
-        <connection>scm:git:https://github.com/metriql/metriql.git</connection>
-        <developerConnection>scm:git:https://github.com/metriql/metriql.git</developerConnection>
-        <url>https://github.com/metriql/metriql</url>
-        <tag>HEAD</tag>
-    </scm>
 
     <repositories>
         <repository>
