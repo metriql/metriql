@@ -34,6 +34,6 @@ jobs:
       - id: upload-binary-to-google-storage
         uses: google-github-actions/upload-cloud-storage@main
         with:
+          credentials: ${{ secrets.GCP_SERVICE_ACCOUNT_P12 }}
           path: target
           destination: cdn.rakam.io/metriql
-          credentials: ${{ secrets.GCP_SERVICE_ACCOUNT_P12 }}
