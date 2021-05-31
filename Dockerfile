@@ -4,7 +4,7 @@ FROM maven:3.6.1-jdk-8-alpine AS MAVEN_BUILD
 COPY ./ ./
 
 # package our application code, we optimize with extra JVM flags and disable tests because Maven throws java.lang.OutOfMemoryError: GC overhead limit exceeded
-RUN export MAVEN_OPTS="-XX:MetaspaceSize=512M -XX:MaxMetaspaceSize=1024M -XX:-UseGCOverheadLimit -XX:PermSize=512m" && ./mvnw package -Dmaven.test.skip=true
+RUN export MAVEN_OPTS="-Xmx2500m -XX:MetaspaceSize=512M -XX:MaxMetaspaceSize=1024M -XX:-UseGCOverheadLimit -XX:PermSize=512m" && ./mvnw package -Dmaven.test.skip=true
 
 # the second stage of our build will use open jdk 8 on alpine 3.9
 FROM openjdk:8-jre-alpine3.9

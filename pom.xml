@@ -602,7 +602,6 @@
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
-                    <fork>true</fork>
                     <meminitial>1212m</meminitial>
                 </configuration>
                 <executions>
