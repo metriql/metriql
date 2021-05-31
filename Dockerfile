@@ -1,4 +1,4 @@
-FROM openjdk:8 AS MAVEN_BUILD
+FROM adoptopenjdk:8 AS MAVEN_BUILD
 
 # copy the pom and src code to the container
 COPY ./ ./
