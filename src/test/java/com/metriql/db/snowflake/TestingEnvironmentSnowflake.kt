@@ -15,7 +15,7 @@ object TestingEnvironmentSnowflake : TestingServer<Unit, Connection>() {
 
     override val config = JsonHelper.read(
         System.getenv("METRIQL_TEST_SNOWFLAKE_CREDENTIALS")
-            ?: throw IllegalStateException("METRIQL_SNOWFLAKE_CREDENTIALS environment variable is required to run the tests"),
+            ?: throw IllegalStateException("METRIQL_TEST_SNOWFLAKE_CREDENTIALS environment variable is required to run the tests"),
         SnowflakeConfig::class.java
     )
 

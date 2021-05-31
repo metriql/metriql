@@ -23,3 +23,6 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
+        env:
+          METRIQL_TEST_BIGQUERY_CREDENTIALS: ${{ secrets.METRIQL_TEST_BIGQUERY_CREDENTIALS }}
+          METRIQL_TEST_SNOWFLAKE_CREDENTIALS: ${{ secrets.METRIQL_TEST_SNOWFLAKE_CREDENTIALS }}
