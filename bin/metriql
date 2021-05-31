@@ -1,3 +1,3 @@
-[ ! -d "$(dirname "$0")/lib" ] && echo "Directory $(dirname "$0")/lib doesn't exists."; exit
+[ ! -d "$(dirname "$0")/../lib" ] &&  { echo "Directory `lib` doesn't exists."; exit 1; }
 
-java -cp "$(dirname "$0")/lib/*" com.metriql.ServiceStarterKt "$@"
+java -cp "$(dirname "$0")/../lib/*" com.metriql.ServiceStarterKt "$@"

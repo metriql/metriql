@@ -535,8 +535,7 @@
                 <configuration>
                     <nowarn>true</nowarn>
                     <jvmTarget>1.8</jvmTarget>
-                    <args>
-                    </args>
+                    <args></args>
                 </configuration>
             </plugin>
 
@@ -604,8 +603,7 @@
                     <source>1.8</source>
                     <target>1.8</target>
                     <fork>true</fork>
-                    <meminitial>712m</meminitial>
-                    <maxmem>1248m</maxmem>
+                    <meminitial>1212m</meminitial>
                 </configuration>
                 <executions>
                     <execution>
