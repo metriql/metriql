@@ -55,6 +55,7 @@ object TestingEnvironmentPresto : TestingServer<Unit, TrinoConnection>() {
             val stmt = it.createStatement()
             // CASCADE is not yet supported for DROP SCHEMA
             // remove all tables at once
+            stmt.executeUpdate("DROP TABLE IF EXISTS ${config.schema}.filter_tests")
             stmt.executeUpdate("DROP TABLE IF EXISTS ${config.schema}._table")
             stmt.executeUpdate("DROP TABLE IF EXISTS ${config.schema}._table2")
             stmt.executeUpdate("DROP SCHEMA IF EXISTS ${config.schema}")
