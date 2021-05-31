@@ -27,7 +27,7 @@
         <dep.log4j2.version>2.12.1</dep.log4j2.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <air.version>200</air.version>
-        <presto.version>0.227</presto.version>
+        <trino.version>357</trino.version>
         <testcontainers.version>1.15.3</testcontainers.version>
         <dep.kotlin.version>1.5.0</dep.kotlin.version>
         <check.skip-dependency>false</check.skip-dependency>
@@ -390,9 +390,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.facebook.presto</groupId>
-            <artifactId>presto-jdbc</artifactId>
-            <version>${presto.version}</version>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-jdbc</artifactId>
+            <version>${trino.version}</version>
         </dependency>
 
         <dependency>

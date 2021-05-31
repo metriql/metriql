@@ -1,16 +1,16 @@
 package com.metriql.db.presto
 
-import com.facebook.presto.jdbc.PrestoConnection
 import com.metriql.HostPortProvider
 import com.metriql.db.TestingServer
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.presto.PrestoWarehouse
+import io.trino.jdbc.TrinoConnection
 import org.testcontainers.containers.TrinoContainer
 import java.sql.DriverManager
 import java.sql.ResultSet
 import java.util.Properties
 
-object TestingEnvironmentPresto : TestingServer<Unit, PrestoConnection>() {
+object TestingEnvironmentPresto : TestingServer<Unit, TrinoConnection>() {
     private const val PRESTO_HOST = "127.0.0.1"
     private const val PRESTO_CATALOG = "memory"
     private const val PRESTO_USER = "metriql_user"
@@ -40,13 +40,13 @@ object TestingEnvironmentPresto : TestingServer<Unit, PrestoConnection>() {
         return "${ValidationUtil.quoteIdentifier(config.schema)}.${ValidationUtil.quoteIdentifier(tableName)}"
     }
 
-    override fun createConnection(): PrestoConnection {
+    override fun createConnection(): TrinoConnection {
         val properties = Properties().apply {
             setProperty("SSL", "false")
         }
 
         val connection = DriverManager.getConnection(getJdbcUrl(dockerContainer::getMappedPort), properties)
-        return connection.unwrap(PrestoConnection::class.java)
+        return connection.unwrap(TrinoConnection::class.java)
     }
 
     @Synchronized

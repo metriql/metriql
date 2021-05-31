@@ -1,13 +1,13 @@
 package com.metriql.warehouse.presto
 
-import com.facebook.presto.jdbc.PrestoDriver
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.spi.Warehouse
+import io.trino.jdbc.TrinoDriver
 import java.sql.DriverManager
 
 object PrestoWarehouse : Warehouse<PrestoWarehouse.PrestoConfig> {
     init {
-        DriverManager.registerDriver(PrestoDriver())
+        DriverManager.registerDriver(TrinoDriver())
     }
 
     override val names = Warehouse.Name("presto", "presto")
@@ -28,6 +28,7 @@ object PrestoWarehouse : Warehouse<PrestoWarehouse.PrestoConfig> {
         val connectionParameters: Map<String, String>? = null
     ) : Warehouse.Config {
         enum class Method { none, ldap, kerberos }
+
         override fun toString(): String = "$catalog - $schema"
         override fun stripPassword() = this.copy(password = "")
         override fun isValid() = ValidationUtil.checkForPrivateIPAccess(host) == null

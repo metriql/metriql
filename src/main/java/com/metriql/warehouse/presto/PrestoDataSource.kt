@@ -1,10 +1,10 @@
 package com.metriql.warehouse.presto
 
-import com.facebook.presto.jdbc.PrestoConnection
 import com.metriql.db.FieldType
 import com.metriql.report.QueryTask
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.WarehouseAuth
+import io.trino.jdbc.TrinoConnection
 import java.util.Properties
 
 class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBCWarehouse(
@@ -20,7 +20,7 @@ class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBC
     override val dataSourceProperties: Properties by lazy {
         val properties = Properties()
         properties["jdbcUrl"] = "jdbc:presto://${config.host}:${config.port}/${config.catalog}/${config.schema}"
-        properties["driverClassName"] = "com.facebook.presto.jdbc.PrestoDriver"
+        properties["driverClassName"] = "io.trino.jdbc.TrinoDriver"
 
         properties["dataSource.user"] = config.user
         properties["dataSource.password"] = config.password
@@ -79,7 +79,7 @@ class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBC
     ): QueryTask {
         val connection = openConnection(auth.timezone)
         // Set timezone here
-        if (connection is PrestoConnection) {
+        if (connection is TrinoConnection) {
             auth.timezone?.let { timeZone -> connection.timeZoneId = timeZone.id }
         }
 
