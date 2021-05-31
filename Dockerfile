@@ -3,8 +3,8 @@ FROM maven:3.6.1-jdk-8-alpine AS MAVEN_BUILD
 # copy the pom and src code to the container
 COPY ./ ./
 
-# package our application code
-RUN ./mvnw clean package
+# package our application code, don't run tests since Maven throws java.lang.OutOfMemoryError: GC overhead limit exceeded
+RUN ./mvnw package -Dmaven.test.skip=true
 
 # the second stage of our build will use open jdk 8 on alpine 3.9
 FROM openjdk:8-jre-alpine3.9
