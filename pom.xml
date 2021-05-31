@@ -11,13 +11,13 @@
 
     <groupId>com.metriql</groupId>
     <artifactId>metriql</artifactId>
-    <version>0.3-SNAPSHOT</version>
+    <version>0.3</version>
 
     <scm>
         <connection>scm:git:https://github.com/metriql/metriql.git</connection>
         <developerConnection>scm:git:https://github.com/metriql/metriql.git</developerConnection>
         <url>https://github.com/metriql/metriql</url>
-        <tag>HEAD</tag>
+        <tag>metriql-0.3</tag>
     </scm>
 
     <properties>
@@ -535,7 +535,7 @@
                 <configuration>
                     <nowarn>true</nowarn>
                     <jvmTarget>1.8</jvmTarget>
-                    <args></args>
+                    <args />
                 </configuration>
             </plugin>
 
