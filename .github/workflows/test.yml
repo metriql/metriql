@@ -22,15 +22,6 @@ jobs:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
-      - name: Test env
-        run: |
-          echo $TEST_GITHUB_TOKEN
-          echo $METRIQL_TEST_BIGQUERY_CREDENTIALS
-          echo $INVALID
-        env:
-          TEST_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          METRIQL_TEST_BIGQUERY_CREDENTIALS: ${{ secrets.METRIQL_TEST_BIGQUERY_CREDENTIALS }}
-          METRIQL_TEST_SNOWFLAKE_CREDENTIALS: ${{ secrets.METRIQL_TEST_SNOWFLAKE_CREDENTIALS }}
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
         env:
