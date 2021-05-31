@@ -11,7 +11,7 @@
 
     <groupId>com.metriql</groupId>
     <artifactId>metriql</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3-SNAPSHOT</version>
 
     <scm>
         <connection>scm:git:https://github.com/metriql/metriql.git</connection>
