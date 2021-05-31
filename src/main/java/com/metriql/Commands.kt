@@ -100,8 +100,12 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                     file.readBytes()
                 }
             }
+            null -> {
+                echo("Manifest file should be an URI with one of http, https, and file schema. Example: file:/etc/manifest.json")
+                null
+            }
             else -> {
-                echo("Scheme ${manifestLocation.scheme} is not supported.", err = true)
+                echo("Manifest file scheme ${manifestLocation.scheme} is not supported. $manifestJson", err = true)
                 null
             }
         }

@@ -21,6 +21,7 @@ object TestingEnvironmentMSSQLServer : TestingServer<Unit, Connection>() {
             withPassword(MSSQL_PASSWORD)
         }
         server.acceptLicense()
+        server.start()
 
         server
     }
