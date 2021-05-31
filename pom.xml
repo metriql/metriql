@@ -25,7 +25,7 @@
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
         <dep.jackson.version>2.10.3</dep.jackson.version>
         <dep.log4j2.version>2.12.1</dep.log4j2.version>
-        <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
+        <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <air.version>200</air.version>
         <trino.version>357</trino.version>
         <testcontainers.version>1.15.3</testcontainers.version>
@@ -603,14 +603,9 @@
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
-
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>com.google.auto.service</groupId>
-                            <artifactId>auto-service</artifactId>
-                            <version>1.0</version>
-                        </path>
-                    </annotationProcessorPaths>
+                    <fork>true</fork>
+                    <meminitial>712m</meminitial>
+                    <maxmem>1248m</maxmem>
                 </configuration>
                 <executions>
                     <execution>
