@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: e2e-tests
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
