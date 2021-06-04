@@ -6,6 +6,9 @@ You can learn more about metriql from [here](https://metriql.com/introduction/in
 
 This is the core repository of the [metriql](http://metriql.com) project. It includes the following components:
 
-1. [metriql CLI](https://metriql.com/metriql-cli/cli-overview)
-2. [REST API](https://metriql.com/integrations/rest-api)
-3. [JDBC Driver](https://metriql.com/integrations/jdbc-driver)
+* [metriql CLI](https://metriql.com/metriql-cli/cli-overview)
+* [REST API](https://metriql.com/integrations/rest-api)
+* [JDBC Driver](https://metriql.com/integrations/jdbc-driver)
+* [BI tools](https://metriql.com/integrations/bi-tools)
+* [Embedded Applications](https://metriql.com/integrations/embedded)
+
