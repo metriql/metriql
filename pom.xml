@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-<!--        <parent>-->
-<!--            <groupId>io.rakam</groupId>-->
-<!--            <artifactId>rakam-root</artifactId>-->
-<!--            <version>0.1-SNAPSHOT</version>-->
-<!--            <relativePath>../pom.xml</relativePath>-->
-<!--        </parent>-->
+    <!--        <parent>-->
+    <!--            <groupId>io.rakam</groupId>-->
+    <!--            <artifactId>rakam-root</artifactId>-->
+    <!--            <version>0.1-SNAPSHOT</version>-->
+    <!--            <relativePath>../pom.xml</relativePath>-->
+    <!--        </parent>-->
 
     <groupId>com.metriql</groupId>
     <artifactId>metriql</artifactId>
@@ -35,7 +36,6 @@
         <dep.jinja.version>2.5.7</dep.jinja.version>
 
         <air.main.basedir>${project.basedir}</air.main.basedir>
-        <air.java.version>1.8.0-60</air.java.version>
         <air.check.skip-extended>true</air.check.skip-extended>
         <air.check.skip-license>true</air.check.skip-license>
         <air.check.skip-duplicate-finder>true</air.check.skip-duplicate-finder>
@@ -49,7 +49,7 @@
         <presto.version>0.253</presto.version>
         <redshift.version>2.0.0.4</redshift.version>
         <postgresql.version>42.2.8</postgresql.version>
-        <java.version>1.8</java.version>
+        <java.version>11</java.version>
         <aws.library>1.10.66</aws.library>
         <swagger.version>1.5.16</swagger.version>
 
@@ -63,12 +63,6 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.github.jsqlparser</groupId>
-            <artifactId>jsqlparser</artifactId>
-            <version>4.0</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
@@ -115,11 +109,11 @@
             <artifactId>google-cloud-bigquery</artifactId>
             <version>1.93.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-servlet</artifactId>
-            <version>9.4.40.v20210413</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.eclipse.jetty</groupId>-->
+<!--            <artifactId>jetty-servlet</artifactId>-->
+<!--            <version>9.4.40.v20210413</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
@@ -205,7 +199,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>24.1-jre</version>
+            <version>30.1.1-jre</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -277,18 +271,18 @@
             </exclusions>
         </dependency>
 
-        <dependency>
-            <groupId>io.javalin</groupId>
-            <artifactId>javalin</artifactId>
-            <version>${javalin.version}</version>
-        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>io.javalin</groupId>-->
+        <!--            <artifactId>javalin</artifactId>-->
+        <!--            <version>${javalin.version}</version>-->
+        <!--        </dependency>-->
 
 
-        <dependency>
-            <groupId>io.javalin</groupId>
-            <artifactId>javalin-openapi</artifactId>
-            <version>${javalin.version}</version>
-        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>io.javalin</groupId>-->
+        <!--            <artifactId>javalin-openapi</artifactId>-->
+        <!--            <version>${javalin.version}</version>-->
+        <!--        </dependency>-->
 
         <dependency>
             <groupId>org.testng</groupId>
@@ -392,6 +386,54 @@
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-jdbc</artifactId>
+            <version>${trino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-main</artifactId>
+            <version>${trino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-client</artifactId>
+            <version>${trino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-plugin-toolkit</artifactId>
+            <version>${trino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>node</artifactId>
+            <version>206</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>concurrent</artifactId>
+            <version>206</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>units</artifactId>
+            <version>1.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-spi</artifactId>
+            <version>${trino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-parser</artifactId>
             <version>${trino.version}</version>
         </dependency>
 
@@ -534,15 +576,15 @@
                 </executions>
                 <configuration>
                     <nowarn>true</nowarn>
-                    <jvmTarget>1.8</jvmTarget>
-                    <args />
+                    <jvmTarget>11</jvmTarget>
+                    <args/>
                 </configuration>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.1.2</version>
                 <configuration>
                     <skip>${check.skip-dependency}</skip>
                     <failOnWarning>${check.fail-dependency}</failOnWarning>
@@ -600,8 +642,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.0</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>11</source>
+                    <target>11</target>
                     <meminitial>1212m</meminitial>
                 </configuration>
                 <executions>
