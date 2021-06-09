@@ -33,7 +33,7 @@ import java.util.logging.Logger
 import kotlin.system.exitProcess
 
 open class Commands(help: String? = null) : CliktCommand(help = help ?: "", printHelpOnEmptyArgs = help == null) {
-    val version by option("--version", help = "Print version name and exit", hidden = true)
+    val version by option("--version", help = "Print version name and exit", hidden = true).flag()
     val debug by option("-d", "--debug", help = "Enable debugging").flag()
     private val profilesDir by option(
         "--profiles-dir",
@@ -77,7 +77,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
     }
 
     protected fun parseRecipe(manifestJson: String): Recipe {
-        if (version != null) {
+        if (version) {
             echo(this.javaClass.getPackage().implementationVersion, trailingNewline = true)
             exitProcess(0)
         }
@@ -187,6 +187,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
     class Run : Commands(help = "Spins up an HTTP server serving your datasets") {
         private val origin by option("--origin", help = "The origin HTTP server for CORS", envvar = "METRIQL_ORIGIN")
+        private val enableJdbc by option("--jdbc", help = "Enable JDBC services via Trino Proxy", envvar = "METRIQL_ENABLE_JDBC").flag()
         val vars by option(
             "--vars",
             envvar = "METRIQL_VARS",
@@ -227,7 +228,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val dataSource = this.getDataSource()
 
             val modelService = RecipeModelService(null, this.parseRecipe(manifestJson), -1, dataSource.warehouse.bridge)
-            HttpServer.start(HostAndPort.fromParts(host, port), apiSecret, threads, debug, origin, modelService, dataSource, timezone?.let { ZoneId.of(it) })
+            HttpServer.start(HostAndPort.fromParts(host, port), apiSecret, threads, debug, origin, modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) })
         }
     }
 
