@@ -1,0 +1,24 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "HassamSaeed",
+      "name": "Hassam Saeed",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32792779?v=4",
+      "profile": "http://ITfiers.com / GSheets.com",
+      "contributions": [
+        "data"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "metriql",
+  "projectOwner": "metriql",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
