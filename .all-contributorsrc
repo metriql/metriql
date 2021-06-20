@@ -12,6 +12,16 @@
       "contributions": [
         "data"
       ]
+    },
+    {
+      "login": "UmarMajeed-Rana",
+      "name": "Umar Majeed",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19478456?v=4",
+      "profile": "http://www.linkedin.com/in/umarmajeedrana",
+      "contributions": [
+        "code",
+        "platform"
+      ]
     }
   ],
   "contributorsPerLine": 7,
