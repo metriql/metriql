@@ -53,7 +53,7 @@ data class Model(
     val dimensions: List<Dimension>,
     val measures: List<Measure>,
     val materializes: List<Materialize>? = null,
-    val alwaysFilters: List<Recipe.FilterReference>? = null,
+    val alwaysFilters: List<Recipe.FilterReferences>? = null,
     val id: Int? = null,
     val recipeId: Int? = null,
     val recipePath: String? = null,

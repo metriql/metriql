@@ -3,7 +3,7 @@ package com.metriql
 import com.metriql.db.FieldType
 import com.metriql.report.Recipe
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.jdbc.IsMetadataQueryVisitor
+import com.metriql.service.jdbc.IsMetriqlQueryVisitor
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
 import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
@@ -59,7 +59,7 @@ class Test {
     fun visitorTest() {
         val stmt = sqlParser.createStatement(metriqlSql, ParsingOptions())
         val isMetadata = AtomicReference<Boolean?>()
-        IsMetadataQueryVisitor().process(stmt, isMetadata)
+        IsMetriqlQueryVisitor("metriql").process(stmt, isMetadata)
     }
 
     @Test

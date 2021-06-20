@@ -7,7 +7,7 @@ import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.ModelName
-import com.metriql.util.ValidationUtil.checkLiteral
+import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.flow.Flow
@@ -33,8 +33,8 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
         )
 
         val followingEvents = reportOptions.events.joinToString(" UNION ALL ") { event ->
-            val dimension = event.dimension?.let { "CONCAT('${checkLiteral(event.modelName)}', CONCAT(' ', ${context.getDimensionAlias(it.name, null)}))" }
-                ?: "'${checkLiteral(event.modelName)}'"
+            val dimension = event.dimension?.let { "CONCAT('${stripLiteral(event.modelName)}', CONCAT(' ', ${context.getDimensionAlias(it.name, it.relationName, null)}))" }
+                ?: "'${stripLiteral(event.modelName)}'"
 
             """SELECT user_id, event_timestamp, $dimension as event_type FROM (${
             segmentationService.renderQuery(

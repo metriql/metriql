@@ -47,7 +47,7 @@ class DbtModelService @Inject constructor(
         committer.deletePath(directory)
 
         val (_, _, modelConfigMapper) = dataSource.dbtSettings()
-        val modelService = RecipeModelService(modelService, recipe, recipeId, dataSource.warehouse.bridge)
+        val modelService = RecipeModelService(modelService, { recipe }, recipeId, dataSource.warehouse.bridge)
 
         val context = QueryGeneratorContext(
             auth,
@@ -78,7 +78,11 @@ class DbtModelService @Inject constructor(
                 val (materialized, renderedSql) = if (eventTimestamp != null) {
                     val eventTimestampDim = materialize.value.dimensions?.find { d -> d.name.name == eventTimestamp && d.name.relation == null }
                         ?.toDimension(modelName, FieldType.TIMESTAMP)!!
-                    val eventDimensionAlias = context.getDimensionAlias(eventTimestamp, eventTimestampDim.postOperation)
+                    val eventDimensionAlias = context.getDimensionAlias(
+                        eventTimestamp,
+                        null,
+                        eventTimestampDim.postOperation
+                    )
 
                     val renderedEventTimestampDimension = dataSource.warehouse.bridge.renderDimension(
                         context, modelName, eventTimestamp, null, null,

@@ -25,7 +25,7 @@ import com.metriql.service.model.ModelRelation
 import com.metriql.service.model.RelationName
 import com.metriql.util.DefaultJinja
 import com.metriql.util.MetriqlException
-import com.metriql.util.ValidationUtil.quoteIdentifier
+import com.metriql.util.ValidationUtil
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC
@@ -43,9 +43,18 @@ import java.time.ZoneId
 
 abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
-    override val aliasQuote: Char? = '"'
+    override val quote = '"'
+    override fun quoteIdentifier(identifier: String) = ValidationUtil.quoteIdentifier(identifier, quote)
 
     override val metricRenderHook = object : WarehouseMetriqlBridge.MetricRenderHook {}
+
+    override val functions = mapOf(
+        RFunction.NOW to "CURRENT_TIMESTAMP",
+        RFunction.SUBSTRING to "SUBSTRING({{value[0]}}, {{value[1]}}, {{value[2]}})",
+        RFunction.CEIL to "CEIL({{value[0]}}, )",
+        RFunction.FLOOR to "FLOOR({{value[0]}})",
+        RFunction.ROUND to "FLOOR({{value[0]}})",
+    )
 
     override val supportedDBTTypes: Set<DBTType> = setOf()
     override val supportedJoins: Set<Model.Relation.JoinType> = setOf(
@@ -64,109 +73,116 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         return when (filter.value) {
             is ReportFilter.FilterValue.Sql -> {
                 val renderedQuery = context.renderSQL(filter.value.sql, contextModelName)
-                RenderedFilter(null, renderedQuery, null)
+                RenderedFilter(listOf(), renderedQuery, null)
             }
             is ReportFilter.FilterValue.MetricFilter -> {
-                when (filter.value.metricValue) {
-                    is ReportMetric.ReportDimension -> {
-                        val reportDimension = filter.value.metricValue
+                val joins = mutableListOf<String>()
+                val wheres = mutableListOf<String>()
+                val havings = mutableListOf<String>()
 
-                        // hacky way to find out relation if the dimension doesn't belong to context model
-                        val relationName = if (contextModelName != reportDimension.modelName) {
-                            context.relations
-                                .filter { it.value.sourceModelName == contextModelName && it.value.targetModelName == reportDimension.modelName }
-                                .map { it.value }
-                                .firstOrNull()?.relation?.name
+                filter.value.filters.forEach {
+                    val metricValue = it.metricValue ?: filter.value.metricValue ?: throw java.lang.IllegalStateException()
+                    when (metricValue) {
+                        is ReportMetric.ReportDimension -> {
+                            // hacky way to find out relation if the dimension doesn't belong to context model
+                            val relationName = if (contextModelName != metricValue.modelName) {
+                                context.relations
+                                    .filter { it.value.sourceModelName == contextModelName && it.value.targetModelName == metricValue.modelName }
+                                    .map { it.value }
+                                    .firstOrNull()?.relation?.name
 
-                            // the filter is not applicable to this model
-                            throw MetriqlException("Dimension is not applicable for context model", HttpResponseStatus.BAD_REQUEST)
-                        } else reportDimension.relationName
+                                // the filter is not applicable to this model
+                                throw MetriqlException("Dimension is not applicable for context model", HttpResponseStatus.BAD_REQUEST)
+                            } else metricValue.relationName
 
-                        val renderedMetric = renderDimension(
-                            context,
-                            contextModelName,
-                            reportDimension.name,
-                            relationName,
-                            reportDimension.postOperation,
-                            MetricPositionType.FILTER
-                        )
-                        val whereFilters = filter.value.filters.joinToString(" OR ") { dimensionFilter ->
-                            val value = if (dimensionFilter.value is SQLRenderable) {
-                                context.renderSQL(dimensionFilter.value, contextModelName)
+                            val renderedMetric = renderDimension(
+                                context,
+                                contextModelName,
+                                metricValue.name,
+                                relationName,
+                                metricValue.postOperation,
+                                MetricPositionType.FILTER
+                            )
+
+                            val value = if (it.value is SQLRenderable) {
+                                context.renderSQL(it.value, contextModelName)
                             } else {
-                                dimensionFilter.value
+                                it.value
                             }
-                            filters.generateFilter(
-                                context,
-                                dimensionFilter.operator as FilterOperator,
-                                renderedMetric.metricValue,
-                                value
+
+                            if (renderedMetric.join != null) {
+                                joins.add(renderedMetric.join)
+                            }
+
+                            wheres.add(
+                                filters.generateFilter(
+                                    context,
+                                    it.operator as FilterOperator,
+                                    renderedMetric.metricValue,
+                                    value
+                                )
                             )
                         }
-                        RenderedFilter(
-                            renderedMetric.join,
-                            // if there is OR, we need to encapsulate
-                            if (filter.value.filters.size > 1) "($whereFilters)" else whereFilters,
-                            null
-                        )
-                    }
-                    is ReportMetric.ReportMappingDimension -> {
-                        val mappingType = filter.value.metricValue.name
-                        val postOperation = filter.value.metricValue.postOperation
-                        val dimensionName = context.getMappingDimensions(contextModelName).get(mappingType)
-                            ?: throw MetriqlException("'${mappingType.serializableName}' mapping type not found for model $contextModelName", HttpResponseStatus.BAD_REQUEST)
-                        val renderedMetric = renderDimension(
-                            context,
-                            contextModelName,
-                            dimensionName,
-                            null,
-                            postOperation,
-                            MetricPositionType.FILTER
-                        )
-                        val whereFilters = filter.value.filters.joinToString(" OR ") { dimensionFilter ->
-                            filters.generateFilter(
+                        is ReportMetric.ReportMappingDimension -> {
+                            val mappingType = metricValue.name
+                            val postOperation = metricValue.postOperation
+                            val dimensionName = context.getMappingDimensions(contextModelName).get(mappingType)
+                                ?: throw MetriqlException("'${mappingType.serializableName}' mapping type not found for model $contextModelName", HttpResponseStatus.BAD_REQUEST)
+                            val renderedMetric = renderDimension(
                                 context,
-                                dimensionFilter.operator as FilterOperator,
-                                renderedMetric.metricValue,
-                                dimensionFilter.value
+                                contextModelName,
+                                dimensionName,
+                                null,
+                                postOperation,
+                                MetricPositionType.FILTER
+                            )
+                            wheres.add(
+                                filters.generateFilter(
+                                    context,
+                                    it.operator as FilterOperator,
+                                    renderedMetric.metricValue,
+                                    it.value
+                                )
                             )
                         }
-                        RenderedFilter(
-                            null,
-                            // if there is OR, we need to encapsulate
-                            if (filter.value.filters.size > 1) "($whereFilters)" else whereFilters,
-                            null
-                        )
-                    }
-                    is ReportMeasure -> {
-                        val reportMeasure = filter.value.metricValue
-                        val renderedMetric = renderMeasure(
-                            context,
-                            contextModelName,
-                            reportMeasure.name,
-                            reportMeasure.relationName,
-                            MetricPositionType.FILTER,
-                            ADHOC,
-                            zoneId
-                        )
-                        val havingFilters = filter.value.filters.joinToString(" OR ") { measureFilter ->
-                            filters.generateFilter(
+                        is ReportMeasure -> {
+                            val renderedMetric = renderMeasure(
                                 context,
-                                measureFilter.operator as FilterOperator,
-                                renderedMetric.metricValue,
-                                measureFilter.value
+                                contextModelName,
+                                metricValue.name,
+                                metricValue.relationName,
+                                MetricPositionType.FILTER,
+                                ADHOC,
+                                zoneId
                             )
+                            val havingFilters = filter.value.filters.joinToString(" OR ") { measureFilter ->
+                                filters.generateFilter(
+                                    context,
+                                    measureFilter.operator as FilterOperator,
+                                    renderedMetric.metricValue,
+                                    measureFilter.value
+                                )
+                            }
+
+                            if (renderedMetric.join != null) {
+                                joins.add(renderedMetric.join)
+                            }
+
+                            havings.add(havingFilters)
                         }
-                        // Measure filters are only applied as having filters
-                        RenderedFilter(
-                            renderedMetric.join, null,
-                            // if there is OR, we need to encapsulate
-                            if (filter.value.filters.size > 1) "($havingFilters)" else havingFilters
-                        )
+                        is ReportMetric.Function -> TODO()
+                        is ReportMetric.Unary -> TODO()
                     }
-                    is ReportMetric.Function -> TODO()
-                    is ReportMetric.Unary -> TODO()
                 }
+
+                val whereFilters = wheres.joinToString(" OR ")
+                val havingFilters = havings.joinToString(" OR ")
+
+                RenderedFilter(
+                    joins,
+                    if (wheres.size > 1) "($whereFilters)" else if (wheres.size == 1) whereFilters else null,
+                    if (havings.size > 1) "($havingFilters)" else if (havings.size == 1) havingFilters else null
+                )
             }
         }
     }
@@ -237,7 +253,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                         if (measure.value.column == null)
                             "*" else
                             context.getSQLReference(modelMeasure.target, modelMeasure.modelName, measure.value.column)
-                    INTERMEDIATE_MERGE -> quoteIdentifier(measureName, aliasQuote)
+                    INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
             is Model.Measure.MeasureValue.Sql -> {
@@ -255,7 +271,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                             } else null
                         )
                     }
-                    INTERMEDIATE_MERGE -> quoteIdentifier(measureName, aliasQuote)
+                    INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
             is Model.Measure.MeasureValue.Dimension -> {
@@ -263,7 +279,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
                 when (queryType) {
                     ADHOC, INTERMEDIATE_ACCUMULATE -> context.renderSQL(sqlMeasure.sql, modelMeasure.modelName)
-                    INTERMEDIATE_MERGE -> quoteIdentifier(measureName, aliasQuote)
+                    INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
         }
@@ -302,7 +318,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 .joinToString(" AND ") { "($it)" }
 
             val measureJoinsFromFilter = renderedFilters
-                .mapNotNull { it.join }
+                .flatMap { it.joins }
                 .joinToString("\n") { it }
 
             val columnValue = "CASE WHEN $measureFilterExpression THEN $rawValue ELSE NULL END"
@@ -359,7 +375,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
         val measureValueForPositionType = when (metricPositionType) {
             MetricPositionType.FILTER -> renderedValue
-            MetricPositionType.PROJECTION -> "$renderedValue AS ${context.getMeasureAlias(measure.name)}"
+            MetricPositionType.PROJECTION -> "$renderedValue AS ${context.getMeasureAlias(measure.name, relationName)}"
         }
 
         return WarehouseMetriqlBridge.RenderedMetric(measureValueForPositionType, joinRelations)
@@ -401,7 +417,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                         is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelTarget, modelName, dimension.value.column)
                         is Model.Dimension.DimensionValue.Sql -> context.renderSQL(dimension.value.sql, modelName)
                     }
-                    "$value AS ${quoteIdentifier(context.getDimensionAlias(dimension.name, null), context.getAliasQuote())}"
+                    "$value AS ${quoteIdentifier(context.getDimensionAlias(dimension.name, null, null))}"
                 }
         } else {
             "*"
@@ -452,7 +468,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         val dimensionValue = when (metricPositionType) {
             MetricPositionType.FILTER -> postProcessedDimension
             MetricPositionType.PROJECTION -> {
-                "$postProcessedDimension AS ${quoteIdentifier(context.getDimensionAlias(dimensionName, postOperation), context.getAliasQuote())}"
+                "$postProcessedDimension AS ${quoteIdentifier(context.getDimensionAlias(dimensionName, relationName, postOperation))}"
             }
         }
         return WarehouseMetriqlBridge.RenderedMetric(dimensionValue, joinRelations)
@@ -553,7 +569,7 @@ ${comments.joinToString("\n") { "   * $it" }}
         return comments + (
             if (viewModels?.isNotEmpty()) {
                 val views = viewModels.map { (modelName, sql) ->
-                    "${quoteIdentifier(modelName, aliasQuote)} AS (\n$sql\n)"
+                    "${quoteIdentifier(modelName)} AS (\n$sql\n)"
                 }.joinToString(",\n")
                 "WITH $views \n${rawQuery.replace(multiLineRegex, "\n")} \n"
             } else {

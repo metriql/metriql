@@ -54,7 +54,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
 
                 // Get the running and idle tasks
                 taskTickets.values
-                    .filter { it.status == Task.Status.RUNNING || it.status == Task.Status.IDLE }
+                    .filter { it.status == Task.Status.RUNNING || it.status == Task.Status.QUEUED }
                     .forEach {
                         waitingJobs.add(it)
                     }
@@ -108,7 +108,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
     }
 
     fun <T, K> execute(runnable: Task<T, K>, initialWaitInSeconds: Long): CompletableFuture<Task<T, K>> {
-        if (runnable.status == Task.Status.FINISHED || initialWaitInSeconds <= 0L) {
+        if (runnable.status == Task.Status.FINISHED) {
             return CompletableFuture.completedFuture(runnable)
         }
 
@@ -117,14 +117,16 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         val future = CompletableFuture<Task<T, K>>()
         runnable.onFinish { future.complete(runnable) }
 
-        Scheduler.executor.schedule(
-            {
-                if (!future.isDone) {
-                    future.complete(runnable)
-                }
-            },
-            initialWaitInSeconds, TimeUnit.SECONDS
-        )
+        if (initialWaitInSeconds > 0) {
+            Scheduler.executor.schedule(
+                {
+                    if (!future.isDone) {
+                        future.complete(runnable)
+                    }
+                },
+                initialWaitInSeconds, TimeUnit.SECONDS
+            )
+        }
 
         return future
     }

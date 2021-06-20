@@ -73,16 +73,22 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                         return DbtJinjaRenderer.renderer.renderReference("{{$to}}", packageName)
                     }
 
-                    fun toRelation(packageName: String): Recipe.RecipeModel.RecipeRelation {
+                    @JsonIgnore
+                    fun getReferenceLabel(packageName: String): String {
+                        return DbtJinjaRenderer.renderer.getReferenceLabel("{{$to}}", packageName)
+                    }
+
+                    fun toRelation(packageName: String): Recipe.RecipeModel.RecipeRelation? {
+                        if (metriql == null) return null
                         return Recipe.RecipeModel.RecipeRelation(
                             sourceColumn = column_name,
                             targetColumn = field,
                             to = to,
-                            type = metriql?.type,
-                            relationship = metriql?.relationship,
-                            hidden = metriql?.hidden,
-                            description = metriql?.description,
-                            label = metriql?.label ?: DbtJinjaRenderer.renderer.getReferenceLabel("{{$to}}", packageName)
+                            type = metriql.type,
+                            relationship = metriql.relationship,
+                            hidden = metriql.hidden,
+                            description = metriql.description,
+                            label = metriql.label ?: getReferenceLabel(packageName)
                         )
                     }
                 }
@@ -100,8 +106,12 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                     is Relationships -> {
                         if (kwargs.getSourceModelName(packageName) == model.name) {
                             val toRelation = kwargs.toRelation(packageName)
-                            val modelName = kwargs.getTargetModelName(packageName)
-                            model.copy(relations = (model.relations ?: mapOf()) + mapOf(modelName to toRelation))
+                            if (toRelation != null) {
+                                val reference = kwargs.getReferenceLabel(packageName)
+                                model.copy(relations = (model.relations ?: mapOf()) + mapOf(reference to toRelation))
+                            } else {
+                                model
+                            }
                         } else model
                     }
                     is AcceptedValues -> model

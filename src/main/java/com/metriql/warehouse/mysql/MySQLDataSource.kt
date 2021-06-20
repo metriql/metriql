@@ -40,7 +40,7 @@ class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWar
 
         val customProperties = dataSourceProperties.clone() as Properties
 
-        val timezone = ValidationUtil.checkLiteral(timezone.getDisplayName(TextStyle.NARROW, Locale.ENGLISH))
+        val timezone = ValidationUtil.stripLiteral(timezone.getDisplayName(TextStyle.NARROW, Locale.ENGLISH))
         customProperties["connectionInitSql"] = "SET time_zone = '$timezone'"
 
         return customProperties

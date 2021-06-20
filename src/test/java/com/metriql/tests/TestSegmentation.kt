@@ -50,7 +50,7 @@ abstract class TestSegmentation {
     abstract val testingServer: TestingServer<*, *>
     private val auth: ProjectAuth = ProjectAuth(
         1, 1,
-        isOwner = true, isSuperuser = true, email = null, permissions = null, timezone = ZoneId.of("UTC")
+        isOwner = true, isSuperuser = true, email = null, permissions = null, attributes = null, timezone = ZoneId.of("UTC")
     )
     private val rendererService = JinjaRendererService()
 
@@ -63,7 +63,12 @@ abstract class TestSegmentation {
             MetricFilter(
                 MetricFilter.MetricType.MAPPING_DIMENSION,
                 ReportMetric.ReportMappingDimension(EVENT_TIMESTAMP, null),
-                listOf(MetricFilter.Filter(FieldType.TIMESTAMP, TimestampOperatorType.BETWEEN, mapOf("start" to dateRange.start.toString(), "end" to dateRange.end.toString())))
+                listOf(
+                    MetricFilter.Filter(
+                        null, null, FieldType.TIMESTAMP, TimestampOperatorType.BETWEEN,
+                        mapOf("start" to dateRange.start.toString(), "end" to dateRange.end.toString())
+                    )
+                )
             )
         )
     }
@@ -629,7 +634,7 @@ abstract class TestSegmentation {
             MetricFilter(
                 MetricFilter.MetricType.DIMENSION,
                 ReportDimension("testnumber", "_table", null, null),
-                listOf(MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.GREATER_THAN, 10))
+                listOf(MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.GREATER_THAN, 10))
             )
         )
         val report = SegmentationReportOptions(

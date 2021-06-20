@@ -14,7 +14,6 @@ import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TI
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
-import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceType
@@ -117,15 +116,19 @@ class FunnelService @Inject constructor(
                 useAggregate = false,
                 forAccumulator = false
             ).second
-            }) AS ${quoteIdentifier(contextModelName, datasource.warehouse.bridge.aliasQuote)}",
+            }) AS ${datasource.warehouse.bridge.quoteIdentifier(contextModelName)}",
 
-            connector = quoteIdentifier(connectorDimensionName, datasource.warehouse.bridge.aliasQuote),
-            eventTimestamp = quoteIdentifier(eventTimeStampDimensionName, datasource.warehouse.bridge.aliasQuote),
+            connector = datasource.warehouse.bridge.quoteIdentifier(connectorDimensionName),
+            eventTimestamp = datasource.warehouse.bridge.quoteIdentifier(eventTimeStampDimensionName),
 
             dimension = if (!isExcludeStep && options.dimension != null && options.dimension.step == idx) {
                 // Pass context models as nulls while funnel does not support joins
-                val alias = context.getDimensionAlias(options.dimension.name, options.dimension.postOperation)
-                quoteIdentifier(alias, datasource.warehouse.bridge.aliasQuote)
+                val alias = context.getDimensionAlias(
+                    options.dimension.name,
+                    options.dimension.relationName,
+                    options.dimension.postOperation
+                )
+                datasource.warehouse.bridge.quoteIdentifier(alias)
             } else {
                 null
             },

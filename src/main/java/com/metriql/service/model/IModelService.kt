@@ -9,4 +9,5 @@ interface IModelService {
     fun getModel(auth: ProjectAuth, modelName: ModelName): Model?
     @Deprecated("It's being used for stale models")
     fun delete(auth: ProjectAuth, id: List<Int>)
+    fun update()
 }

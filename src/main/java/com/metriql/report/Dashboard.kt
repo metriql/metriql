@@ -114,13 +114,15 @@ data class Dashboard(
                     val dimension = context.getModelDimension(value.name, value.modelName!!)
                     val valueType = dimension.dimension.fieldType ?: FieldType.UNKNOWN
                     val operator = valueType.operatorClass?.javaObjectType?.enumConstants?.find { it.name == operation }
+                    val metricValue = ReportMetric.ReportDimension(value.name, value.modelName, null, null)
+
                     val filter = if (operator != null) {
-                        MetricFilter.Filter(valueType, operator, defaultValue)
+                        MetricFilter.Filter(DIMENSION, metricValue, valueType, operator, defaultValue)
                     } else {
                         null
                     }
 
-                    MetricFilter(DIMENSION, ReportMetric.ReportDimension(value.name, value.modelName, null, null), listOfNotNull(filter))
+                    MetricFilter(DIMENSION, metricValue, listOfNotNull(filter))
                 }
                 is ReportMetric.ReportMappingDimension -> {
                     val valueType = value.name.fieldType
@@ -132,13 +134,15 @@ data class Dashboard(
                             else -> null
                         }
                     }
+                    val metricValue = ReportMetric.ReportMappingDimension(value.name, null)
+
                     val filter = if (operator != null) {
-                        MetricFilter.Filter(valueType, operator, defaultValue)
+                        MetricFilter.Filter(MAPPING_DIMENSION, metricValue, valueType, operator, defaultValue)
                     } else {
                         null
                     }
 
-                    MetricFilter(MAPPING_DIMENSION, ReportMetric.ReportMappingDimension(value.name, null), listOfNotNull(filter))
+                    MetricFilter(MAPPING_DIMENSION, metricValue, listOfNotNull(filter))
                 }
                 else -> throw IllegalStateException()
             }

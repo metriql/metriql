@@ -18,7 +18,6 @@ import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TI
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
-import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import com.metriql.warehouse.spi.function.TimestampPostOperation
@@ -114,13 +113,19 @@ class RetentionService @Inject constructor(
                 ).second
                 }) AS $contextModelName",
                 // While the modelReference is rendered by the segmentation service, these dimension values must always refer to dimension aliases.
-                connector = quoteIdentifier(context.getDimensionAlias(connectorDimensionName, null), context.getAliasQuote()),
+                connector = context.warehouseBridge.quoteIdentifier(context.getDimensionAlias(connectorDimensionName, null, null)),
                 // Also pass the post-operator to alias generator, since post operated dimensions has prefix of the post operation name
                 // i.e timestamp day post operated _time dimensions alias is: column as _time_timestamp_day
-                eventTimestamp = quoteIdentifier(context.getDimensionAlias(eventTimeStampDimensionName, eventTimestampPostOperation), context.getAliasQuote()),
+                eventTimestamp = context.warehouseBridge.quoteIdentifier(
+                    context.getDimensionAlias(
+                        eventTimeStampDimensionName,
+                        null,
+                        eventTimestampPostOperation
+                    )
+                ),
                 dimension = if (report.dimension != null) {
                     // Pass context models as nulls while funnel does not support joins
-                    quoteIdentifier(report.dimension, context.datasource.warehouse.bridge.aliasQuote)
+                    context.warehouseBridge.quoteIdentifier(report.dimension)
                 } else {
                     null
                 },

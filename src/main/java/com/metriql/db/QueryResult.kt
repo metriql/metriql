@@ -8,11 +8,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 import java.util.logging.Logger
 
-data class QueryResult @JsonCreator private constructor(
+data class QueryResult @JsonCreator constructor(
     val metadata: List<QueryColumn>?,
     val result: List<List<Any?>>?,
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL) val error: QueryError?,
-    var properties: Map<String, Any>?
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
+    val error: QueryError?,
+    var properties: Map<String, Any>?,
+    var responseHeaders: Map<String, String>? = null
 ) {
 
     constructor(metadata: List<QueryColumn>, result: List<List<Any?>>) : this(metadata, result, null, null)

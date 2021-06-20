@@ -17,6 +17,7 @@ import com.metriql.warehouse.spi.filter.ANSISQLFilters
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import io.netty.handler.codec.http.HttpResponseStatus
+import java.lang.IllegalStateException
 import kotlin.reflect.KClass
 
 @JSONBSerializable
@@ -34,27 +35,32 @@ data class ReportFilter(
         override fun getValueClass() = clazz.java
     }
 
-    fun toReference(): Recipe.FilterReference? {
+    fun toReference(): Recipe.FilterReferences? {
         return when (value) {
-            is FilterValue.Sql -> throw java.lang.IllegalStateException()
+            is FilterValue.Sql -> throw IllegalStateException()
             is FilterValue.MetricFilter -> {
                 if (value.filters.isEmpty()) {
                     null
                 } else {
-                    val firstFilter = value.filters[0]
+                    val references = Recipe.FilterReferences()
+                    value.filters.map {
+                        val metricValue = it.metricValue ?: value.metricValue ?: throw IllegalStateException()
+                        val operator = toCamelCase(it.operator.name)
+                        val item = when (metricValue) {
+                            is ReportMetric.ReportDimension ->
+                                Recipe.FilterReference(dimension = metricValue.toReference(), operator = operator, value = it.value)
+                            is ReportMetric.ReportMeasure ->
+                                Recipe.FilterReference(measure = metricValue.toMetricReference(), operator = operator, value = it.value)
+                            is ReportMetric.ReportMappingDimension ->
+                                Recipe.FilterReference(mapping = metricValue.name.name, operator = operator, value = it.value)
+                            is ReportMetric.Function -> TODO()
+                            is ReportMetric.Unary -> TODO()
+                        }
 
-                    val operator = toCamelCase(firstFilter.operator.name)
-
-                    when (value.metricValue) {
-                        is ReportMetric.ReportDimension ->
-                            Recipe.FilterReference(dimension = value.metricValue.toReference(), operator = operator, value = firstFilter.value)
-                        is ReportMetric.ReportMeasure ->
-                            Recipe.FilterReference(measure = value.metricValue.toMetricReference(), operator = operator, value = firstFilter.value)
-                        is ReportMetric.ReportMappingDimension ->
-                            Recipe.FilterReference(mapping = value.metricValue.name.name, operator = operator, value = firstFilter.value)
-                        is ReportMetric.Function -> TODO()
-                        is ReportMetric.Unary -> TODO()
+                        references.add(item)
                     }
+
+                    references
                 }
             }
         }
@@ -62,7 +68,6 @@ data class ReportFilter(
 
     sealed class FilterValue {
         data class Sql(val sql: String) : FilterValue() {
-
             override fun subtract(filter: ReportFilter): ReportFilter? {
                 return if (filter.value == this) {
                     null
@@ -73,10 +78,13 @@ data class ReportFilter(
         }
 
         data class MetricFilter(
-            val metricType: MetricType,
+            @Deprecated("Use filter.metricType instead")
+            val metricType: MetricType?,
+            @Deprecated("Use filter.metricValue instead")
             @PolymorphicTypeStr<MetricType>(externalProperty = "metricType", valuesEnum = MetricType::class)
-            val metricValue: ReportMetric,
-            val filters: List<Filter>
+            val metricValue: ReportMetric?,
+
+            val filters: List<Filter>,
         ) : FilterValue() {
 
             override fun subtract(filter: ReportFilter): ReportFilter? {
@@ -88,6 +96,12 @@ data class ReportFilter(
             }
 
             data class Filter(
+                //  TODO: make it required when MetricFilter.metricType is removed
+                val metricType: MetricType?,
+                //  TODO: make it required when MetricFilter.metricValue is removed
+                @PolymorphicTypeStr<MetricType>(externalProperty = "metricType", valuesEnum = MetricType::class)
+                val metricValue: ReportMetric?,
+
                 val valueType: FieldType,
                 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "valueType", include = JsonTypeInfo.As.EXTERNAL_PROPERTY)
                 @JsonTypeIdResolver(OperatorTypeResolver::class)
@@ -106,7 +120,6 @@ data class ReportFilter(
             @UppercaseEnum
             enum class MetricType(private val clazz: KClass<out ReportMetric>) : StrValueEnum {
                 UNARY(ReportMetric.Unary::class),
-                LITERAL(ReportMetric.Function::class),
                 FUNCTION(ReportMetric.ReportDimension::class),
                 DIMENSION(ReportMetric.ReportDimension::class),
                 MAPPING_DIMENSION(ReportMetric.ReportMappingDimension::class),

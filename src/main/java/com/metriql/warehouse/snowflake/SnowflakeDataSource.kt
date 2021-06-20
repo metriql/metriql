@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.metriql.db.FieldType
 import com.metriql.report.QueryTask
 import com.metriql.util.JsonHelper
-import com.metriql.util.ValidationUtil.checkLiteral
+import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.WarehouseAuth
@@ -61,7 +61,7 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
 
         val customProperties = dataSourceProperties.clone() as Properties
 
-        val timezone = checkLiteral(timezone.getDisplayName(TextStyle.NARROW, Locale.ENGLISH))
+        val timezone = stripLiteral(timezone.getDisplayName(TextStyle.NARROW, Locale.ENGLISH))
         customProperties["connectionInitSql"] = "${customProperties["connectionInitSql"]}, TIMEZONE = '$timezone'"
         return customProperties
     }

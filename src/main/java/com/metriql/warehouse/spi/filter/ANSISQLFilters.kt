@@ -34,11 +34,11 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
             return "NULL"
         }
         val rawValue = when (value) {
-            is String, is LocalTime, is Instant -> "'${ValidationUtil.checkLiteral(value.toString())}'"
-            is LocalDate -> "'${ValidationUtil.checkLiteral(value.format(DateTimeFormatter.ISO_DATE))}'"
+            is String, is LocalTime, is Instant -> "'${ValidationUtil.stripLiteral(value.toString())}'"
+            is LocalDate -> "'${ValidationUtil.stripLiteral(value.format(DateTimeFormatter.ISO_DATE))}'"
             is Boolean -> if (value) "TRUE" else "FALSE"
             is Number -> value.toString()
-            is List<*> -> "(${value.joinToString(", ") { if (it == null) "NULL" else "'${ValidationUtil.checkLiteral(it.toString())}'" }})"
+            is List<*> -> "(${value.joinToString(", ") { if (it == null) "NULL" else "'${ValidationUtil.stripLiteral(it.toString())}'" }})"
             else -> "NULL"
         }
 

@@ -13,6 +13,9 @@ import com.metriql.service.model.DimensionName
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.MeasureName
 import com.metriql.service.model.Model
+import com.metriql.service.model.Model.Measure.AggregationType.COUNT
+import com.metriql.service.model.Model.Measure.MeasureValue.Column
+import com.metriql.service.model.Model.Measure.Type.COLUMN
 import com.metriql.service.model.ModelDimension
 import com.metriql.service.model.ModelMeasure
 import com.metriql.service.model.ModelName
@@ -21,7 +24,6 @@ import com.metriql.service.model.RelationName
 import com.metriql.service.model.getMappingDimensionIfValid
 import com.metriql.util.MetriqlException
 import com.metriql.util.TextUtil
-import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
@@ -29,6 +31,8 @@ import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 import java.util.LinkedHashMap
 import java.util.concurrent.ConcurrentHashMap
+
+val TOTAL_ROWS_MEASURE = Model.Measure("\$total_rows", null, null, null, COLUMN, Column(COUNT, null))
 
 class QueryGeneratorContext(
     override val auth: ProjectAuth,
@@ -45,7 +49,6 @@ class QueryGeneratorContext(
     override val dimensions = ConcurrentHashMap<Pair<ModelName, DimensionName>, ModelDimension>()
     override val measures = ConcurrentHashMap<Pair<ModelName, MeasureName>, ModelMeasure>()
     override val relations = ConcurrentHashMap<Pair<ModelName, RelationName>, ModelRelation>()
-    override fun getAliasQuote() = datasource.warehouse.bridge.aliasQuote
 
     val models = ConcurrentHashMap<String, Model>()
 
@@ -70,17 +73,19 @@ class QueryGeneratorContext(
             }
     }
 
-    override fun getDimensionAlias(dimensionName: DimensionName, postOperation: ReportMetric.PostOperation?): String {
+    override fun getDimensionAlias(dimensionName: DimensionName, relationName: RelationName?, postOperation: ReportMetric.PostOperation?): String {
         val dimensionLabel = dimensionName.getMappingDimensionIfValid()?.let { TextUtil.toSlug(it.name) } ?: dimensionName
-        return if (postOperation != null) {
+        val prefix = relationName?.let { "$it." } ?: ""
+        return prefix + if (postOperation != null) {
             "${dimensionLabel}__${postOperation.type.toSnakeCase}_${CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_UNDERSCORE, postOperation.value.name)}"
         } else {
             dimensionLabel
         }
     }
 
-    override fun getMeasureAlias(measureName: MeasureName): String {
-        return quoteIdentifier(measureName, getAliasQuote())
+    override fun getMeasureAlias(measureName: MeasureName, relationName: String?): String {
+        val name = (relationName?.let { "$it." } ?: "") + measureName
+        return warehouseBridge.quoteIdentifier(name)
     }
 
     override fun getMappingDimensions(modelName: ModelName): Model.MappingDimensions {
@@ -111,7 +116,8 @@ class QueryGeneratorContext(
     override fun getModelMeasure(measureName: MeasureName, modelName: ModelName): ModelMeasure {
         val model = getModel(modelName)
         val measure = model.measures.find { it.name == measureName }
-            ?: throw MetriqlException("The measure `$measureName` not found in model `${model.name}`", NOT_FOUND)
+            ?: if (measureName == TOTAL_ROWS_MEASURE.name) TOTAL_ROWS_MEASURE else null
+                ?: throw MetriqlException("The measure `$measureName` not found in model `${model.name}`", NOT_FOUND)
         val modelMeasure = ModelMeasure(model.name, model.target, measure)
         measures[Pair(modelName, measureName)] = modelMeasure
         return modelMeasure
@@ -163,7 +169,7 @@ class QueryGeneratorContext(
         // If target is SQL only return the view alias.
         if (columnName == null && !modelTarget.needsAlias()) {
             viewModels[aliasName] = reference
-            return quoteIdentifier(aliasName, getAliasQuote())
+            return warehouseBridge.quoteIdentifier(aliasName)
         }
 
         return reference

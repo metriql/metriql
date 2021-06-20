@@ -9,6 +9,7 @@ import com.metriql.service.model.ModelName
 import com.metriql.service.model.ModelRelation
 import com.metriql.service.model.RelationName
 import com.metriql.util.MetriqlException
+import com.metriql.util.ValidationUtil
 import com.metriql.util.serializableName
 import com.metriql.warehouse.WarehouseSupports
 import com.metriql.warehouse.spi.DBTType
@@ -34,11 +35,13 @@ interface WarehouseMetriqlBridge {
     val timeframes: WarehouseTimeframes
     val queryGenerators: Map<ServiceType, ServiceQueryGenerator<*, *, *>>
     val functions: RFunctions
-
     val supportedDBTTypes: Set<DBTType>
     val supportedJoins: Set<Model.Relation.JoinType>
-    val aliasQuote: Char?
-    val isCaseSensitive: Boolean get() = true
+    val quote: Char
+
+    fun quoteIdentifier(identifier: String): String {
+        return ValidationUtil.quoteIdentifier(identifier, quote)
+    }
 
     // used for dimension projection (mainly for timezone conversion)
     val metricRenderHook: MetricRenderHook
@@ -86,7 +89,7 @@ interface WarehouseMetriqlBridge {
         metricPositionType: MetricPositionType
     ): RenderedMetric
 
-    data class RenderedFilter(val join: String?, val whereFilter: String?, val havingFilter: String?)
+    data class RenderedFilter(val joins: List<String>, val whereFilter: String?, val havingFilter: String?)
 
     /**
      * Renders where, having and a join expression.
@@ -166,7 +169,7 @@ interface WarehouseMetriqlBridge {
                 }
             ),
             dbtTypes = supportedDBTTypes,
-            aliasQuote = aliasQuote,
+            aliasQuote = quote,
             services = queryGenerators.map { it.key.serializableName to it.value.supports() }.toMap(),
             aggregations = allAggregations
         )

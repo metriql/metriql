@@ -16,10 +16,13 @@ package io.trino;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.io.Closer;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+import io.airlift.jaxrs.testing.GuavaMultivaluedMap;
 import io.airlift.node.NodeInfo;
 import io.airlift.units.Duration;
+import io.trino.client.ProtocolHeaders;
 import io.trino.connector.CatalogName;
 import io.trino.connector.ConnectorManager;
 import io.trino.connector.system.*;
@@ -42,7 +45,9 @@ import io.trino.operator.*;
 import io.trino.operator.index.IndexJoinLookupStats;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
 import io.trino.security.GroupProviderManager;
+import io.trino.server.HttpRequestSessionContext;
 import io.trino.server.PluginManager;
+import io.trino.server.QuerySessionSupplier;
 import io.trino.server.SessionPropertyDefaults;
 import io.trino.server.security.CertificateAuthenticatorManager;
 import io.trino.server.security.PasswordAuthenticatorConfig;
@@ -50,14 +55,18 @@ import io.trino.server.security.PasswordAuthenticatorManager;
 import io.trino.spi.PageIndexerFactory;
 import io.trino.spi.PageSorter;
 import io.trino.spi.Plugin;
+import io.trino.spi.QueryId;
 import io.trino.spi.connector.ConnectorFactory;
-import io.trino.spi.session.PropertyMetadata;
+import io.trino.spi.resourcegroups.QueryType;
+import io.trino.spi.resourcegroups.ResourceGroupId;
+import io.trino.spi.type.BooleanType;
 import io.trino.spi.type.TypeOperators;
 import io.trino.spiller.*;
 import io.trino.split.PageSinkManager;
 import io.trino.split.PageSourceManager;
 import io.trino.split.SplitManager;
 import io.trino.split.SplitSource;
+import io.trino.sql.SqlEnvironmentConfig;
 import io.trino.sql.analyzer.Analysis;
 import io.trino.sql.analyzer.Analyzer;
 import io.trino.sql.analyzer.FeaturesConfig;
@@ -70,31 +79,34 @@ import io.trino.sql.planner.optimizations.PlanOptimizer;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.sql.planner.plan.TableScanNode;
-import io.trino.sql.planner.planprinter.PlanPrinter;
 import io.trino.sql.planner.sanity.PlanSanityChecker;
 import io.trino.sql.tree.*;
-import io.trino.testing.*;
+import io.trino.testing.MaterializedResult;
 import io.trino.testing.PageConsumerOperator.PageConsumerOutputFactory;
+import io.trino.testing.TestingAccessControlManager;
+import io.trino.testing.TestingGroupProvider;
+import io.trino.testing.TestingTaskContext;
 import io.trino.transaction.InMemoryTransactionManager;
 import io.trino.transaction.TransactionManager;
 import io.trino.transaction.TransactionManagerConfig;
 import io.trino.type.BlockTypeOperators;
 import io.trino.util.FinalizerService;
+import io.trino.util.StatementUtils;
 import org.intellij.lang.annotations.Language;
+import org.rakam.server.http.RakamHttpRequest;
 
+import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
@@ -105,28 +117,25 @@ import static io.trino.spi.connector.ConnectorSplitManager.SplitSchedulingStrate
 import static io.trino.spi.connector.DynamicFilter.EMPTY;
 import static io.trino.spi.connector.NotPartitionedPartitionHandle.NOT_PARTITIONED;
 import static io.trino.sql.ParameterUtils.parameterExtractor;
-import static io.trino.sql.ParsingUtil.createParsingOptions;
 import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED;
 import static io.trino.sql.planner.optimizations.PlanNodeSearcher.searchFrom;
-import static io.trino.sql.testing.TreeAssertions.assertFormattedSql;
 import static io.trino.transaction.TransactionBuilder.transaction;
 import static io.trino.version.EmbedVersion.testingVersionEmbedder;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 
-public class LocalQueryRunner
-        implements QueryRunner {
+public class LocalQueryRunner {
     private final EventListenerManager eventListenerManager = new EventListenerManager(new EventListenerConfig());
 
-    private final Session defaultSession;
     private final ExecutorService notificationExecutor;
     private final ScheduledExecutorService yieldExecutor;
     private final FinalizerService finalizerService;
 
     private final SqlParser sqlParser;
     private final PlanFragmenter planFragmenter;
-    private final InMemoryNodeManager nodeManager;
+    public final InMemoryNodeManager nodeManager;
     private final TypeOperators typeOperators;
     private final BlockTypeOperators blockTypeOperators;
     private final MetadataManager metadata;
@@ -156,36 +165,14 @@ public class LocalQueryRunner
     private final PluginManager pluginManager;
 
     private final TaskManagerConfig taskManagerConfig;
-    private final boolean alwaysRevokeMemory;
     private final NodeSpillConfig nodeSpillConfig;
-    private final FeaturesConfig featuresConfig;
     private final List<PlanOptimizer> planOptimizers;
+    private final ImmutableMap<Class<? extends Statement>, DataDefinitionTask<?>> dataDefinitionTask;
+    private final QuerySessionSupplier sessionSupplier;
 
-//    private final ReadWriteLock lock = new ReentrantReadWriteLock();
-
-    public static LocalQueryRunner create(Session defaultSession) {
-        return builder(defaultSession).build();
-    }
-
-    public static Builder builder(Session defaultSession) {
-        return new Builder(defaultSession);
-    }
-
-    private LocalQueryRunner(
-            Session defaultSession,
-            FeaturesConfig featuresConfig,
-            NodeSpillConfig nodeSpillConfig,
-            boolean withInitialTransaction,
-            boolean alwaysRevokeMemory,
-            int nodeCountForStats,
-            Map<String, List<PropertyMetadata<?>>> defaultSessionProperties) {
-        requireNonNull(defaultSession, "defaultSession is null");
-        requireNonNull(defaultSessionProperties, "defaultSessionProperties is null");
-        checkArgument(defaultSession.getTransactionId().isEmpty() || !withInitialTransaction, "Already in transaction");
-
+    public LocalQueryRunner(FeaturesConfig featuresConfig, NodeSpillConfig nodeSpillConfig) {
         this.taskManagerConfig = new TaskManagerConfig().setTaskConcurrency(4);
         this.nodeSpillConfig = requireNonNull(nodeSpillConfig, "nodeSpillConfig is null");
-        this.alwaysRevokeMemory = alwaysRevokeMemory;
         this.notificationExecutor = newCachedThreadPool(daemonThreadsNamed("local-query-runner-executor-%s"));
         this.yieldExecutor = newScheduledThreadPool(2, daemonThreadsNamed("local-query-runner-scheduler-%s"));
         this.finalizerService = new FinalizerService();
@@ -199,7 +186,6 @@ public class LocalQueryRunner
         this.indexManager = new IndexManager();
         NodeSchedulerConfig nodeSchedulerConfig = new NodeSchedulerConfig().setIncludeCoordinator(true);
         NodeScheduler nodeScheduler = new NodeScheduler(new UniformNodeSelectorFactory(nodeManager, nodeSchedulerConfig, new NodeTaskMap(finalizerService)));
-        this.featuresConfig = requireNonNull(featuresConfig, "featuresConfig is null");
         this.pageSinkManager = new PageSinkManager();
         this.catalogManager = new CatalogManager();
         this.transactionManager = InMemoryTransactionManager.create(
@@ -227,7 +213,7 @@ public class LocalQueryRunner
         PageIndexerFactory pageIndexerFactory = new GroupByHashPageIndexerFactory(joinCompiler, blockTypeOperators);
         this.statsCalculator = createNewStatsCalculator(metadata, new TypeAnalyzer(sqlParser, metadata));
         this.scalarStatsCalculator = new ScalarStatsCalculator(metadata, new TypeAnalyzer(sqlParser, metadata));
-        this.taskCountEstimator = new TaskCountEstimator(() -> nodeCountForStats);
+        this.taskCountEstimator = new TaskCountEstimator(() -> 1);
         this.costCalculator = new CostCalculatorUsingExchanges(taskCountEstimator);
         this.estimatedExchangesCostCalculator = new CostCalculatorWithEstimatedExchanges(costCalculator, taskCountEstimator);
         this.groupProvider = new TestingGroupProvider();
@@ -285,8 +271,7 @@ public class LocalQueryRunner
                 new TableJdbcTable(metadata, accessControl),
                 new TableTypeJdbcTable(),
                 new UdtJdbcTable()
-        ),
-                ImmutableSet.of());
+        ), ImmutableSet.of());
 
         this.pluginManager = new PluginManager(
                 (loader, createClassLoader) -> {
@@ -303,33 +288,6 @@ public class LocalQueryRunner
 
         connectorManager.addConnectorFactory(globalSystemConnectorFactory, globalSystemConnectorFactory.getClass()::getClassLoader);
         connectorManager.createCatalog(GlobalSystemConnector.NAME, GlobalSystemConnector.NAME, ImmutableMap.of());
-
-        // rewrite session to use managed SessionPropertyMetadata
-        this.defaultSession = new Session(
-                defaultSession.getQueryId(),
-                withInitialTransaction ? Optional.of(transactionManager.beginTransaction(false)) : defaultSession.getTransactionId(),
-                defaultSession.isClientTransactionSupport(),
-                defaultSession.getIdentity(),
-                defaultSession.getSource(),
-                defaultSession.getCatalog(),
-                defaultSession.getSchema(),
-                defaultSession.getPath(),
-                defaultSession.getTraceToken(),
-                defaultSession.getTimeZoneKey(),
-                defaultSession.getLocale(),
-                defaultSession.getRemoteUserAddress(),
-                defaultSession.getUserAgent(),
-                defaultSession.getClientInfo(),
-                defaultSession.getClientTags(),
-                defaultSession.getClientCapabilities(),
-                defaultSession.getResourceEstimates(),
-                defaultSession.getStart(),
-                defaultSession.getSystemProperties(),
-                defaultSession.getConnectorProperties(),
-                defaultSession.getUnprocessedCatalogProperties(),
-                metadata.getSessionPropertyManager(),
-                defaultSession.getPreparedStatements(),
-                defaultSession.getProtocolHeaders());
 
         SpillerStats spillerStats = new SpillerStats();
         this.singleStreamSpillerFactory = new FileSingleStreamSpillerFactory(metadata, spillerStats, featuresConfig, nodeSpillConfig);
@@ -350,9 +308,19 @@ public class LocalQueryRunner
                 new CostComparator(featuresConfig),
                 taskCountEstimator,
                 nodePartitioningManager).get();
+
+        sessionSupplier = new QuerySessionSupplier(transactionManager, accessControl, new SessionPropertyManager(), new SqlEnvironmentConfig());
+
+        dataDefinitionTask = ImmutableMap.<Class<? extends Statement>, DataDefinitionTask<?>>builder()
+                .put(Use.class, new UseTask())
+                .put(Comment.class, new CommentTask())
+                .put(Prepare.class, new PrepareTask(sqlParser))
+                .put(Deallocate.class, new DeallocateTask())
+                .put(ResetSession.class, new ResetSessionTask())
+                .put(SetSession.class, new SetSessionTask())
+                .build();
     }
 
-    @Override
     public void close() {
         notificationExecutor.shutdownNow();
         yieldExecutor.shutdownNow();
@@ -361,127 +329,32 @@ public class LocalQueryRunner
         singleStreamSpillerFactory.destroy();
     }
 
-    public void loadEventListeners() {
-        this.eventListenerManager.loadEventListeners();
-    }
-
-    @Override
-    public int getNodeCount() {
-        return 1;
-    }
-
-    public CatalogManager getCatalogManager() {
-        return catalogManager;
-    }
-
-    @Override
-    public TransactionManager getTransactionManager() {
-        return transactionManager;
-    }
-
-    public SqlParser getSqlParser() {
-        return sqlParser;
-    }
-
-    @Override
-    public Metadata getMetadata() {
-        return metadata;
-    }
-
-    public TypeOperators getTypeOperators() {
-        return typeOperators;
-    }
-
-    public BlockTypeOperators getBlockTypeOperators() {
-        return blockTypeOperators;
-    }
-
-    @Override
-    public NodePartitioningManager getNodePartitioningManager() {
-        return nodePartitioningManager;
-    }
-
-    @Override
-    public PageSourceManager getPageSourceManager() {
-        return pageSourceManager;
-    }
-
-    @Override
-    public SplitManager getSplitManager() {
-        return splitManager;
-    }
-
-    @Override
-    public StatsCalculator getStatsCalculator() {
-        return statsCalculator;
-    }
-
-    @Override
-    public TestingGroupProvider getGroupProvider() {
-        return groupProvider;
-    }
-
-    @Override
-    public TestingAccessControlManager getAccessControl() {
-        return accessControl;
-    }
-
-    public ExecutorService getExecutor() {
-        return notificationExecutor;
-    }
-
-    public ScheduledExecutorService getScheduler() {
-        return yieldExecutor;
-    }
-
-    @Override
-    public Session getDefaultSession() {
-        return defaultSession;
-    }
-
-    public ExpressionCompiler getExpressionCompiler() {
-        return expressionCompiler;
-    }
-
     public void createCatalog(String catalogName, ConnectorFactory connectorFactory, Map<String, String> properties) {
         nodeManager.addCurrentNodeConnector(new CatalogName(catalogName));
         connectorManager.addConnectorFactory(connectorFactory, connectorFactory.getClass()::getClassLoader);
         connectorManager.createCatalog(catalogName, connectorFactory.getName(), properties);
     }
 
-    @Override
     public void installPlugin(Plugin plugin) {
         pluginManager.installPlugin(plugin, plugin.getClass()::getClassLoader);
     }
 
-    @Override
     public void addFunctions(List<? extends SqlFunction> functions) {
         metadata.addFunctions(functions);
     }
 
-    @Override
     public void createCatalog(String catalogName, String connectorName, Map<String, String> properties) {
         nodeManager.addCurrentNodeConnector(new CatalogName(catalogName));
         connectorManager.createCatalog(catalogName, connectorName, properties);
     }
 
-    @Override
-    public MaterializedResult execute(@Language("SQL") String sql) {
-        return execute(defaultSession, sql);
-    }
-
-    @Override
-    public MaterializedResult execute(Session session, @Language("SQL") String sql) {
-        return executeWithPlan(session, sql, WarningCollector.NOOP).getMaterializedResult();
-    }
-
-    public MaterializedResultWithPlan executeWithPlan(String sql) {
-        return inTransaction(defaultSession, transactionSession -> executeInternal(transactionSession, sql));
-    }
-
-    @Override
-    public MaterializedResultWithPlan executeWithPlan(Session session, String sql, WarningCollector warningCollector) {
-        return inTransaction(session, transactionSession -> executeInternal(transactionSession, sql));
+    public MaterializedResultWithPlanHeader executeWithPlan(RakamHttpRequest request, String sql, UUID id, WarningCollector warningCollector) {
+        GroupProviderManager groupProviderManager = new GroupProviderManager();
+        MultivaluedMap<String, String> headerMap = new GuavaMultivaluedMap<>();
+        request.headers().forEach(header -> headerMap.add(header.getKey(), header.getValue()));
+        QueryId queryId = QueryId.valueOf(id.toString().replace('-', '_'));
+        Session session = sessionSupplier.createSession(queryId, new HttpRequestSessionContext(headerMap, Optional.of("Presto"), request.getUri(), Optional.empty(), groupProviderManager));
+        return inTransaction(session, transactionSession -> executeInternal(transactionSession, sql, warningCollector));
     }
 
     public <T> T inTransaction(Session session, Function<Session, T> transactionSessionConsumer) {
@@ -490,46 +363,132 @@ public class LocalQueryRunner
                 .execute(session, transactionSessionConsumer);
     }
 
-    private MaterializedResultWithPlan executeInternal(Session session, @Language("SQL") String sql) {
+    private MaterializedResultWithPlanHeader executeInternal(Session session, @Language("SQL") String sql, WarningCollector warningCollector) {
         try (Closer closer = Closer.create()) {
             AtomicReference<MaterializedResult.Builder> builder = new AtomicReference<>();
-            PageConsumerOutputFactory outputFactory = new PageConsumerOutputFactory(types -> {
-                builder.compareAndSet(null, MaterializedResult.resultBuilder(session, types));
-                return builder.get()::page;
-            });
 
             TaskContext taskContext = TestingTaskContext.builder(notificationExecutor, yieldExecutor, session)
                     .setMaxSpillSize(nodeSpillConfig.getMaxSpillPerNode())
                     .setQueryMaxSpillSize(nodeSpillConfig.getQueryMaxSpillPerNode())
                     .build();
 
-            Plan plan = createPlan(session, sql, WarningCollector.NOOP);
-            List<Driver> drivers = createDrivers(session, plan, outputFactory, taskContext);
-            drivers.forEach(closer::register);
+            PreparedQuery preparedQuery = new QueryPreparer(sqlParser).prepareQuery(session, sql);
 
-            boolean done = false;
-            while (!done) {
-                boolean processed = false;
-                for (Driver driver : drivers) {
-                    if (!driver.isFinished()) {
-                        driver.process();
-                        processed = true;
-                    }
+            Class<? extends Statement> statementClazz = preparedQuery.getStatement().getClass();
+            QueryType queryType = StatementUtils.getQueryType(statementClazz).orElse(null);
+
+            AtomicReference<Map<String, String>> headers = new AtomicReference<>();
+            if (queryType == QueryType.DATA_DEFINITION) {
+                DataDefinitionTask<? super Statement> task = (DataDefinitionTask<? super Statement>) this.dataDefinitionTask.get(statementClazz);
+                // we don't need else statement as the relevant exception is thrown by the StatementAnalyzer
+                if (task != null) {
+                    QueryStateMachine stateMachine = QueryStateMachine.begin(
+                            sql,
+                            preparedQuery.getPrepareSql(),
+                            session,
+                            URI.create("fake://uri"),
+                            new ResourceGroupId("test"),
+                            false,
+                            transactionManager,
+                            accessControl,
+                            MoreExecutors.directExecutor(),
+                            metadata,
+                            warningCollector,
+                            Optional.ofNullable(queryType));
+                    stateMachine.setUpdateType(task.getName());
+
+                    ListenableFuture<?> result = task.execute(preparedQuery.getStatement(), transactionManager, metadata, accessControl, stateMachine, preparedQuery.getParameters(), warningCollector);
+                    result.get();
+                    QueryInfo queryInfo = stateMachine.updateQueryInfo(Optional.empty());
+                    headers.compareAndSet(null, getResponseHeaders(queryInfo, stateMachine.getSession()));
+
+                    MaterializedResult.Builder materializedResult = MaterializedResult.resultBuilder(session, ImmutableList.of(BooleanType.BOOLEAN));
+                    builder.compareAndSet(null, materializedResult);
+                    materializedResult.row(true);
+
+                    return new MaterializedResultWithPlanHeader(materializedResult.build(), null, headers.get(), queryInfo.getUpdateType());
+                } else {
+                    throw new UnsupportedOperationException(String.format("Invalid task %s", statementClazz));
                 }
-                done = !processed;
+            } else if (queryType == QueryType.SELECT || queryType == QueryType.ANALYZE || queryType == QueryType.DESCRIBE || queryType == QueryType.EXPLAIN) {
+                Plan plan = createPlan(session, preparedQuery, warningCollector);
+
+                PageConsumerOutputFactory outputFactory = new PageConsumerOutputFactory(types -> {
+                    builder.compareAndSet(null, MaterializedResult.resultBuilder(session, types));
+                    return builder.get()::page;
+                });
+                List<Driver> drivers = createDrivers(session, plan, outputFactory, taskContext);
+                drivers.forEach(closer::register);
+
+                boolean done = false;
+                while (!done) {
+                    boolean processed = false;
+                    for (Driver driver : drivers) {
+                        if (!driver.isFinished()) {
+                            driver.process();
+                            processed = true;
+                        }
+                    }
+                    done = !processed;
+                }
+
+                MaterializedResult.Builder builderValue = builder.get();
+                verify(builderValue != null, "Output operator was not created");
+                return new MaterializedResultWithPlanHeader(builderValue.build(), plan, headers.get(), null);
+            } else {
+                throw new UnsupportedOperationException(String.format("%s operation is not supported in metriql", queryType));
             }
 
-            verify(builder.get() != null, "Output operator was not created");
-            return new MaterializedResultWithPlan(builder.get().build(), plan);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        } catch (IOException | InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
         }
     }
 
+    private static String urlEncode(String value) {
+        return URLEncoder.encode(value, UTF_8);
+    }
 
-    @Override
-    public Lock getExclusiveLock() {
-        throw new UnsupportedOperationException();
+    private static Map<String, String> getResponseHeaders(QueryInfo info, Session session) {
+        Map<String, String> headers = new HashMap<>();
+        ProtocolHeaders protocolHeaders = session.getProtocolHeaders();
+        info.getSetCatalog().ifPresent(catalog -> headers.put(protocolHeaders.responseSetCatalog(), catalog));
+        info.getSetSchema().ifPresent(schema -> headers.put(protocolHeaders.responseSetSchema(), schema));
+        info.getSetPath().ifPresent(path -> headers.put(protocolHeaders.responseSetPath(), path));
+
+        // add set session properties
+        info.getSetSessionProperties()
+                .forEach((key, value) -> headers.put(protocolHeaders.responseSetSession(), key + '=' + urlEncode(value)));
+
+        // add clear session properties
+        info.getResetSessionProperties()
+                .forEach(name -> headers.put(protocolHeaders.responseClearSession(), name));
+
+        // add set roles
+        info.getSetRoles()
+                .forEach((key, value) -> headers.put(protocolHeaders.responseSetRole(), key + '=' + urlEncode(value.toString())));
+
+        // add added prepare statements
+        for (Map.Entry<String, String> entry : info.getAddedPreparedStatements().entrySet()) {
+            String encodedKey = urlEncode(entry.getKey());
+            String encodedValue = urlEncode(entry.getValue());
+            headers.put(protocolHeaders.responseAddedPrepare(), encodedKey + '=' + encodedValue);
+        }
+
+        // add deallocated prepare statements
+        for (String name : info.getDeallocatedPreparedStatements()) {
+            headers.put(protocolHeaders.responseDeallocatedPrepare(), urlEncode(name));
+        }
+
+        // add new transaction ID
+        info.getStartedTransactionId()
+                .ifPresent(transactionId -> headers.put(protocolHeaders.responseStartedTransactionId(), transactionId.toString()));
+
+        // add clear transaction ID directive
+        if (info.isClearTransactionId()) {
+            headers.put(protocolHeaders.responseClearTransactionId(), "true");
+        }
+
+        return headers;
     }
 
     public SubPlan createSubPlans(Session session, Plan plan, boolean forceSingleNode) {
@@ -636,42 +595,12 @@ public class LocalQueryRunner
         return ImmutableList.copyOf(drivers);
     }
 
-    @Override
-    public Plan createPlan(Session session, @Language("SQL") String sql, WarningCollector warningCollector) {
-        return createPlan(session, sql, OPTIMIZED_AND_VALIDATED, warningCollector);
-    }
-
-    @Override
-    public List<QualifiedObjectName> listTables(Session session, String catalog, String schema) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean tableExists(Session session, String table) {
-        throw new UnsupportedOperationException();
-    }
-
-    public Plan createPlan(Session session, @Language("SQL") String sql, LogicalPlanner.Stage stage, WarningCollector warningCollector) {
-        return createPlan(session, sql, stage, true, warningCollector);
-    }
-
-    public Plan createPlan(Session session, @Language("SQL") String sql, LogicalPlanner.Stage stage, boolean forceSingleNode, WarningCollector warningCollector) {
-        PreparedQuery preparedQuery = new QueryPreparer(sqlParser).prepareQuery(session, sql);
-
-        assertFormattedSql(sqlParser, createParsingOptions(session), preparedQuery.getStatement());
-
-        return createPlan(session, sql, planOptimizers, stage, warningCollector);
-    }
-
-    public Plan createPlan(Session session, @Language("SQL") String sql, List<PlanOptimizer> optimizers, LogicalPlanner.Stage stage, WarningCollector warningCollector) {
-        PreparedQuery preparedQuery = new QueryPreparer(sqlParser).prepareQuery(session, sql);
-
-        assertFormattedSql(sqlParser, createParsingOptions(session), preparedQuery.getStatement());
+    public Plan createPlan(Session session, PreparedQuery preparedQuery, WarningCollector warningCollector) {
 
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
 
         QueryExplainer queryExplainer = new QueryExplainer(
-                optimizers,
+                planOptimizers,
                 planFragmenter,
                 metadata,
                 typeOperators,
@@ -680,12 +609,12 @@ public class LocalQueryRunner
                 sqlParser,
                 statsCalculator,
                 costCalculator,
-                new HashMap<>());
+                dataDefinitionTask);
         Analyzer analyzer = new Analyzer(session, metadata, sqlParser, groupProvider, accessControl, Optional.of(queryExplainer), preparedQuery.getParameters(), parameterExtractor(preparedQuery.getStatement(), preparedQuery.getParameters()), warningCollector, statsCalculator);
 
         LogicalPlanner logicalPlanner = new LogicalPlanner(
                 session,
-                optimizers,
+                planOptimizers,
                 new PlanSanityChecker(true),
                 idAllocator,
                 metadata,
@@ -697,7 +626,7 @@ public class LocalQueryRunner
 
         Analysis analysis = analyzer.analyze(preparedQuery.getStatement());
         // make LocalQueryRunner always compute plan statistics for test purposes
-        return logicalPlanner.plan(analysis, stage);
+        return logicalPlanner.plan(analysis, OPTIMIZED_AND_VALIDATED);
     }
 
     private static List<Split> getNextBatch(SplitSource splitSource) {
@@ -710,33 +639,17 @@ public class LocalQueryRunner
                 .findAll();
     }
 
-    public static class Builder {
-        private final Session defaultSession;
-        private FeaturesConfig featuresConfig = new FeaturesConfig();
-        private NodeSpillConfig nodeSpillConfig = new NodeSpillConfig();
-        private boolean initialTransaction;
-        private boolean alwaysRevokeMemory;
-        private Map<String, List<PropertyMetadata<?>>> defaultSessionProperties = ImmutableMap.of();
-        private int nodeCountForStats;
+    public class MaterializedResultWithPlanHeader {
+        public final MaterializedResult materializedResult;
+        public final Plan queryPlan;
+        public final Map<String, String> responseHeaders;
+        public final String updateType;
 
-        private Builder(Session defaultSession) {
-            this.defaultSession = requireNonNull(defaultSession, "defaultSession is null");
-        }
-
-        public Builder withDefaultSessionProperties(Map<String, List<PropertyMetadata<?>>> defaultSessionProperties) {
-            this.defaultSessionProperties = requireNonNull(defaultSessionProperties, "defaultSessionProperties is null");
-            return this;
-        }
-
-        public LocalQueryRunner build() {
-            return new LocalQueryRunner(
-                    defaultSession,
-                    featuresConfig,
-                    nodeSpillConfig,
-                    initialTransaction,
-                    alwaysRevokeMemory,
-                    nodeCountForStats,
-                    defaultSessionProperties);
+        public MaterializedResultWithPlanHeader(MaterializedResult materializedResult, Plan queryPlan, Map<String, String> responseHeaders, String updateType) {
+            this.materializedResult = materializedResult;
+            this.queryPlan = queryPlan;
+            this.responseHeaders = responseHeaders;
+            this.updateType = updateType;
         }
     }
 }

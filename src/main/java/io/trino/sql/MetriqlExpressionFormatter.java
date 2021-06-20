@@ -16,21 +16,20 @@ package io.trino.sql;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.hubspot.jinjava.Jinjava;
 import com.metriql.service.model.Model;
+import com.metriql.warehouse.spi.function.RFunction;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
 import io.trino.sql.tree.*;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.PrimitiveIterator;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getOnlyElement;
-import static io.trino.sql.MetriqlSqlFormatter.formatName;
 import static io.trino.sql.MetriqlSqlFormatter.formatSql;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -39,6 +38,7 @@ import static java.util.stream.Collectors.toList;
 public final class MetriqlExpressionFormatter {
     private static final ThreadLocal<DecimalFormat> doubleFormatter = ThreadLocal.withInitial(
             () -> new DecimalFormat("0.###################E0###", new DecimalFormatSymbols(Locale.US)));
+    private static final Jinjava renderer = new Jinjava();
 
     private MetriqlExpressionFormatter() {
     }
@@ -47,22 +47,18 @@ public final class MetriqlExpressionFormatter {
         return new Formatter(reWriter, context, models).process(expression, null);
     }
 
-    private static String formatIdentifier(String rawValue, IQueryGeneratorContext bridge) {
-        StringBuilder quote = new StringBuilder().append(bridge.getAliasQuote());
-        String value = rawValue.replace(
-                quote,
-                quote.append(bridge.getAliasQuote()));
-        return bridge.getAliasQuote() + value + bridge.getAliasQuote();
+    protected static String formatIdentifier(String rawValue, IQueryGeneratorContext context) {
+        return context.getWarehouseBridge().quoteIdentifier(rawValue);
     }
 
     public static class Formatter extends AstVisitor<String, Void> {
-        private final IQueryGeneratorContext bridge;
+        protected final IQueryGeneratorContext queryContext;
         private final List<Model> models;
         private final SqlToSegmentation reWriter;
 
-        public Formatter(SqlToSegmentation reWriter, IQueryGeneratorContext bridge, List<Model> models) {
+        public Formatter(SqlToSegmentation reWriter, IQueryGeneratorContext queryContext, List<Model> models) {
             this.reWriter = reWriter;
-            this.bridge = bridge;
+            this.queryContext = queryContext;
             this.models = models;
         }
 
@@ -219,12 +215,12 @@ public final class MetriqlExpressionFormatter {
 
         @Override
         protected String visitSubqueryExpression(SubqueryExpression node, Void context) {
-            return "(" + formatSql(node.getQuery(), reWriter, bridge, models) + ")";
+            return "(" + formatSql(node.getQuery(), reWriter, queryContext, models) + ")";
         }
 
         @Override
         protected String visitExists(ExistsPredicate node, Void context) {
-            return "(EXISTS " + formatSql(node.getSubquery(), reWriter, bridge, models) + ")";
+            return "(EXISTS " + formatSql(node.getSubquery(), reWriter, queryContext, models) + ")";
         }
 
         @Override
@@ -232,18 +228,18 @@ public final class MetriqlExpressionFormatter {
             if (!node.isDelimited()) {
                 return node.getValue();
             } else {
-                return formatIdentifier(node.getValue(), bridge);
+                return formatIdentifier(node.getValue(), queryContext);
             }
         }
 
         @Override
         protected String visitLambdaArgumentDeclaration(LambdaArgumentDeclaration node, Void context) {
-            return formatExpression(node.getName(), reWriter, bridge, models);
+            return formatExpression(node.getName(), reWriter, queryContext, models);
         }
 
         @Override
         protected String visitSymbolReference(SymbolReference node, Void context) {
-            return formatIdentifier(node.getName(), bridge);
+            return formatIdentifier(node.getName(), queryContext);
         }
 
         @Override
@@ -259,23 +255,43 @@ public final class MetriqlExpressionFormatter {
             if (node.getProcessingMode().isPresent()) {
                 throw new UnsupportedOperationException("Processing mode is not supported");
             }
-
-            String arguments = joinExpressions(node.getArguments());
-            if (node.getArguments().isEmpty() && "count".equalsIgnoreCase(node.getName().getSuffix())) {
-                arguments = "*";
-            }
             if (node.isDistinct()) {
-                arguments = "DISTINCT " + arguments;
+                throw new UnsupportedOperationException("DISTINCT in a function is not supported");
             }
-
-            builder.append(formatName(node.getName(), reWriter, bridge, models))
-                    .append('(').append(arguments);
-
             if (node.getOrderBy().isPresent()) {
                 throw new UnsupportedOperationException("Order by in function is not supported");
             }
 
-            builder.append(')');
+            if (node.getFilter().isPresent()) {
+                throw new UnsupportedOperationException("Filter in function is not supported");
+            }
+
+            if (node.getWindow().isPresent()) {
+                throw new UnsupportedOperationException("WINDOW function is not supported");
+            }
+
+            Map<RFunction, String> functions = queryContext.getDatasource().getWarehouse().getBridge().getFunctions();
+            String name = node.getName().getSuffix().toUpperCase();
+
+            String functionTemplate;
+            try {
+                functionTemplate = functions.get(RFunction.valueOf(name));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(String.format("Function %s not supported", node.getName().getSuffix()));
+            }
+
+            if (functionTemplate == null) {
+                String dbName = queryContext.getDatasource().getWarehouse().getNames().component1();
+                throw new IllegalArgumentException(String.format("Function %s not supported in %s", node.getName().getSuffix(), dbName));
+            }
+            HashMap<String, Object> templateParams = new HashMap<>();
+
+            List<String> arguments = node.getArguments().stream().map((e) -> process(e, null))
+                    .collect(Collectors.toList());
+            templateParams.put("value", arguments);
+
+            String renderedFunction = renderer.render(functionTemplate, templateParams);
+            builder.append(renderedFunction);
 
             node.getNullTreatment().ifPresent(nullTreatment -> {
                 switch (nullTreatment) {
@@ -287,14 +303,6 @@ public final class MetriqlExpressionFormatter {
                         break;
                 }
             });
-
-            if (node.getFilter().isPresent()) {
-                throw new UnsupportedOperationException("Filter in function is not supported");
-            }
-
-            if (node.getWindow().isPresent()) {
-                throw new UnsupportedOperationException("WINDOW function is not supported");
-            }
 
             return builder.toString();
         }
@@ -612,7 +620,7 @@ public final class MetriqlExpressionFormatter {
 
         private String formatWindow(Window window) {
             if (window instanceof WindowReference) {
-                return formatExpression(((WindowReference) window).getName(), reWriter, bridge, models);
+                return formatExpression(((WindowReference) window).getName(), reWriter, queryContext, models);
             }
 
             return formatWindowSpecification((WindowSpecification) window);
@@ -622,11 +630,11 @@ public final class MetriqlExpressionFormatter {
             List<String> parts = new ArrayList<>();
 
             if (windowSpecification.getExistingWindowName().isPresent()) {
-                parts.add(formatExpression(windowSpecification.getExistingWindowName().get(), reWriter, bridge, models));
+                parts.add(formatExpression(windowSpecification.getExistingWindowName().get(), reWriter, queryContext, models));
             }
             if (!windowSpecification.getPartitionBy().isEmpty()) {
                 parts.add("PARTITION BY " + windowSpecification.getPartitionBy().stream()
-                        .map(i -> formatExpression(i, reWriter, bridge, models))
+                        .map(i -> formatExpression(i, reWriter, queryContext, models))
                         .collect(joining(", ")));
             }
             if (windowSpecification.getOrderBy().isPresent()) {
@@ -639,7 +647,7 @@ public final class MetriqlExpressionFormatter {
             return '(' + Joiner.on(' ').join(parts) + ')';
         }
 
-         String formatOrderBy(OrderBy orderBy) {
+        String formatOrderBy(OrderBy orderBy) {
             return "ORDER BY " + formatSortItems(orderBy.getSortItems());
         }
 
@@ -653,7 +661,7 @@ public final class MetriqlExpressionFormatter {
             return input -> {
                 StringBuilder builder = new StringBuilder();
 
-                builder.append(formatExpression(input.getSortKey(), reWriter, bridge, models));
+                builder.append(formatExpression(input.getSortKey(), reWriter, queryContext, models));
 
                 switch (input.getOrdering()) {
                     case ASCENDING:
@@ -713,7 +721,7 @@ public final class MetriqlExpressionFormatter {
 
         private String formatGroupingSet(List<Expression> groupingSet) {
             return format("(%s)", Joiner.on(", ").join(groupingSet.stream()
-                    .map(i -> formatExpression(i, reWriter, bridge, models))
+                    .map(i -> formatExpression(i, reWriter, queryContext, models))
                     .iterator()));
         }
 
@@ -740,11 +748,11 @@ public final class MetriqlExpressionFormatter {
                 case UNBOUNDED_PRECEDING:
                     return "UNBOUNDED PRECEDING";
                 case PRECEDING:
-                    return formatExpression(frameBound.getValue().get(), reWriter, bridge, models) + " PRECEDING";
+                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext, models) + " PRECEDING";
                 case CURRENT_ROW:
                     return "CURRENT ROW";
                 case FOLLOWING:
-                    return formatExpression(frameBound.getValue().get(), reWriter, bridge, models) + " FOLLOWING";
+                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext, models) + " FOLLOWING";
                 case UNBOUNDED_FOLLOWING:
                     return "UNBOUNDED FOLLOWING";
             }

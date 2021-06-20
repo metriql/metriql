@@ -18,8 +18,19 @@ import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 
 object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
+    private val identifierRegex = "^[A-Za-z0-9_]+$".toRegex()
+
     override val filters = SnowflakeFilters { SnowflakeMetriqlBridge }
     override val timeframes = SnowflakeTimeframes()
+
+    // it's not case-sensitive
+    override fun quoteIdentifier(identifier: String): String {
+        return if (identifierRegex.matches(identifier)) {
+            identifier
+        } else {
+            super.quoteIdentifier(identifier)
+        }
+    }
 
     override val queryGenerators = mapOf(
         ServiceType.SEGMENTATION to ANSISQLSegmentationQueryGenerator(),
@@ -34,8 +45,6 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         RFunction.HEX_TO_INT to "TO_NUMBER({{value[0]}}, 'XXXXXXXXXXXXXXXX')",
     )
 
-    override val aliasQuote: Char? = null
-    override val isCaseSensitive = false
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
     override val metricRenderHook = object : WarehouseMetriqlBridge.MetricRenderHook {
         override fun dimensionBeforePostOperation(

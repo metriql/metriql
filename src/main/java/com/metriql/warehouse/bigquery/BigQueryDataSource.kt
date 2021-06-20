@@ -278,7 +278,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         target: Model.Target,
         aliasName: String,
         columnName: String
-    ) = "${quoteIdentifier(aliasName, bridge.aliasQuote)}.${quoteIdentifier(columnName, bridge.aliasQuote)}"
+    ) = "${bridge.quoteIdentifier(aliasName)}.${bridge.quoteIdentifier(columnName)}"
 
     override fun sqlReferenceForTarget(
         target: Model.Target,
@@ -288,9 +288,9 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         return when (target.value) {
             is Model.Target.TargetValue.Sql -> renderSQL.invoke(target.value.sql)
             is Model.Target.TargetValue.Table -> {
-                "${quoteIdentifier(target.value.database ?: config.project ?: serviceProjectId, bridge.aliasQuote)}." +
-                    "${quoteIdentifier(target.value.schema ?: config.dataset, bridge.aliasQuote)}." +
-                    "${quoteIdentifier(target.value.table, bridge.aliasQuote)} AS ${quoteIdentifier(aliasName, bridge.aliasQuote)}"
+                "${bridge.quoteIdentifier(target.value.database ?: config.project ?: serviceProjectId)}." +
+                    "${bridge.quoteIdentifier(target.value.schema ?: config.dataset)}." +
+                    "${bridge.quoteIdentifier(target.value.table)} AS ${bridge.quoteIdentifier(aliasName)}"
             }
         }
     }

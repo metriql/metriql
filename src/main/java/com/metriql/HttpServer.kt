@@ -4,13 +4,26 @@ import com.google.common.cache.CacheBuilderSpec
 import com.google.common.collect.ImmutableMap
 import com.google.common.net.HostAndPort
 import com.metriql.report.IAdHocService
+import com.metriql.report.ReportService
 import com.metriql.report.ReportType
+import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.funnel.FunnelService
 import com.metriql.report.retention.RetentionService
 import com.metriql.report.segmentation.SegmentationService
+import com.metriql.report.sql.MqlService
 import com.metriql.report.sql.SqlService
+import com.metriql.service.QueryHttpService
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.auth.UserAttribute
+import com.metriql.service.auth.UserAttributeDefinition
+import com.metriql.service.auth.UserAttributeValues
 import com.metriql.service.cache.InMemoryCacheService
+import com.metriql.service.jdbc.NodeInfoService
+import com.metriql.service.jdbc.QueryService
+import com.metriql.service.jdbc.StatementService
+import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IModelService
+import com.metriql.service.model.RecipeModelService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
 import com.metriql.service.task.TaskQueueService
@@ -19,41 +32,69 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.logging.LogService
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.services.ServiceReportOptions
-import io.jsonwebtoken.Claims
-import io.jsonwebtoken.JwsHeader
-import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
-import io.jsonwebtoken.SignatureException
-import io.jsonwebtoken.SigningKeyResolver
-import io.jsonwebtoken.UnsupportedJwtException
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.epoll.Epoll
 import io.netty.channel.epoll.EpollEventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED
 import io.swagger.util.PrimitiveType
+import io.trino.sql.SqlToSegmentation
 import org.rakam.server.http.HttpRequestException
 import org.rakam.server.http.HttpServerBuilder
 import org.rakam.server.http.HttpService
-import org.rakam.server.http.IRequestParameter
-import java.io.ByteArrayInputStream
-import java.io.IOException
-import java.nio.charset.StandardCharsets
-import java.security.Key
-import java.security.cert.CertificateFactory
 import java.time.ZoneId
-import java.util.Base64
-import javax.crypto.spec.SecretKeySpec
 
 object HttpServer {
-    private fun getServices(modelService: IModelService, dataSource: DataSource, timezone: ZoneId?): Set<HttpService> {
+    private fun getServices(modelService: RecipeModelService, dataSource: DataSource, enableJdbc: Boolean, timezone: ZoneId?): MutableSet<HttpService> {
+        val services = mutableSetOf<HttpService>()
+
+        services.add(BaseHttpService())
+
+        val queryService = getQueryService(modelService, dataSource, timezone)
+        services.add(queryService)
+
+        services.add(TaskHttpService(queryService.taskQueueService))
+
+        if (enableJdbc) {
+            jdbcServices(queryService).forEach { services.add(it) }
+        }
+
+        return services
+    }
+
+    private fun getQueryService(modelService: RecipeModelService, dataSource: DataSource, timezone: ZoneId?): QueryHttpService {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
         val cacheConfig = CacheBuilderSpec.parse("")
-        val apiService = QueryHttpService(modelService, dataSource, InMemoryCacheService(cacheConfig), taskQueueService, getReportServices(modelService), timezone)
-        return setOf(BaseHttpService(), TaskHttpService(taskQueueService), apiService)
+        val cacheService = InMemoryCacheService(cacheConfig)
+        val services = getReportServices(modelService)
+
+        val reportService = ReportService(modelService, JinjaRendererService(), SqlQueryTaskGenerator(cacheService), services, this::getAttributes)
+        return QueryHttpService(modelService, { dataSource }, reportService, taskQueueService, services)
+    }
+
+    private fun jdbcServices(queryService: QueryHttpService): Set<HttpService> {
+        return setOf(
+            NodeInfoService(),
+            StatementService(queryService.taskQueueService, queryService.reportService, queryService.dataSourceFetcher, queryService.modelService),
+            QueryService(queryService.taskQueueService),
+        )
+    }
+
+    private fun getAttributes(auth: ProjectAuth): UserAttributeValues {
+        return auth.attributes?.mapNotNull { item -> toAttribute(item.value)?.let { item.key to it } }?.toMap() ?: mapOf()
+    }
+
+    private fun toAttribute(value: Any?): UserAttribute? {
+        return when (value) {
+            is String -> UserAttribute(UserAttributeDefinition.Type.STRING, UserAttributeDefinition.Type.UserAttributeValue.StringValue(value))
+            is Number -> UserAttribute(UserAttributeDefinition.Type.NUMERIC, UserAttributeDefinition.Type.UserAttributeValue.NumericValue(value))
+            is Boolean -> UserAttribute(UserAttributeDefinition.Type.BOOLEAN, UserAttributeDefinition.Type.UserAttributeValue.BooleanValue(value))
+            else -> null
+        }
     }
 
     private fun getReportServices(modelService: IModelService): Map<ReportType, IAdHocService<out ServiceReportOptions>> {
@@ -63,18 +104,21 @@ object HttpServer {
             ReportType.SEGMENTATION to segmentationService,
             ReportType.FUNNEL to FunnelService(modelService, segmentationService),
             ReportType.RETENTION to RetentionService(modelService, segmentationService),
-            ReportType.SQL to SqlService()
+            ReportType.SQL to SqlService(),
+            ReportType.MQL to MqlService(modelService, SqlToSegmentation(segmentationService, modelService)),
         )
     }
 
     fun start(
         address: HostAndPort,
         apiSecret: String?,
+        usernamePass: String?,
         numberOfThreads: Int,
         isDebug: Boolean,
         origin: String?,
-        modelService: IModelService,
+        modelService: RecipeModelService,
         dataSource: DataSource,
+        enableJdbc: Boolean,
         timezone: ZoneId?
     ) {
         val eventExecutors: EventLoopGroup = if (Epoll.isAvailable()) {
@@ -83,8 +127,20 @@ object HttpServer {
             NioEventLoopGroup(numberOfThreads)
         }
 
+        val basicAuthLoader: BasicAuthLoader? = if (usernamePass != null) {
+            val arr = usernamePass.split(":".toRegex(), 2)
+            val (user, pass) = Pair(arr[0], arr[1]);
+            {
+                if (it.user == user && it.pass == pass) {
+                    ProjectAuth(-1, -1, false, false, null, null, mapOf(), timezone)
+                } else {
+                    throw MetriqlException(UNAUTHORIZED)
+                }
+            }
+        } else null
+
         val httpServer = HttpServerBuilder()
-            .setHttpServices(getServices(modelService, dataSource, timezone))
+            .setHttpServices(getServices(modelService, dataSource, enableJdbc, timezone))
             .setMaximumBody(104_857_600)
             .setEventLoopGroup(eventExecutors)
             .setMapper(JsonHelper.getMapper())
@@ -99,42 +155,7 @@ object HttpServer {
             }
             .setOverridenMappings(ImmutableMap.of(ZoneId::class.java, PrimitiveType.STRING))
             .setCustomRequestParameters(
-                mapOf(
-                    "auth" to HttpServerBuilder.IRequestParameterFactory {
-                        IRequestParameter { _, request ->
-                            if (apiSecret == null) {
-                                null
-                            } else {
-                                val token = request.headers().get(HttpHeaders.Names.AUTHORIZATION)?.split(" ".toRegex(), 2)
-                                    ?: throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
-                                if (token[0].lowercase() != "bearer") {
-                                    throw MetriqlException("Only the `Bearer` Authorization is accepted", HttpResponseStatus.BAD_REQUEST)
-                                }
-
-                                val key = loadKeyFile(apiSecret)
-
-                                val parser = Jwts.parser()
-                                parser.setSigningKeyResolver(object : SigningKeyResolver {
-                                    override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, claims: Claims?): Key? {
-                                        val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
-                                        return key.getKey(algorithm)
-                                    }
-
-                                    override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, plaintext: String?): Key? {
-                                        val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
-                                        return key.getKey(algorithm)
-                                    }
-                                })
-
-                                try {
-                                    parser.parse(token[1]).body
-                                } catch (e: Exception) {
-                                    throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
-                                }
-                            }
-                        }
-                    }
-                )
+                mapOf("userContext" to MetriqlAuthRequestParameterFactory(apiSecret, basicAuthLoader))
             )
             .addPostProcessor { response ->
                 if (origin != null) {
@@ -161,32 +182,5 @@ object HttpServer {
         }
 
         build.bind(address.host, address.port)
-    }
-
-    class LoadedKey(private val publicKey: Key?, private val hmacKey: ByteArray?) {
-        fun getKey(algorithm: SignatureAlgorithm): Key? {
-            return if (algorithm.isHmac) {
-                if (hmacKey == null) {
-                    throw UnsupportedJwtException(String.format("JWT is signed with %s, but no HMAC key is configured", algorithm))
-                } else {
-                    SecretKeySpec(hmacKey, algorithm.jcaName)
-                }
-            } else publicKey ?: throw UnsupportedJwtException(String.format("JWT is signed with %s, but no key is configured", algorithm))
-        }
-    }
-
-    private fun loadKeyFile(value: String): LoadedKey {
-        return try {
-            val cf = CertificateFactory.getInstance("X.509")
-            val cert = cf.generateCertificate(ByteArrayInputStream(value.toByteArray(StandardCharsets.UTF_8)))
-            LoadedKey(cert.publicKey, null)
-        } catch (var4: Exception) {
-            try {
-                val rawKey = Base64.getMimeDecoder().decode(value.toByteArray(StandardCharsets.US_ASCII))
-                LoadedKey(null, rawKey)
-            } catch (var3: IOException) {
-                throw SignatureException("Unknown signing key id")
-            }
-        }
     }
 }

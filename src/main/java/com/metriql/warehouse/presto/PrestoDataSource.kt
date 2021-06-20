@@ -19,7 +19,7 @@ class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBC
 
     override val dataSourceProperties: Properties by lazy {
         val properties = Properties()
-        properties["jdbcUrl"] = "jdbc:presto://${config.host}:${config.port}/${config.catalog}/${config.schema}"
+        properties["jdbcUrl"] = "jdbc:trino://${config.host}:${config.port}/${config.catalog}/${config.schema}"
         properties["driverClassName"] = "io.trino.jdbc.TrinoDriver"
 
         properties["dataSource.user"] = config.user

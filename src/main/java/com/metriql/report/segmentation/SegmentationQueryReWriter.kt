@@ -161,7 +161,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
                 } else {
                     materializeDimension.copy(relationName = null)
                 }
-            }.firstOrNull() ?: return Either.Right("`${encode(dimReference)}` dimension don't fit in.")
+            }.firstOrNull() ?: return Either.Right("`${encode(dimReference)}` dimension doesn't fit in.")
         }
 
         return Either.Left(
@@ -185,7 +185,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             Model.Dimension(
                 it.name.name,
                 Model.Dimension.Type.COLUMN,
-                Model.Dimension.DimensionValue.Column(context.getDimensionAlias(it.name.name, dimension.postOperation)),
+                Model.Dimension.DimensionValue.Column(context.getDimensionAlias(it.name.name, it.name.relation, dimension.postOperation)),
                 fieldType = if (dimension.postOperation != null) {
                     (dimension.postOperation.value as IPostOperation).valueType
                 } else {
@@ -202,7 +202,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
                 null,
                 null,
                 Model.Measure.Type.COLUMN,
-                Model.Measure.MeasureValue.Column(measure.value.agg!!, context.getMeasureAlias(it.name))
+                Model.Measure.MeasureValue.Column(measure.value.agg!!, context.getMeasureAlias(it.name, it.relation))
             )
         }
 

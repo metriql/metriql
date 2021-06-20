@@ -20,6 +20,7 @@ import com.metriql.service.model.ModelRelation
 import com.metriql.service.model.RelationName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DataSource
+import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.filter.DateRange
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.util.LinkedHashMap
@@ -37,6 +38,7 @@ abstract class IQueryGeneratorContext {
     abstract val relations: Map<Pair<ModelName, RelationName>, ModelRelation>
     abstract val viewModels: LinkedHashMap<ModelName, String>
     abstract val comments: MutableList<String>
+    val warehouseBridge: WarehouseMetriqlBridge get() = datasource.warehouse.bridge
 
     abstract fun getMappingDimensions(modelName: ModelName): Model.MappingDimensions
     abstract fun getModelDimension(dimensionName: DimensionName, modelName: ModelName): ModelDimension
@@ -47,13 +49,12 @@ abstract class IQueryGeneratorContext {
     ): ModelRelation
 
     // Could use only dimensionName but post-operations may be used more than once
-    abstract fun getDimensionAlias(dimensionName: DimensionName, postOperation: ReportMetric.PostOperation?): String
+    abstract fun getDimensionAlias(dimensionName: DimensionName, relationName: RelationName?, postOperation: ReportMetric.PostOperation?): String
 
     // Syntax sugar for measure. We don't need it actually.
-    abstract fun getMeasureAlias(measureName: MeasureName): String
+    abstract fun getMeasureAlias(measureName: MeasureName, relationName: String?): String
     abstract fun getModel(modelName: ModelName): Model
     abstract fun getAggregatesForModel(target: Model.Target, type: ReportType): List<Triple<ModelName, String, SegmentationRecipeQuery.SegmentationMaterialize>>
-    abstract fun getAliasQuote(): Char?
     abstract fun addModel(model: Model)
     abstract fun getSQLReference(
         modelTarget: Model.Target,

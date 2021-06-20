@@ -19,4 +19,8 @@ open class TestModelService(private var models: List<Model> = listOf()) : IModel
     override fun delete(auth: ProjectAuth, id: List<Int>) {
         TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
     }
+
+    override fun update() {
+        TODO("not implemented")
+    }
 }

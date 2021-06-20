@@ -26,7 +26,6 @@ object RedshiftMetriqlBridge : BasePostgresqlMetriqlBridge() {
         RFunction.HEX_TO_INT to "STRTOL({{value[0]}}, 16)",
     )
 
-    override val aliasQuote = '"'
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
 
     override fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {

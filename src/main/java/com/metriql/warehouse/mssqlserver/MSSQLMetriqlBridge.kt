@@ -25,10 +25,8 @@ object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
     )
 
     override val functions = mapOf(
-        RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "DATEADD({{value[1]}}, {{value[2]}}, {{value[0]}})",
-    )
+    ) + super.functions
 
-    override val aliasQuote = '"'
     override val supportedDBTTypes = setOf<DBTType>()
 }

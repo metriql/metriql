@@ -15,15 +15,13 @@ import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 
 open abstract class BasePostgresqlMetriqlBridge : ANSISQLMetriqlBridge() {
-    override val aliasQuote = '"'
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
 
     override val functions = mapOf(
-        RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "{{value[0]}} + INTERVAL '{{value[2]}} {{value[1]}}'",
 //        RFunction.HEX_TO_INT to "CAST(CAST(({{value[0]}} || '00000100') AS bit(32)) AS bigint)",
         RFunction.HEX_TO_INT to "('x' || lpad({{value[0]}}, 16, '0'))::bit(64)::bigint",
-    )
+    ) + super.functions
 
     override val metricRenderHook: WarehouseMetriqlBridge.MetricRenderHook
         get() = object : WarehouseMetriqlBridge.MetricRenderHook {

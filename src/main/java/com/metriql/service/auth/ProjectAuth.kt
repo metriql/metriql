@@ -1,17 +1,20 @@
 package com.metriql.service.auth
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.metriql.warehouse.spi.WarehouseAuth
 import java.time.ZoneId
 
-open class ProjectAuth(
+class ProjectAuth(
     val userId: Int,
     val projectId: Int,
     val isOwner: Boolean,
     val isSuperuser: Boolean,
     val email: String?,
     val permissions: List<Int>?,
+    val attributes: Map<String, Any?>?,
     val timezone: ZoneId?
 ) {
+    @JsonIgnore
     fun warehouseAuth() = WarehouseAuth(projectId, userId, timezone)
 
     companion object {
@@ -23,6 +26,7 @@ open class ProjectAuth(
                 isSuperuser = true,
                 email = null,
                 permissions = null,
+                attributes = null,
                 timezone = timezone
             )
         }

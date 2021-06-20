@@ -22,7 +22,7 @@ data class Dataset(
 data class RecipeDataset(
     @JsonAlias("model")
     val dataset: String,
-    val filters: List<Recipe.FilterReference>?,
+    val filters: List<Recipe.FilterReferences>?,
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     val dimension: Recipe.DimensionReference?
 ) {
@@ -38,7 +38,7 @@ data class RecipeDataset(
 fun getUsedModels(step: Dataset, context: IQueryGeneratorContext): List<ModelName> {
     val filterRelations = step.filters.mapNotNull {
         when (it.value) {
-            is ReportFilter.FilterValue.MetricFilter -> it.value.metricValue.toMetricReference().relation
+            is ReportFilter.FilterValue.MetricFilter -> it.value.metricValue?.toMetricReference()?.relation
             is ReportFilter.FilterValue.Sql -> null
         }
     }

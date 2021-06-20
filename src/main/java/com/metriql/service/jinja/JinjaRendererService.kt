@@ -62,9 +62,9 @@ class JinjaRendererService @Inject constructor() {
         }
 
         val base = mapOf(
-            "TABLE" to if (modelName != null) quoteIdentifier(modelName, dataSource.warehouse.bridge.aliasQuote) else null,
-            "TARGET" to if (targetModelName != null) quoteIdentifier(targetModelName, dataSource.warehouse.bridge.aliasQuote) else null,
-            "aq" to context.getAliasQuote(),
+            "TABLE" to if (modelName != null) dataSource.warehouse.bridge.quoteIdentifier(modelName) else null,
+            "TARGET" to if (targetModelName != null) dataSource.warehouse.bridge.quoteIdentifier(targetModelName) else null,
+            "aq" to context.warehouseBridge.quote,
             "model" to MetriqlJinjaContext.ModelContext(context, auth.timezone),
             "relation" to MetriqlJinjaContext.RelationContext(modelName, context, auth.timezone),
             "dimension" to MetriqlJinjaContext.DimensionContext(modelName, context, auth.timezone),

@@ -1,5 +1,7 @@
 package com.metriql
 
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
@@ -16,8 +18,10 @@ import com.metriql.report.Recipe
 import com.metriql.report.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
+import com.metriql.service.model.Model
 import com.metriql.service.model.RecipeModelService
 import com.metriql.util.JsonHelper
+import com.metriql.util.TextUtil
 import com.metriql.util.UnirestHelper
 import com.metriql.util.YamlHelper
 import com.metriql.warehouse.WarehouseConfig
@@ -78,7 +82,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
     protected fun parseRecipe(manifestJson: String): Recipe {
         if (version) {
-            echo(this.javaClass.getPackage().implementationVersion, trailingNewline = true)
+            echo(TextUtil.version(), trailingNewline = true)
             exitProcess(0)
         }
 
@@ -115,7 +119,16 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             // this code is unreachable as we're exiting the process
             null!!
         } else {
-            val models = DbtManifestParser.parse(content)
+            val models = try {
+                DbtManifestParser.parse(content)
+            } catch (manifestEx: MismatchedInputException) {
+                // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
+                try {
+                    JsonHelper.read(content, object : TypeReference<List<Model>>() {}).map { Recipe.RecipeModel.fromModel(it) }
+                } catch (metriqlModelEx: Exception) {
+                    throw manifestEx
+                }
+            }
             Recipe("local://metriql", "master", null, Recipe.Config("(inline)"), "(inline)", models = models)
         }
     }
@@ -204,6 +217,10 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             "--api-auth-secret-base64", envvar = "METRIQL_API_AUTH_SECRET_BASE64",
             help = "Your JWT secret key in Base64 format. metriql supports various algorithms such as HS256 and RS256 and identifies the key parsing the content."
         )
+        private val usernamePass by option(
+            "--api-auth-username-password", envvar = "METRIQL_API_AUTH_USERNAME_PASSWORD",
+            help = "Your username:password pair for basic authentification"
+        )
         private val apiSecretFile by option(
             "--api-auth-secret-file", envvar = "METRIQL_API_AUTH_SECRET_FILE",
             help = "If you're using metriql locally, you can set the private key file or API secret as a file argument."
@@ -227,8 +244,11 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val dataSource = this.getDataSource()
 
-            val modelService = RecipeModelService(null, this.parseRecipe(manifestJson), -1, dataSource.warehouse.bridge)
-            HttpServer.start(HostAndPort.fromParts(host, port), apiSecret, threads, debug, origin, modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) })
+            val modelService = RecipeModelService(null, { this.parseRecipe(manifestJson) }, -1, dataSource.warehouse.bridge)
+            HttpServer.start(
+                HostAndPort.fromParts(host, port), apiSecret, usernamePass, threads, debug, origin,
+                modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }
+            )
         }
     }
 

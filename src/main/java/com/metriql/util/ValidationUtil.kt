@@ -6,16 +6,16 @@ import java.net.UnknownHostException
 
 object ValidationUtil {
     @JvmStatic
-    fun quoteIdentifier(collection: String, character: Char? = '"'): String {
+    fun quoteIdentifier(reference: String, character: Char? = '"'): String {
         if (character == null) {
-            return collection
+            return reference
         }
 
-        return character + collection.replace(character.toString().toRegex(), "") + character
+        return character + reference.replace(character.toString().toRegex(), "") + character
     }
 
     @JvmStatic
-    fun checkLiteral(value: String): String {
+    fun stripLiteral(value: String): String {
         return value.replace("'".toRegex(), "''")
     }
 

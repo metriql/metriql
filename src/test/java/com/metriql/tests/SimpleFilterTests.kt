@@ -41,9 +41,9 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.EQUALS, 1),
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.EQUALS, 2),
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.EQUALS, 3)
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.EQUALS, 1),
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.EQUALS, 2),
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.EQUALS, 3)
                             )
                         )
                     ),
@@ -53,7 +53,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.EQUALS, "charlie")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.EQUALS, "charlie")
                             )
                         )
                     )
@@ -71,9 +71,9 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.EQUALS, 1),
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.EQUALS, 2),
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.LESS_THAN, 6)
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.EQUALS, 1),
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.EQUALS, 2),
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.LESS_THAN, 6)
                             )
                         )
                     ),
@@ -83,7 +83,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.EQUALS, "charlie")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.EQUALS, "charlie")
                             )
                         )
                     )
@@ -104,7 +104,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, AnyOperatorType.IS_SET, null)
+                                MetricFilter.Filter(null, null, FieldType.STRING, AnyOperatorType.IS_SET, null)
                             )
                         )
                     )
@@ -123,7 +123,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, AnyOperatorType.IS_NOT_SET, null)
+                                MetricFilter.Filter(null, null, FieldType.STRING, AnyOperatorType.IS_NOT_SET, null)
                             )
                         )
                     )
@@ -144,7 +144,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.EQUALS, "alpha")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.EQUALS, "alpha")
                             )
                         )
                     )
@@ -163,7 +163,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.NOT_EQUALS, "alpha")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.NOT_EQUALS, "alpha")
                             )
                         ),
                     ),
@@ -173,7 +173,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.EQUALS, "bravo")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.EQUALS, "bravo")
                             )
                         ),
                     )
@@ -192,7 +192,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.CONTAINS, "liet")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.CONTAINS, "liet")
                             )
                         )
                     )
@@ -211,7 +211,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.STARTS_WITH, "charli")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.STARTS_WITH, "charli")
                             )
                         )
                     )
@@ -230,7 +230,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.ENDS_WITH, "trot")
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.ENDS_WITH, "trot")
                             )
                         )
                     )
@@ -249,7 +249,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.IN, listOf("alpha"))
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.IN, listOf("alpha"))
                             )
                         )
                     )
@@ -268,7 +268,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_string", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.STRING, StringOperatorType.IN, listOf("alpha"))
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.IN, listOf("alpha"))
                             )
                         )
                     )
@@ -289,7 +289,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_bool", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.BOOLEAN, BooleanOperatorType.IS, true)
+                                MetricFilter.Filter(null, null, FieldType.BOOLEAN, BooleanOperatorType.IS, true)
                             )
                         )
                     )
@@ -310,7 +310,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_double", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.EQUALS, 1)
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.EQUALS, 1)
                             )
                         )
                     )
@@ -329,7 +329,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_double", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DOUBLE, NumberOperatorType.EQUALS, 1.0)
+                                MetricFilter.Filter(null, null, FieldType.DOUBLE, NumberOperatorType.EQUALS, 1.0)
                             )
                         )
                     )
@@ -348,7 +348,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.GREATER_THAN, 0)
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.GREATER_THAN, 0)
                             )
                         )
                     )
@@ -367,7 +367,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_double", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DOUBLE, NumberOperatorType.GREATER_THAN, 0)
+                                MetricFilter.Filter(null, null, FieldType.DOUBLE, NumberOperatorType.GREATER_THAN, 0)
                             )
                         )
                     )
@@ -386,7 +386,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.LESS_THAN, 1)
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.LESS_THAN, 1)
                             )
                         )
                     )
@@ -405,7 +405,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_double", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DOUBLE, NumberOperatorType.LESS_THAN, 1.0)
+                                MetricFilter.Filter(null, null, FieldType.DOUBLE, NumberOperatorType.LESS_THAN, 1.0)
                             )
                         )
                     )
@@ -424,7 +424,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.GREATER_THAN, 3)
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.GREATER_THAN, 3)
                             )
                         )
                     ),
@@ -434,7 +434,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_int", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.INTEGER, NumberOperatorType.LESS_THAN, 5)
+                                MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.LESS_THAN, 5)
                             )
                         )
                     )
@@ -453,7 +453,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_double", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DOUBLE, NumberOperatorType.GREATER_THAN, 3.0)
+                                MetricFilter.Filter(null, null, FieldType.DOUBLE, NumberOperatorType.GREATER_THAN, 3.0)
                             )
                         )
                     ),
@@ -463,7 +463,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_double", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DOUBLE, NumberOperatorType.LESS_THAN, 5.0)
+                                MetricFilter.Filter(null, null, FieldType.DOUBLE, NumberOperatorType.LESS_THAN, 5.0)
                             )
                         )
                     )
@@ -485,6 +485,7 @@ object SimpleFilterTests {
                             ReportDimension("test_timestamp", modelName, null, null),
                             listOf(
                                 MetricFilter.Filter(
+                                    null, null,
                                     FieldType.TIMESTAMP,
                                     TimestampOperatorType.GREATER_THAN,
                                     testTimestamp.last().format(DateTimeFormatter.ISO_DATE_TIME)
@@ -508,6 +509,7 @@ object SimpleFilterTests {
                             ReportDimension("test_timestamp", modelName, null, null),
                             listOf(
                                 MetricFilter.Filter(
+                                    null, null,
                                     FieldType.TIMESTAMP,
                                     TimestampOperatorType.LESS_THAN,
                                     testTimestamp[1].toString()
@@ -531,6 +533,7 @@ object SimpleFilterTests {
                             ReportDimension("test_timestamp", modelName, null, null),
                             listOf(
                                 MetricFilter.Filter(
+                                    null, null,
                                     FieldType.TIMESTAMP,
                                     TimestampOperatorType.GREATER_THAN,
                                     testTimestamp[3].toString()
@@ -545,6 +548,7 @@ object SimpleFilterTests {
                             ReportDimension("test_timestamp", modelName, null, null),
                             listOf(
                                 MetricFilter.Filter(
+                                    null, null,
                                     FieldType.TIMESTAMP,
                                     TimestampOperatorType.LESS_THAN,
                                     testTimestamp[5].toString()
@@ -569,7 +573,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_date", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DATE, DateOperatorType.GREATER_THAN, testDate.last().toString())
+                                MetricFilter.Filter(null, null, FieldType.DATE, DateOperatorType.GREATER_THAN, testDate.last().toString())
                             )
                         )
                     )
@@ -588,7 +592,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_date", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DATE, DateOperatorType.LESS_THAN, testDate[1].toString())
+                                MetricFilter.Filter(null, null, FieldType.DATE, DateOperatorType.LESS_THAN, testDate[1].toString())
                             )
                         )
                     )
@@ -608,6 +612,7 @@ object SimpleFilterTests {
                             ReportDimension("test_date", modelName, null, null),
                             listOf(
                                 MetricFilter.Filter(
+                                    null, null,
                                     FieldType.DATE,
                                     DateOperatorType.GREATER_THAN,
                                     testDate[3].toString()
@@ -621,7 +626,7 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_date", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(FieldType.DATE, DateOperatorType.LESS_THAN, testDate[5].toString())
+                                MetricFilter.Filter(null, null, FieldType.DATE, DateOperatorType.LESS_THAN, testDate[5].toString())
                             )
                         )
                     )

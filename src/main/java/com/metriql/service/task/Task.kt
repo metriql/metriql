@@ -30,7 +30,7 @@ abstract class Task<T, K>(val projectId: Int, val userId: Int?, private val isBa
     private var postProcessors = mutableListOf<(T) -> T>()
 
     @Volatile
-    var status = Status.IDLE
+    var status = Status.QUEUED
         private set
 
     private var result: T? = null
@@ -143,7 +143,14 @@ abstract class Task<T, K>(val projectId: Int, val userId: Int?, private val isBa
 
     @UppercaseEnum
     enum class Status {
-        IDLE, RUNNING, CANCELED, FINISHED
+        QUEUED, RUNNING, CANCELED, FINISHED
+    }
+
+    fun markAsRunning() {
+        if (status != Status.QUEUED) {
+            throw IllegalStateException()
+        }
+        status = Status.RUNNING
     }
 
     fun isDone(): Boolean {

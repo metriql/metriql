@@ -2,6 +2,7 @@ package com.metriql.report
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -121,7 +122,7 @@ data class Recipe(
         val materializes: Map<String, Map<String, SegmentationRecipeQuery.SegmentationMaterialize>>? = null,
         val aggregates: Map<String, SegmentationRecipeQuery.SegmentationMaterialize>? = null,
         @JsonAlias("always_filters")
-        val alwaysFilters: List<FilterReference>? = null,
+        val alwaysFilters: List<FilterReferences>? = null,
         @JsonIgnore
         val _path: String? = null,
     ) {
@@ -298,45 +299,47 @@ data class Recipe(
                                         )
                                     }
                                     is ReportFilter.FilterValue.MetricFilter -> {
-                                        when (filter.value.metricValue) {
-                                            is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters cant filter measures")
-                                            is ReportMetric.ReportDimension -> {
-                                                val metricValue = filter.value.metricValue
-                                                filter.value.filters
-                                                    .map {
-                                                        Metric.RecipeMeasure.Filter(
-                                                            metricValue.name,
-                                                            null,
-                                                            null,
-                                                            metricValue.modelName,
-                                                            metricValue.relationName,
-                                                            metricValue.postOperation,
-                                                            it.valueType,
-                                                            it.operator,
-                                                            it.value
-                                                        )
-                                                    }
+                                        filter.value.filters.map {
+                                            val metricValue = filter.value.metricValue ?: it.metricValue ?: throw java.lang.IllegalArgumentException()
+                                            when (metricValue) {
+                                                is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters cant filter measures")
+                                                is ReportMetric.ReportDimension -> {
+                                                    filter.value.filters
+                                                        .map {
+                                                            Metric.RecipeMeasure.Filter(
+                                                                metricValue.name,
+                                                                null,
+                                                                null,
+                                                                metricValue.modelName,
+                                                                metricValue.relationName,
+                                                                metricValue.postOperation,
+                                                                it.valueType,
+                                                                it.operator,
+                                                                it.value
+                                                            )
+                                                        }
+                                                }
+                                                is ReportMetric.ReportMappingDimension -> {
+                                                    filter.value.filters
+                                                        .map {
+                                                            Metric.RecipeMeasure.Filter(
+                                                                null,
+                                                                metricValue.name,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                metricValue.postOperation,
+                                                                it.valueType,
+                                                                it.operator,
+                                                                it.value
+                                                            )
+                                                        }
+                                                }
+                                                is ReportMetric.Function -> TODO()
+                                                is ReportMetric.Unary -> TODO()
+                                                else -> TODO()
                                             }
-                                            is ReportMetric.ReportMappingDimension -> {
-                                                val metricValue = filter.value.metricValue
-                                                filter.value.filters
-                                                    .map {
-                                                        Metric.RecipeMeasure.Filter(
-                                                            null,
-                                                            metricValue.name,
-                                                            null,
-                                                            null,
-                                                            null,
-                                                            metricValue.postOperation,
-                                                            it.valueType,
-                                                            it.operator,
-                                                            it.value
-                                                        )
-                                                    }
-                                            }
-                                            is ReportMetric.Function -> TODO()
-                                            is ReportMetric.Unary -> TODO()
-                                        }
+                                        }.flatten()
                                     }
                                 }
                             }.flatten()
@@ -574,14 +577,16 @@ data class Recipe(
                                 ReportFilter(
                                     ReportFilter.Type.METRIC_FILTER,
                                     ReportFilter.FilterValue.MetricFilter(
+                                        // TODO: it's deprecated
                                         ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                        // TODO: it's deprecated
                                         ReportMetric.ReportDimension(
                                             filter.dimension,
                                             filter.modelName ?: modelName,
                                             filter.relationName,
                                             filter.postOperation
                                         ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(filter.valueType!!, filter.operator!!, filter.value))
+                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.valueType!!, filter.operator!!, filter.value))
                                     )
                                 )
                             }
@@ -594,7 +599,7 @@ data class Recipe(
                                             filter.mappingDimension,
                                             filter.postOperation
                                         ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(filter.valueType!!, filter.operator!!, filter.value))
+                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.valueType!!, filter.operator!!, filter.value))
                                     )
                                 )
                             }
@@ -797,64 +802,72 @@ data class Recipe(
         )
     }
 
+    @JsonFormat(with = [JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY])
+    class FilterReferences : ArrayList<FilterReference>() {
+        @JsonIgnore
+        fun toReportFilter(
+            context: IQueryGeneratorContext,
+            modelName: ModelName,
+        ): ReportFilter {
+            val orFilters = map { filter ->
+                val metricType = when {
+                    filter.dimension != null -> ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
+                    filter.measure != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE
+                    filter.mapping != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION
+                    else -> throw IllegalStateException("One of dimension, measure or mapping is required")
+                }
+
+                var (fieldType, metricValue) = when {
+                    filter.dimension != null -> {
+                        val type = filter.dimension.getType(context::getModel, modelName)
+                        Pair(type, filter.dimension.toDimension(modelName, type))
+                    }
+                    filter.measure != null -> {
+                        Pair(filter.measure.getType(context, modelName), filter.measure.toMeasure(modelName))
+                    }
+                    filter.mapping != null -> {
+                        val type = JsonHelper.read(filter.mapping, Model.MappingDimensions.CommonMappings::class.java)
+                        Pair(type.fieldType, ReportMetric.ReportMappingDimension(type, null))
+                    }
+                    else -> {
+                        throw IllegalStateException("One of dimension, measure or mapping is required")
+                    }
+                }
+
+                try {
+                    JsonHelper.convert(filter.operator, FieldType.UNKNOWN.operatorClass.java)
+                    fieldType = FieldType.UNKNOWN
+                } catch (e: Exception) {
+                    null
+                }
+
+                val operatorBean: Enum<*> = try {
+                    JsonHelper.convert(filter.operator, fieldType.operatorClass.java)
+                } catch (e: Exception) {
+                    val values = fieldType.operatorClass.java.enumConstants.joinToString(", ") { toCamelCase(it.name) }
+                    throw MetriqlException("Invalid operator `${filter.operator}`, available values for type $fieldType is $values", BAD_REQUEST)
+                }
+
+                ReportFilter.FilterValue.MetricFilter.Filter(metricType, metricValue, fieldType, operatorBean, filter.value)
+            }
+
+            return ReportFilter(
+                ReportFilter.Type.METRIC_FILTER,
+                ReportFilter.FilterValue.MetricFilter(
+                    null, null,
+                    orFilters
+                )
+            )
+        }
+    }
+
     data class FilterReference(
         val dimension: DimensionReference? = null,
         val measure: MetricReference? = null,
         val mapping: String? = null,
         val operator: String,
         val value: Any?,
-    ) {
-        fun toReportFilter(
-            context: IQueryGeneratorContext,
-            modelName: ModelName,
-        ): ReportFilter {
-            val metricType = when {
-                dimension != null -> ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
-                measure != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE
-                mapping != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION
-                else -> throw IllegalStateException("One of dimension, measure or mapping is required")
-            }
-
-            var (fieldType, metricValue) = when {
-                dimension != null -> {
-                    val type = dimension.getType(context::getModel, modelName)
-                    Pair(type, dimension.toDimension(modelName, type))
-                }
-                measure != null -> {
-                    Pair(measure.getType(context, modelName), measure.toMeasure(modelName))
-                }
-                mapping != null -> {
-                    val type = JsonHelper.read(mapping, Model.MappingDimensions.CommonMappings::class.java)
-                    Pair(type.fieldType, ReportMetric.ReportMappingDimension(type, null))
-                }
-                else -> {
-                    throw IllegalStateException("One of dimension, measure or mapping is required")
-                }
-            }
-
-            try {
-                JsonHelper.convert(operator, FieldType.UNKNOWN.operatorClass.java)
-                fieldType = FieldType.UNKNOWN
-            } catch (e: Exception) {
-                null
-            }
-
-            val operatorBean: Enum<*> = try {
-                JsonHelper.convert(operator, fieldType.operatorClass.java)
-            } catch (e: Exception) {
-                val values = fieldType.operatorClass.java.enumConstants.joinToString(", ") { toCamelCase(it.name) }
-                throw MetriqlException("Invalid operator `$operator`, available values for type $fieldType is $values", BAD_REQUEST)
-            }
-
-            return ReportFilter(
-                ReportFilter.Type.METRIC_FILTER,
-                ReportFilter.FilterValue.MetricFilter(
-                    metricType, metricValue,
-                    listOf(ReportFilter.FilterValue.MetricFilter.Filter(fieldType, operatorBean, value))
-                )
-            )
-        }
-    }
+    )
 
     data class MetricReference(val name: String, val relation: String? = null) {
 
@@ -880,7 +893,7 @@ data class Recipe(
         }
 
         companion object {
-            private val regex = "(([A-Z0-9a-z_]+)?\\.)?([:A-Z0-9a-z_]+)".toRegex()
+            private val regex = "(([A-Z0-9a-z_]+)?\\.)?(\\$?[:A-Z0-9a-z_]+)".toRegex()
 
             fun mappingDimension(name: Model.MappingDimensions.CommonMappings, relation: String?): MetricReference {
                 return MetricReference(":" + name.toSnakeCase, relation)

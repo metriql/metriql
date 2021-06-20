@@ -12,7 +12,6 @@ import com.metriql.util.MetriqlEventBus
 import com.metriql.util.MetriqlException
 import com.metriql.util.MetriqlExceptions
 import com.metriql.util.Scheduler
-import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.DatabaseName
 import com.metriql.warehouse.spi.SchemaName
@@ -231,7 +230,7 @@ abstract class JDBCWarehouse(
         target: Model.Target,
         aliasName: String,
         column: String,
-    ): String = "${quoteIdentifier(aliasName, warehouse.bridge.aliasQuote)}.${quoteIdentifier(column, warehouse.bridge.aliasQuote)}"
+    ): String = "${warehouse.bridge.quoteIdentifier(aliasName)}.${warehouse.bridge.quoteIdentifier(column)}"
 
     override fun sqlReferenceForTarget(
         target: Model.Target,
@@ -247,14 +246,14 @@ abstract class JDBCWarehouse(
 
                 val targetBuilder = mutableListOf<String>()
                 if (supportsCrossDatabaseQueries && databaseName != null) {
-                    targetBuilder.add(quoteIdentifier(databaseName, warehouse.bridge.aliasQuote))
+                    targetBuilder.add(warehouse.bridge.quoteIdentifier(databaseName))
                 }
                 if (defaultSchema != null && schemaName != null) {
-                    targetBuilder.add(quoteIdentifier(schemaName, warehouse.bridge.aliasQuote))
+                    targetBuilder.add(warehouse.bridge.quoteIdentifier(schemaName))
                 }
-                targetBuilder.add(quoteIdentifier(table, warehouse.bridge.aliasQuote))
+                targetBuilder.add(warehouse.bridge.quoteIdentifier(table))
                 val targetSQL = targetBuilder.joinToString(".")
-                "$targetSQL AS ${quoteIdentifier(aliasName, warehouse.bridge.aliasQuote)}"
+                "$targetSQL AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
             }
         }
     }
@@ -349,6 +348,7 @@ abstract class JDBCWarehouse(
                         }
 
 //                        resultSet = statement.unwrap(SnowflakeStatement::class.java).executeAsyncQuery(query)
+                        markAsRunning()
                         resultSet = statement.executeQuery(query)
 
                         val value = JdbcUtil.toQueryResult(

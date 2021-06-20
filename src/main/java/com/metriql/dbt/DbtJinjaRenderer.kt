@@ -10,7 +10,6 @@ import com.metriql.service.model.ModelName
 import com.metriql.util.CryptUtil
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil
-import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.spi.DataSource
 import jinjava.javax.el.ELException
 import java.io.File
@@ -118,15 +117,12 @@ class DbtJinjaRenderer() {
             val context = JinjavaInterpreter.getCurrent().context
             val dataSource = context["_db"] as DataSource?
             val refs = JsonHelper.read(arguments[0].toString(), object : TypeReference<Map<String, String>>() {})
-            val aliasQuote = dataSource!!.warehouse.bridge.aliasQuote
+                ?: throw ELException("get_alias requires a valid relation argument. Ex: {database: null, schema: null, table: null}")
 
-            if (refs == null) {
-                throw ELException("get_alias requires a valid relation argument. Ex: {database: null, schema: null, table: null}")
-            }
             return listOfNotNull(
-                refs["database"]?.let { ValidationUtil.quoteIdentifier(it, aliasQuote) },
-                refs["schema"]?.let { ValidationUtil.quoteIdentifier(it, aliasQuote) },
-                refs["table"]?.let { ValidationUtil.quoteIdentifier(it, aliasQuote) }
+                refs["database"]?.let { dataSource!!.warehouse.bridge.quoteIdentifier(it) },
+                refs["schema"]?.let { dataSource!!.warehouse.bridge.quoteIdentifier(it) },
+                refs["table"]?.let { dataSource!!.warehouse.bridge.quoteIdentifier(it) }
             ).joinToString(".")
         }
 

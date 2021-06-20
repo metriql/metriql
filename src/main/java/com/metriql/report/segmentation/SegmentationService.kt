@@ -26,7 +26,6 @@ import java.util.Collections.newSetFromMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 import java.util.logging.Logger
-import javax.inject.Inject
 
 /*
 * Segmentation service can render segmentation query and generate modelTarget for:
@@ -40,7 +39,7 @@ import javax.inject.Inject
 * Instead of generating the join relation on funnel service, we apply the filters (thus generating the join relation if needed)
 * using this service
 * */
-class SegmentationService @Inject constructor() : IAdHocService<SegmentationReportOptions> {
+class SegmentationService : IAdHocService<SegmentationReportOptions> {
     // check if materialize exists in the database, if not, ignore it
     private val materializeTableExists = newSetFromMap(ConcurrentHashMap<MaterializeTableCache, Boolean>())
 
@@ -75,7 +74,8 @@ class SegmentationService @Inject constructor() : IAdHocService<SegmentationRepo
     override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: SegmentationReportOptions): Set<ModelName> {
         val filterRelations = (reportOptions.filters ?: listOf()).mapNotNull {
             when (it.value) {
-                is ReportFilter.FilterValue.MetricFilter -> it.value.metricValue.toMetricReference().relation
+                // TODO
+                is ReportFilter.FilterValue.MetricFilter -> it.value.metricValue?.toMetricReference()?.relation
                 is ReportFilter.FilterValue.Sql -> null
             }
         }
@@ -234,7 +234,7 @@ class SegmentationService @Inject constructor() : IAdHocService<SegmentationRepo
                 }
             }
 
-        val joinRelations = (renderedDimensions.mapNotNull { it.join } + renderedMeasures.mapNotNull { it.join } + renderedFilters.mapNotNull { it.join }).toSet()
+        val joinRelations = (renderedFilters.mapNotNull { it.joins }.flatten() + (renderedDimensions.mapNotNull { it.join } + renderedMeasures.mapNotNull { it.join })).toSet()
 
         /*
         * 2. Prepare parts.
@@ -263,7 +263,7 @@ class SegmentationService @Inject constructor() : IAdHocService<SegmentationRepo
             },
             whereFilters = renderedFilters.mapNotNull { it.whereFilter },
 
-            groupIdx = if (dimensions.isNotEmpty()) {
+            groupIdx = if (measures.isNotEmpty()) {
                 (1..dimensions.size).toSet()
             } else null,
 

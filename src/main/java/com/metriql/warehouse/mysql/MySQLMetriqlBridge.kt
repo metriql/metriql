@@ -16,12 +16,11 @@ object MySQLMetriqlBridge : ANSISQLMetriqlBridge() {
         ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator()
     )
 
-    override val aliasQuote = '`'
+    override val quote = '`'
     override val supportedDBTTypes = setOf<DBTType>()
 
     override val functions = mapOf(
-        RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "DATE_ADD({{value[0]}}, INTERVAL {{value[2]}} {{value[1]}})'",
         RFunction.HEX_TO_INT to "CONV({{value[0]}}, 16, 10)",
-    )
+    ) + super.functions
 }

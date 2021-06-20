@@ -1,14 +1,12 @@
 package io.trino.sql
 
 import com.google.inject.Inject
-import com.hubspot.jinjava.Jinjava
 import com.metriql.db.FieldType
 import com.metriql.report.Recipe
 import com.metriql.report.ReportFilter
 import com.metriql.report.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.ReportFilter.FilterValue.MetricFilter.MetricType
 import com.metriql.report.ReportFilter.Type.METRIC_FILTER
-import com.metriql.report.ReportMetric
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.model.IModelService
@@ -16,22 +14,27 @@ import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
-import com.metriql.util.ValidationUtil
+import com.metriql.warehouse.presto.PrestoMetriqlBridge
+import com.metriql.warehouse.presto.PrestoWarehouse
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
+import com.metriql.warehouse.spi.querycontext.TOTAL_ROWS_MEASURE
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
+import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
 import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.parser.SqlParser
 import io.trino.sql.tree.AliasedRelation
 import io.trino.sql.tree.AllColumns
+import io.trino.sql.tree.BooleanLiteral
 import io.trino.sql.tree.ComparisonExpression
-import io.trino.sql.tree.DefaultTraversalVisitor
 import io.trino.sql.tree.DereferenceExpression
 import io.trino.sql.tree.DoubleLiteral
 import io.trino.sql.tree.Expression
 import io.trino.sql.tree.FunctionCall
 import io.trino.sql.tree.Identifier
 import io.trino.sql.tree.Limit
+import io.trino.sql.tree.Literal
 import io.trino.sql.tree.LogicalBinaryExpression
 import io.trino.sql.tree.LongLiteral
 import io.trino.sql.tree.Node
@@ -45,11 +48,7 @@ import io.trino.sql.tree.StringLiteral
 import io.trino.sql.tree.Table
 
 class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
-    private lateinit var groupings: List<Node>
-    private lateinit var model: Model
-    private lateinit var references: Map<Node, String>
-    private lateinit var projectionColumns: List<Pair<String, String>>
-    val renderer = Jinjava()
+    val parser = SqlParser()
 
     fun convert(context: IQueryGeneratorContext, query: QuerySpecification): String {
         if (query.offset.isPresent) {
@@ -63,54 +62,40 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
         val (model, alias) = getModel(models, query.from.orElse(null))
 
-        this.model = model
+        val references = mutableMapOf<Node, Pair<MetricType, String>>()
+        buildReferences(references, model, context, alias, relation = null)
 
-        references = buildReferences(model, context, alias, metricPrefix = null)
+        model.relations.forEach { relation ->
+            val relationModel = models.find { it.name == relation.modelName } ?: throw IllegalStateException()
+            buildReferences(references, relationModel, context, alias, relation = relation)
+        }
 
         val measures = mutableListOf<String>()
         val dimensions = mutableListOf<String>()
 
-        this.groupings = query.groupBy.orElse(null)?.groupingElements?.flatMap {
+        // TODO: see how we can use it
+        val groupings = query.groupBy.orElse(null)?.groupingElements?.flatMap {
             if (it !is SimpleGroupBy) {
                 throw UnsupportedOperationException()
             }
             it.expressions.map { exp -> getReference(query.select.selectItems, exp) }
         }?.toList() ?: listOf()
 
-        for (selectItem in query.select.selectItems) {
-            when (selectItem) {
-                is AllColumns -> throw TODO()
-                is SingleColumn -> {
-
-                    val metricReferences = pushdownExpression(selectItem.expression)
-
-                    metricReferences.forEach { metricReference ->
-                        val isDimension = model.dimensions.any { it.name == metricReference }
-
-                        if (isDimension) {
-                            dimensions.add(metricReference)
-                        } else {
-                            measures.add(metricReference)
-                        }
-                    }
-                }
-            }
-        }
-
-        projectionColumns = query.select.selectItems.map {
+        val projectionColumns = query.select.selectItems.map {
             when (it) {
                 is AllColumns -> throw TODO()
                 is SingleColumn -> {
-                    val alias = it.alias.orElse(null)?.let { identifier -> identifier.value } ?: getIdentifierValue(deferenceExpression(it.expression, model.name))
-                    val projection = MetriqlExpressionFormatter.formatExpression(it.expression, this, context, models)
+                    val alias = it.alias.orElse(null)?.let { identifier -> identifier.value }
+                        ?: deferenceExpression(it.expression, model.name)?.let { exp -> getIdentifierValue(exp) }
+                    val projection = pushdownExpression(references, context, models, it.expression, dimensions, measures)
                     Pair(projection, alias)
                 }
                 else -> TODO()
             }
         }
 
-        val whereFilters = query.where.orElse(null)?.let { processWhereExpression(it, models) } ?: listOf()
-        val havingFilters = query.having.orElse(null)?.let { processWhereExpression(it, models) } ?: listOf()
+        val whereFilters = query.where.orElse(null)?.let { processWhereExpression(references, model, it, models) } ?: listOf()
+        val havingFilters = query.having.orElse(null)?.let { processWhereExpression(references, model, it, models) } ?: listOf()
 
         val query = SegmentationRecipeQuery(
             model.name,
@@ -118,24 +103,27 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             dimensions.map { Recipe.DimensionReference.fromName(it) },
             (whereFilters + havingFilters).mapNotNull { it.toReference() },
             limit = parseLimit(query.limit.orElse(null)),
-            orders = parseOrders(query)
+            orders = parseOrders(references, query)
         ).toReportOptions(context)
 
         val (renderedQuery, _, _) = segmentationService.renderQuery(context.auth, context, query)
 
-        return if (projectionColumns.any { it != null }) {
-            """SELECT ${projectionColumns.map { col -> col?.let { "${it.first} AS ${it.second}" } }.joinToString(",")} FROM ($renderedQuery) ${
-                ValidationUtil.quoteIdentifier(
-                    alias,
-                    context.getAliasQuote()
-                )
-            }"""
+        return if (projectionColumns.any { it.first != it.second }) {
+            val quotedAlias = context.warehouseBridge.quoteIdentifier(alias)
+            """SELECT ${
+            projectionColumns.joinToString(", ") { col ->
+                val alias = col.second?.let { context.warehouseBridge.quoteIdentifier(it) }
+                if (col.first != col.second) "${col.first}${alias?.let { " AS $it" } ?: ""}" else col.first
+            }
+            } FROM (
+                |$renderedQuery
+                |) AS $quotedAlias""".trimMargin()
         } else {
             renderedQuery
         }
     }
 
-    private fun deferenceExpression(expression: Expression?, modelName: ModelName): Node {
+    private fun deferenceExpression(expression: Expression, modelName: ModelName): Node? {
         return when (expression) {
             is DereferenceExpression -> {
                 val source = getIdentifierValue(expression.base)
@@ -144,7 +132,9 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 }
                 expression.field
             }
-            else -> TODO()
+            is Identifier -> expression
+            is FunctionCall -> Identifier(expression.name.suffix)
+            else -> null
         }
     }
 
@@ -157,19 +147,89 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun pushdownExpression(expression: Expression): List<String> {
-        val references = mutableListOf<String>()
-        YarrakVisitor().process(expression, references)
-        return references
+    private fun pushdownExpression(
+        references: Map<Node, Pair<MetricType, String>>,
+        context: IQueryGeneratorContext,
+        models: List<Model>,
+        expression: Expression,
+        dimensions: MutableList<String>,
+        measures: MutableList<String>
+    ): String {
+        return MetriqlQueryRewriter(context, models, references, dimensions, measures).process(expression, null)
     }
 
-    class YarrakVisitor : DefaultTraversalVisitor<List<String>>() {
-        override fun visitFunctionCall(node: FunctionCall?, context: List<String>?): Void {
-            return super.visitFunctionCall(node, context)
+    inner class MetriqlQueryRewriter(
+        context: IQueryGeneratorContext,
+        models: List<Model>,
+        private val references: Map<Node, Pair<MetricType, String>>,
+        val dimensions: MutableList<String>,
+        val measures: MutableList<String>,
+    ) : MetriqlExpressionFormatter.Formatter(this, context, models) {
+        override fun visitFunctionCall(node: FunctionCall, context: Void?): String? {
+            if (node.name.prefix.isPresent) {
+                throw UnsupportedOperationException("schema functions are not supported")
+            }
+
+            var directReference = references[node]
+            val reference = if (directReference != null) {
+                measures.add(directReference.second)
+                directReference.second
+            } else if (isPlain(node)) {
+                // workaround for basic count(*) as we have a system measure for it
+                val isTotalRows = when (node.name.suffix) {
+                    "count" -> {
+                        when {
+                            node.arguments.isEmpty() -> true
+                            node.arguments[0] is Literal -> true
+                            else -> false
+                        }
+                    }
+                    "sum" -> {
+                        when (val arg = node.arguments[0]) {
+                            is DoubleLiteral -> arg.value == 1.0
+                            is LongLiteral -> arg.value == 1L
+                            else -> false
+                        }
+                    }
+                    else -> false
+                }
+
+                if (isTotalRows) {
+                    measures.add(TOTAL_ROWS_MEASURE.name)
+                    TOTAL_ROWS_MEASURE.name
+                } else null
+            } else null
+
+            return if (reference != null) {
+                formatIdentifier(reference, queryContext)
+            } else {
+                super.visitFunctionCall(node, context)
+            }
         }
 
-        override fun visitDereferenceExpression(node: DereferenceExpression?, context: List<String>?): Void {
-            return super.visitDereferenceExpression(node, context)
+        private fun isPlain(node: FunctionCall): Boolean {
+            return !node.isDistinct && node.filter.isEmpty &&
+                node.nullTreatment.isEmpty && node.window.isEmpty && node.processingMode.isEmpty
+        }
+
+        override fun visitDereferenceExpression(node: DereferenceExpression, context: Void?): String? {
+            val reference = references[node]
+            return if (reference != null) {
+                dimensions.add(reference.second)
+                queryContext.warehouseBridge.quoteIdentifier(node.field.value)
+            } else {
+                super.visitDereferenceExpression(node, context)
+            }
+        }
+
+        override fun visitIdentifier(node: Identifier, context: Void?): String {
+            val reference = references[node]
+            return if (reference != null) {
+                dimensions.add(reference.second)
+                node.value
+            } else {
+                super.visitIdentifier(node, context)
+            }
         }
     }
 
@@ -186,6 +246,16 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     else -> throw IllegalStateException()
                 }
             }
+            is Identifier -> {
+                val singleSelectItem = selectItems.find {
+                    when (it) {
+                        is SingleColumn -> it.alias.orElse(null) == exp
+                        else -> false
+                    }
+                }
+
+                (singleSelectItem as? SingleColumn)?.expression ?: exp
+            }
             else -> exp
         }
     }
@@ -200,7 +270,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 Pair(getModel(models, from.relation).first, from.alias.value)
             }
             is Table -> {
-                val model = models.find { it.name == from.name.suffix } ?: throw MetriqlException("Model ${from.name.suffix} not found", HttpResponseStatus.NOT_FOUND)
+                val model = models.find { it.name == from.name.suffix } ?: throw MetriqlException("Model ${from.name.suffix} not found", NOT_FOUND)
                 Pair(model, from.name.suffix)
             }
             else -> {
@@ -209,7 +279,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun parseOrders(query: QuerySpecification): Map<Recipe.MetricReference, Recipe.OrderType>? {
+    private fun parseOrders(references: Map<Node, Pair<MetricType, String>>, query: QuerySpecification): Map<Recipe.MetricReference, Recipe.OrderType>? {
         if (!query.orderBy.isPresent) {
             return null
         }
@@ -222,60 +292,101 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             if (it.nullOrdering != SortItem.NullOrdering.UNDEFINED) {
                 throw MetriqlException("NULL ORDERING is not supported yet", HttpResponseStatus.BAD_REQUEST)
             }
-            val metric = Recipe.MetricReference.fromName(references[getReference(query.select.selectItems, it.sortKey)] ?: throw TODO())
+            val reference = getReference(query.select.selectItems, it.sortKey)
+            val metric = Recipe.MetricReference.fromName(references[reference]?.second ?: throw TODO())
             metric to orderType
         }.toMap()
     }
 
-    private fun processWhereExpression(exp: Expression, models: List<Model>): List<ReportFilter> {
+    private fun processWhereExpression(
+        references: Map<Node, Pair<MetricType, String>>,
+        model: Model,
+        exp: Expression,
+        models: List<Model>
+    ): List<ReportFilter>? {
         return when (exp) {
             is LogicalBinaryExpression -> {
-                val left = processWhereExpression(exp.left, models)
-                val right = processWhereExpression(exp.right, models)
-
-                // TODO
-                val metricType: MetricType = null!!
-                val metricValue: ReportMetric = null!!
+                val left = processWhereExpression(references, model, exp.left, models)
+                val right = processWhereExpression(references, model, exp.right, models)
+                val allFilters = (left ?: listOf()) + (right ?: listOf())
 
                 when (exp.operator) {
-                    LogicalBinaryExpression.Operator.AND -> {
-                        listOf(
-                            ReportFilter(METRIC_FILTER, MetricFilter(metricType, metricValue, filters = listOf())),
-                            ReportFilter(METRIC_FILTER, MetricFilter(metricType, metricValue, filters = listOf())),
-                        )
-                    }
+                    LogicalBinaryExpression.Operator.AND -> allFilters
                     LogicalBinaryExpression.Operator.OR -> {
-                        listOf(ReportFilter(METRIC_FILTER, MetricFilter(metricType, metricValue, filters = listOf(null!!, null!!))))
+                        val filters = allFilters.flatMap { filter ->
+                            when (filter.value) {
+                                is ReportFilter.FilterValue.Sql -> throw UnsupportedOperationException()
+                                is MetricFilter -> filter.value.filters
+                            }
+                        }
+                        listOf(ReportFilter(METRIC_FILTER, MetricFilter(null, null, filters = filters)))
                     }
                 }
             }
             is ComparisonExpression -> {
-                val metricReference = references[exp.left] ?: references[exp.right] ?: throw TODO()
+                val isRedundant = if (exp.left is Literal && exp.right is Literal) {
+                    when (exp.operator) {
+                        ComparisonExpression.Operator.EQUAL -> {
+                            exp.left == exp.right
+                        }
+                        ComparisonExpression.Operator.NOT_EQUAL -> {
+                            exp.left != exp.right
+                        }
+                        else -> TODO()
+                    }
+                } else null
 
-                val value = getFilterValue(if (references.containsKey(exp.left)) exp.right else exp.left)
-                val metricType = if (groupings.contains(exp.left) || groupings.contains(exp.right)) MetricType.DIMENSION else MetricType.MEASURE
-                val (type, metricValue) = when (metricType) {
-                    MetricType.DIMENSION -> {
-                        val fromName = Recipe.DimensionReference.fromName(metricReference)
-                        val type = fromName.getType({ models.first { m -> m.name == it } }, model.name)
-                        type to fromName.toDimension(model.name, type)
-                    }
-                    MetricType.MEASURE -> FieldType.DOUBLE to Recipe.MetricReference.fromName(metricReference).toMeasure(model.name)
-                    else -> TODO()
-                }
-                val operator = when (exp.operator) {
-                    ComparisonExpression.Operator.EQUAL -> {
-                        JsonHelper.convert("equals", type.operatorClass.java)
-                    }
-                    ComparisonExpression.Operator.NOT_EQUAL -> {
-                        JsonHelper.convert("notEquals", type.operatorClass.java)
-                    }
-                    else -> throw TODO()
-                }
+                when (isRedundant) {
+                    true -> listOf()
+                    false -> null
+                    else -> {
+                        val metricReference = references[exp.left] ?: references[exp.right] ?: TODO()
 
-                listOf(ReportFilter(METRIC_FILTER, MetricFilter(metricType, metricValue, listOf(MetricFilter.Filter(type, operator, value)))))
+                        val value = getFilterValue(if (references.containsKey(exp.left)) exp.right else exp.left)
+                        val (type, metricValue) = when (metricReference.first) {
+                            MetricType.DIMENSION -> {
+                                val fromName = Recipe.DimensionReference.fromName(metricReference.second)
+                                val type = fromName.getType({ models.first { m -> m.name == it } }, model.name)
+                                type to fromName.toDimension(model.name, type)
+                            }
+                            MetricType.MEASURE -> FieldType.DOUBLE to Recipe.MetricReference.fromName(metricReference.second).toMeasure(model.name)
+                            else -> throw IllegalStateException()
+                        }
+                        val operator = convertMetriqlOperator(exp.operator, type.operatorClass.java)
+
+                        listOf(
+                            ReportFilter(
+                                METRIC_FILTER,
+                                MetricFilter(
+                                    metricReference.first, metricValue,
+                                    listOf(MetricFilter.Filter(metricReference.first, metricValue, type, operator, value))
+                                )
+                            )
+                        )
+                    }
+                }
             }
-            else -> throw TODO()
+            is BooleanLiteral -> {
+                if (exp.value) {
+                    // redundant filter
+                    null
+                } else {
+                    throw UnsupportedOperationException("`false` value is not supported in WHERE condition")
+                }
+            }
+            else -> throw UnsupportedOperationException("${exp.javaClass.name} statement is not supported in WHERE condition")
+        }
+    }
+
+    private fun convertMetriqlOperator(operator: ComparisonExpression.Operator, clazz: Class<out Enum<*>>): Enum<*> {
+        return when (operator) {
+            ComparisonExpression.Operator.EQUAL -> JsonHelper.convert("equals", clazz)
+            ComparisonExpression.Operator.NOT_EQUAL -> JsonHelper.convert("notEquals", clazz)
+            ComparisonExpression.Operator.LESS_THAN -> JsonHelper.convert("lessThan", clazz)
+            ComparisonExpression.Operator.LESS_THAN_OR_EQUAL -> TODO()
+            ComparisonExpression.Operator.GREATER_THAN -> JsonHelper.convert("greaterThan", clazz)
+            ComparisonExpression.Operator.GREATER_THAN_OR_EQUAL -> TODO()
+            ComparisonExpression.Operator.IS_DISTINCT_FROM -> TODO()
         }
     }
 
@@ -301,47 +412,67 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getDimensionExp(context: IQueryGeneratorContext, name: String, alias: String): String {
-        val aliasQuote = context.datasource.warehouse.bridge.aliasQuote
-        return "$aliasQuote$alias$aliasQuote.$aliasQuote$name$aliasQuote"
-    }
+    private fun getMeasureExp(context: IQueryGeneratorContext, model: Model, measure: Model.Measure, tableAlias: String?, prefix: String?): Expression {
+        val exp = when (val value = measure.value) {
+            is Model.Measure.MeasureValue.Column -> {
 
-    private fun buildReferences(model: Model, context: IQueryGeneratorContext, tableAlias: String, metricPrefix: String? = null): Map<Node, String> {
-        val references = mutableMapOf<Node, String>()
-        val prefix = metricPrefix?.let { "$it." } ?: ""
-        model.dimensions.forEach {
-            val dimensionExp = getDimensionExp(context, it.name, tableAlias)
-            references[parseExpression(dimensionExp)] = prefix + it.name
-        }
-
-        model.measures.forEach {
-            val measureExp = when (val value = it.value) {
-                is Model.Measure.MeasureValue.Column -> {
-                    val columnValue = value.column?.let { "$tableAlias.${value.column}" } ?: ""
-                    context.datasource.warehouse.bridge.performAggregation(columnValue, value.aggregation, WarehouseMetriqlBridge.AggregationContext.ADHOC)
-                }
-                is Model.Measure.MeasureValue.Sql -> context.renderSQL(value.sql, model.name)
-                is Model.Measure.MeasureValue.Dimension -> {
-                    val dim = model.dimensions.find { d -> d.name == value.dimension } ?: throw TODO()
-                    context.datasource.warehouse.bridge.performAggregation(
-                        getDimensionExp(context, dim.name, tableAlias),
-                        value.aggregation,
-                        WarehouseMetriqlBridge.AggregationContext.ADHOC
-                    )
-                }
+                val columnValue = value.column?.let {
+                    val suffix = "${prefix ?: ""}${value.column}"
+                    if (tableAlias != null) "$tableAlias.$suffix" else suffix
+                } ?: ""
+                // we support Presto warehouse as the Sql dialect so we can only support Presto aggregations
+                PrestoWarehouse.bridge.performAggregation(columnValue, value.aggregation, WarehouseMetriqlBridge.AggregationContext.ADHOC)
             }
-
-            references[parseExpression(measureExp)] = prefix + it.name
+            is Model.Measure.MeasureValue.Sql -> context.renderSQL(value.sql, model.name)
+            is Model.Measure.MeasureValue.Dimension -> {
+                val dim = model.dimensions.find { d -> d.name == value.dimension } ?: throw TODO()
+                PrestoWarehouse.bridge.performAggregation(
+                    getDimensionStr(dim, tableAlias, prefix),
+                    value.aggregation,
+                    WarehouseMetriqlBridge.AggregationContext.ADHOC
+                )
+            }
         }
-
-        return references
+        return parseExpression(exp)
     }
 
-    fun render(template: String, alias: String): String {
-        return renderer.render(template, mapOf("this" to alias))
+    private fun getDimensionStr(dimension: Model.Dimension, tableAlias: String?, prefix: String?): String {
+        // the mapping is based on presto dialect
+        var suffix = PrestoMetriqlBridge.quoteIdentifier("${prefix?.let { "$it." } ?: ""}${dimension.name}")
+        return if (tableAlias == null) suffix else (PrestoMetriqlBridge.quoteIdentifier(tableAlias) + "." + suffix)
+    }
+
+    private fun getDimensionExp(dimension: Model.Dimension, tableAlias: String?, prefix: String? = null): Expression {
+        return parseExpression(getDimensionStr(dimension, tableAlias, prefix))
+    }
+
+    private fun buildReferences(
+        references: MutableMap<Node, Pair<MetricType, String>>,
+        sourceModel: Model,
+        context: IQueryGeneratorContext,
+        tableAlias: String,
+        relation: Model.Relation? = null
+    ) {
+        val prefix = relation?.name?.let { "$it." } ?: ""
+
+        sourceModel.dimensions.forEach {
+            references[getDimensionExp(it, tableAlias, relation?.name)] = Pair(MetricType.DIMENSION, prefix + it.name)
+
+            if (relation == null) {
+                references[getDimensionExp(it, null, null)] = Pair(MetricType.DIMENSION, prefix + it.name)
+            }
+        }
+
+        sourceModel.measures.forEach {
+            references[getMeasureExp(context, sourceModel, it, tableAlias, relation?.name)] = Pair(MetricType.MEASURE, prefix + it.name)
+
+            if (relation == null) {
+                references[getMeasureExp(context, sourceModel, it, null, null)] = Pair(MetricType.MEASURE, prefix + it.name)
+            }
+        }
     }
 
     private fun parseExpression(expression: String): Expression {
-        return SqlParser().createExpression(expression, ParsingOptions())
+        return parser.createExpression(expression, ParsingOptions())
     }
 }

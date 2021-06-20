@@ -14,7 +14,7 @@ data class SegmentationRecipeQuery(
     val dataset: ModelName,
     val measures: List<Recipe.MetricReference>,
     val dimensions: List<Recipe.DimensionReference>?,
-    val filters: List<Recipe.FilterReference>?,
+    val filters: List<Recipe.FilterReferences>?,
     val reportOptions: SegmentationReportOptions.ReportOptions? = null,
     val limit: Int? = null,
     val orders: Map<Recipe.MetricReference, Recipe.OrderType>? = null
@@ -41,7 +41,7 @@ data class SegmentationRecipeQuery(
     data class SegmentationMaterialize(
         val measures: List<Recipe.MetricReference>,
         val dimensions: List<Recipe.DimensionReference>?,
-        val filters: List<Recipe.FilterReference>?
+        val filters: List<Recipe.FilterReferences>?
     ) : MaterializeQuery {
         override fun toQuery(modelName: ModelName): RecipeQuery {
             return SegmentationRecipeQuery(modelName, measures, dimensions, filters)

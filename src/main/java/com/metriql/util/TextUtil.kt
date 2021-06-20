@@ -16,6 +16,10 @@ object TextUtil {
         return BigInteger(1, md.digest(input.toByteArray())).toString(16).padStart(32, '0')
     }
 
+    fun version(): String {
+        return this.javaClass.getPackage().implementationVersion ?: "(unknown)"
+    }
+
     fun toUserFriendly(input: String): String {
         return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, input).replace(
             String.format(

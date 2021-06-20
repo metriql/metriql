@@ -36,7 +36,8 @@ class MqlService @Inject constructor(private val modelService: IModelService, pr
             MetriqlSqlFormatter.formatSql(
                 statement,
                 reWriter,
-                context, models
+                context,
+                models
             )
         } catch (e: Exception) {
             logger.log(Level.WARNING, "Unable to parse query", e)
