@@ -180,7 +180,7 @@ class StatementService(
             null,
             if (task.isDone()) null else URI("http://$uri/v1/statement/queued/?id=$id"),
             columns,
-            task.result?.result,
+            task.result?.result as Iterable<List<Any?>>?,
             stats.build(),
             task.result?.error?.let { QueryError(it.message + "\n" + task.result?.properties?.get(QUERY), it.sqlState, 10, null, null, null, null) },
             listOf(),
@@ -197,14 +197,15 @@ class StatementService(
 
     @Path("/queued")
     @GET
-    fun status(request: RakamHttpRequest, @QueryParam("id") id: String): QueryResults {
+    fun status(request: RakamHttpRequest, @QueryParam("id") id: String) {
         val idUUID = try {
             UUID.fromString(id)
         } catch (e: Exception) {
             throw MetriqlException(HttpResponseStatus.NOT_FOUND)
         }
         val task = taskQueueService.status(idUUID)
-        return convertQueryResult(request, task as Task.TaskTicket<QueryResult>)
+        request.addResponseHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json")
+        request.response(mapper.writeValueAsBytes(convertQueryResult(request, task as Task.TaskTicket<QueryResult>))).end()
     }
 
     @DELETE

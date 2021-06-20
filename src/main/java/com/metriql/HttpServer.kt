@@ -3,6 +3,7 @@ package com.metriql
 import com.google.common.cache.CacheBuilderSpec
 import com.google.common.collect.ImmutableMap
 import com.google.common.net.HostAndPort
+import com.metriql.Commands.Companion.parseUserNamePass
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
@@ -128,8 +129,7 @@ object HttpServer {
         }
 
         val basicAuthLoader: BasicAuthLoader? = if (usernamePass != null) {
-            val arr = usernamePass.split(":".toRegex(), 2)
-            val (user, pass) = Pair(arr[0], arr[1]);
+            val (user, pass) = parseUserNamePass(usernamePass);
             {
                 if (it.user == user && it.pass == pass) {
                     ProjectAuth(-1, -1, false, false, null, null, mapOf(), timezone)

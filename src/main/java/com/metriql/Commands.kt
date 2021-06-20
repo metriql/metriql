@@ -89,8 +89,21 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         val manifestLocation = URI(manifestJson)
         val content = when (manifestLocation.scheme) {
             "http", "https" -> {
+                val request = UnirestHelper.unirest.get(manifestJson)
+                if (manifestLocation.userInfo != null) {
+                    val (user, pass) = parseUserNamePass(manifestLocation.userInfo)
+                    request.basicAuth(user, pass)
+                }
                 echo("Fetching manifest.json file from $manifestJson")
-                UnirestHelper.unirest.get(manifestJson).asBytes().body
+
+                val response = request.asBytes()
+                if (response.status != 200) {
+                    echo(
+                        "Unable to fetch manifest file from $manifestJson: ${response.statusText}",
+                        err = true
+                    )
+                    null
+                } else response.body
             }
             "file" -> {
                 val file = File(manifestLocation)
@@ -219,7 +232,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         )
         private val usernamePass by option(
             "--api-auth-username-password", envvar = "METRIQL_API_AUTH_USERNAME_PASSWORD",
-            help = "Your username:password pair for basic authentification"
+            help = "Your username:password pair for basic authentication"
         )
         private val apiSecretFile by option(
             "--api-auth-secret-file", envvar = "METRIQL_API_AUTH_SECRET_FILE",
@@ -249,6 +262,16 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 HostAndPort.fromParts(host, port), apiSecret, usernamePass, threads, debug, origin,
                 modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }
             )
+        }
+    }
+
+    companion object {
+        fun parseUserNamePass(usernamePass: String): Pair<String, String> {
+            val arr = usernamePass.split(":".toRegex(), 2)
+            if (arr.size != 2) {
+                throw IllegalArgumentException("Invalid argument for user pass: $usernamePass")
+            }
+            return Pair(arr[0], arr[1]);
         }
     }
 
