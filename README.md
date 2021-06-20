@@ -27,7 +27,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- markdownlint-disable -->
 <table>
   <tr>
-    <td align="center"><a href="http://ITfiers.com / GSheets.com"><img src="https://avatars.githubusercontent.com/u/32792779?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Hassam Saeed</b></sub></a><br /><a href="#data-HassamSaeed" title="Data">🔣</a></td>
+    <td align="center"><a href="https://github.com/HassamSaeed"><img src="https://avatars.githubusercontent.com/u/32792779?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Hassam Saeed</b></sub></a><br /><a href="#data-HassamSaeed" title="Data">🔣</a></td>
   </tr>
 </table>
 
