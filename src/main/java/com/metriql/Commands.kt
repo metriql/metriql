@@ -14,8 +14,8 @@ import com.metriql.dbt.DbtModelService
 import com.metriql.dbt.DbtProfiles
 import com.metriql.dbt.FileHandler
 import com.metriql.dbt.ProjectYaml
-import com.metriql.report.Recipe
-import com.metriql.report.Recipe.Dependencies.DbtDependency
+import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
@@ -271,7 +271,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             if (arr.size != 2) {
                 throw IllegalArgumentException("Invalid argument for user pass: $usernamePass")
             }
-            return Pair(arr[0], arr[1]);
+            return Pair(arr[0], arr[1])
         }
     }
 

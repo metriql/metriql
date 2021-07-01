@@ -22,6 +22,7 @@ import io.trino.spi.type.DoubleType
 import io.trino.spi.type.IntegerType
 import io.trino.spi.type.TimeType
 import io.trino.spi.type.TimestampType
+import io.trino.spi.type.TimestampWithTimeZoneType
 import io.trino.spi.type.Type
 import io.trino.spi.type.VarcharType
 import io.trino.type.UnknownType
@@ -100,17 +101,19 @@ class MetriqlMetadata(val models: List<Model>) : SystemTablesProvider {
                 .build()
         }
 
-        private fun addColumnsForModel(columns: MutableList<ColumnMetadata>, model: Model, relation: Model.Relation) {
+        private fun addColumnsForModel(columns: MutableList<ColumnMetadata>, model: Model, relation: Model.Relation?) {
             model.dimensions.forEach { dimension ->
                 if (dimension.postOperations != null) {
                     dimension.postOperations.forEach { timeframe -> columns.add(toColumnMetadata(dimension, relation?.name, timeframe)) }
-                } else columns.add(toColumnMetadata(dimension))
+                } else columns.add(toColumnMetadata(dimension, relation?.name))
             }
             model.measures.filter { it.value.agg != null }.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
         }
 
         override fun getTableMetadata(): ConnectorTableMetadata {
             val columns = mutableListOf<ColumnMetadata>()
+
+            addColumnsForModel(columns, model, null)
 
             model.relations?.forEach { relation ->
                 models.find { it.name == relation.modelName }?.let { model ->
@@ -168,9 +171,10 @@ class MetriqlMetadata(val models: List<Model>) : SystemTablesProvider {
                 DateType.DATE.baseName == name -> FieldType.DATE
                 TimeType.TIME_MILLIS.baseName == name -> FieldType.TIME
                 TimestampType.TIMESTAMP_MILLIS.baseName == name -> FieldType.TIMESTAMP
+                TimestampWithTimeZoneType.TIMESTAMP_TZ_MILLIS.baseName == name -> FieldType.TIMESTAMP
                 type.baseName == "array" -> TODO()
                 type.baseName == "map" -> TODO()
-                else -> TODO()
+                else -> throw UnsupportedOperationException("Unable to identify $type")
             }
         }
     }

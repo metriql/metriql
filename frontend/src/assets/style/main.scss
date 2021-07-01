@@ -1,0 +1,10 @@
+/*
+  Main SASS file that imports all style resouces
+
+  Based on "Simple Structure" by Milan Savov - https://www.webdesignerdepot.com/2020/12/2-smartest-ways-to-structure-sass/
+*/
+
+
+// Base
+@import '_base.scss';
+@import 'element.scss';

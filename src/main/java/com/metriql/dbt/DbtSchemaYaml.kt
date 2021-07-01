@@ -5,9 +5,9 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.metriql.report.Recipe
-import com.metriql.report.Recipe.RecipeModel.Metric.RecipeDimension
-import com.metriql.report.Recipe.RecipeModel.Metric.RecipeMeasure
+import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeDimension
+import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeMeasure
 import com.metriql.service.model.Model.Relation.JoinType
 import com.metriql.service.model.Model.Relation.RelationType
 import com.metriql.util.JsonHelper

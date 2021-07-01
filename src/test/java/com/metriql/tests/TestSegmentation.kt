@@ -5,13 +5,13 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.db.TestingServer
 import com.metriql.interfaces.TestModelService
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportFilter.FilterValue.MetricFilter
-import com.metriql.report.ReportMetric
-import com.metriql.report.ReportMetric.PostOperation
-import com.metriql.report.ReportMetric.ReportDimension
-import com.metriql.report.ReportMetric.ReportMeasure
 import com.metriql.report.SqlQueryTaskGenerator
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
+import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.ReportMetric.PostOperation
+import com.metriql.report.data.ReportMetric.ReportDimension
+import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.report.sql.SqlReportOptions
@@ -50,7 +50,7 @@ abstract class TestSegmentation {
     abstract val testingServer: TestingServer<*, *>
     private val auth: ProjectAuth = ProjectAuth(
         1, 1,
-        isOwner = true, isSuperuser = true, email = null, permissions = null, attributes = null, timezone = ZoneId.of("UTC")
+        isOwner = true, isSuperuser = true, email = null, permissions = null, attributes = null, timezone = ZoneId.of("UTC"), source = null
     )
     private val rendererService = JinjaRendererService()
 

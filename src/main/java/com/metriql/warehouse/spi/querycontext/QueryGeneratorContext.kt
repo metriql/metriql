@@ -2,8 +2,8 @@ package com.metriql.warehouse.spi.querycontext
 
 import com.google.common.base.CaseFormat
 import com.metriql.report.ReportExecutor
-import com.metriql.report.ReportMetric
 import com.metriql.report.ReportType
+import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
@@ -75,7 +75,7 @@ class QueryGeneratorContext(
 
     override fun getDimensionAlias(dimensionName: DimensionName, relationName: RelationName?, postOperation: ReportMetric.PostOperation?): String {
         val dimensionLabel = dimensionName.getMappingDimensionIfValid()?.let { TextUtil.toSlug(it.name) } ?: dimensionName
-        val prefix = relationName?.let { "$it." } ?: ""
+        val prefix = relationName?.let { "${it}_" } ?: ""
         return prefix + if (postOperation != null) {
             "${dimensionLabel}__${postOperation.type.toSnakeCase}_${CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_UNDERSCORE, postOperation.value.name)}"
         } else {
@@ -84,7 +84,7 @@ class QueryGeneratorContext(
     }
 
     override fun getMeasureAlias(measureName: MeasureName, relationName: String?): String {
-        val name = (relationName?.let { "$it." } ?: "") + measureName
+        val name = (relationName?.let { "${it}_" } ?: "") + measureName
         return warehouseBridge.quoteIdentifier(name)
     }
 

@@ -61,7 +61,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
 
     override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {
         if (target.value is Model.Target.TargetValue.Table) {
-            return object : QueryTask(auth.projectId, auth.userId, false) {
+            return object : QueryTask(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {
                     val tableId = TableId.of(target.value.database ?: config.project ?: serviceProjectId, target.value.schema ?: config.dataset, target.value.table)
                     val bTable = bigQuery.getTable(tableId).reload(TableOption.fields(TableField.SCHEMA))
@@ -72,7 +72,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 }
 
                 override fun getStats(): QueryResult.QueryStats {
-                    return QueryResult.QueryStats(FINISHED.description, nodes = 1, percentage = 100.0)
+                    return QueryResult.QueryStats(FINISHED, "preview($target)", nodes = 1, percentage = 100.0)
                 }
             }
         } else {

@@ -43,8 +43,8 @@ public final class MetriqlExpressionFormatter {
     private MetriqlExpressionFormatter() {
     }
 
-    public static String formatExpression(Expression expression, SqlToSegmentation reWriter, IQueryGeneratorContext context, List<Model> models) {
-        return new Formatter(reWriter, context, models).process(expression, null);
+    public static String formatExpression(Expression expression, SqlToSegmentation reWriter, IQueryGeneratorContext context) {
+        return new Formatter(reWriter, context).process(expression, null);
     }
 
     protected static String formatIdentifier(String rawValue, IQueryGeneratorContext context) {
@@ -53,13 +53,11 @@ public final class MetriqlExpressionFormatter {
 
     public static class Formatter extends AstVisitor<String, Void> {
         protected final IQueryGeneratorContext queryContext;
-        private final List<Model> models;
         private final SqlToSegmentation reWriter;
 
-        public Formatter(SqlToSegmentation reWriter, IQueryGeneratorContext queryContext, List<Model> models) {
+        public Formatter(SqlToSegmentation reWriter, IQueryGeneratorContext queryContext) {
             this.reWriter = reWriter;
             this.queryContext = queryContext;
-            this.models = models;
         }
 
         @Override
@@ -215,12 +213,12 @@ public final class MetriqlExpressionFormatter {
 
         @Override
         protected String visitSubqueryExpression(SubqueryExpression node, Void context) {
-            return "(" + formatSql(node.getQuery(), reWriter, queryContext, models) + ")";
+            return "(" + formatSql(node.getQuery(), reWriter, queryContext) + ")";
         }
 
         @Override
         protected String visitExists(ExistsPredicate node, Void context) {
-            return "(EXISTS " + formatSql(node.getSubquery(), reWriter, queryContext, models) + ")";
+            return "(EXISTS " + formatSql(node.getSubquery(), reWriter, queryContext) + ")";
         }
 
         @Override
@@ -234,7 +232,7 @@ public final class MetriqlExpressionFormatter {
 
         @Override
         protected String visitLambdaArgumentDeclaration(LambdaArgumentDeclaration node, Void context) {
-            return formatExpression(node.getName(), reWriter, queryContext, models);
+            return formatExpression(node.getName(), reWriter, queryContext);
         }
 
         @Override
@@ -270,7 +268,7 @@ public final class MetriqlExpressionFormatter {
                 throw new UnsupportedOperationException("WINDOW function is not supported");
             }
 
-            Map<RFunction, String> functions = queryContext.getDatasource().getWarehouse().getBridge().getFunctions();
+            Map<RFunction, String> functions = queryContext.getWarehouseBridge().getFunctions();
             String name = node.getName().getSuffix().toUpperCase();
 
             String functionTemplate;
@@ -620,7 +618,7 @@ public final class MetriqlExpressionFormatter {
 
         private String formatWindow(Window window) {
             if (window instanceof WindowReference) {
-                return formatExpression(((WindowReference) window).getName(), reWriter, queryContext, models);
+                return formatExpression(((WindowReference) window).getName(), reWriter, queryContext);
             }
 
             return formatWindowSpecification((WindowSpecification) window);
@@ -630,11 +628,11 @@ public final class MetriqlExpressionFormatter {
             List<String> parts = new ArrayList<>();
 
             if (windowSpecification.getExistingWindowName().isPresent()) {
-                parts.add(formatExpression(windowSpecification.getExistingWindowName().get(), reWriter, queryContext, models));
+                parts.add(formatExpression(windowSpecification.getExistingWindowName().get(), reWriter, queryContext));
             }
             if (!windowSpecification.getPartitionBy().isEmpty()) {
                 parts.add("PARTITION BY " + windowSpecification.getPartitionBy().stream()
-                        .map(i -> formatExpression(i, reWriter, queryContext, models))
+                        .map(i -> formatExpression(i, reWriter, queryContext))
                         .collect(joining(", ")));
             }
             if (windowSpecification.getOrderBy().isPresent()) {
@@ -661,7 +659,7 @@ public final class MetriqlExpressionFormatter {
             return input -> {
                 StringBuilder builder = new StringBuilder();
 
-                builder.append(formatExpression(input.getSortKey(), reWriter, queryContext, models));
+                builder.append(formatExpression(input.getSortKey(), reWriter, queryContext));
 
                 switch (input.getOrdering()) {
                     case ASCENDING:
@@ -700,7 +698,7 @@ public final class MetriqlExpressionFormatter {
                 if (groupingElement instanceof SimpleGroupBy) {
                     List<Expression> columns = groupingElement.getExpressions();
                     if (columns.size() == 1) {
-                        result = formatExpression(getOnlyElement(columns), reWriter, bridge, models);
+                        result = formatExpression(getOnlyElement(columns), reWriter, bridge);
                     } else {
                         result = formatGroupingSet(columns);
                     }
@@ -721,7 +719,7 @@ public final class MetriqlExpressionFormatter {
 
         private String formatGroupingSet(List<Expression> groupingSet) {
             return format("(%s)", Joiner.on(", ").join(groupingSet.stream()
-                    .map(i -> formatExpression(i, reWriter, queryContext, models))
+                    .map(i -> formatExpression(i, reWriter, queryContext))
                     .iterator()));
         }
 
@@ -748,11 +746,11 @@ public final class MetriqlExpressionFormatter {
                 case UNBOUNDED_PRECEDING:
                     return "UNBOUNDED PRECEDING";
                 case PRECEDING:
-                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext, models) + " PRECEDING";
+                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext) + " PRECEDING";
                 case CURRENT_ROW:
                     return "CURRENT ROW";
                 case FOLLOWING:
-                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext, models) + " FOLLOWING";
+                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext) + " FOLLOWING";
                 case UNBOUNDED_FOLLOWING:
                     return "UNBOUNDED FOLLOWING";
             }

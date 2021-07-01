@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.hubspot.jinjava.interpret.TemplateError
 import com.metriql.dbt.DbtManifest.Companion.getModelName
-import com.metriql.report.Recipe
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.util.JsonHelper
 import com.metriql.util.JsonPath
 import com.metriql.util.JsonUtil

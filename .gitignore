@@ -1,3 +1,5 @@
 *.iml
 requests.http
 target/*
+frontend/.idea
+frontend/dist

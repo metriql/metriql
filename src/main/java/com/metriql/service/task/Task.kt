@@ -19,12 +19,11 @@ import java.util.logging.Logger
  * @param isBackgroundTask: Is this task a background task, or user initiated?
  * */
 
-abstract class Task<T, K>(val projectId: Int, val userId: Int?, private val isBackgroundTask: Boolean) : Runnable {
+abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String?, private val isBackgroundTask: Boolean) : Runnable {
     private var id: UUID? = null
 
     private val startedAt = Instant.now()!!
     private var endedAt: Instant? = null
-    private var scope: Instant? = null
     private var currentStatsCalledAtMillis = System.currentTimeMillis() // Sets when currentStats is called
     private var delegates = mutableListOf<(T?) -> Unit>()
     private var postProcessors = mutableListOf<(T) -> T>()
@@ -123,6 +122,9 @@ abstract class Task<T, K>(val projectId: Int, val userId: Int?, private val isBa
     data class TaskTicket<T>(
         val id: UUID?,
         val startedAt: Instant,
+        val duration: Duration,
+        val user: Any?,
+        val source: String?,
         val status: Status,
         val update: Any?,
         val result: T?
@@ -133,12 +135,13 @@ abstract class Task<T, K>(val projectId: Int, val userId: Int?, private val isBa
         }
     }
 
-    fun taskTicket(): TaskTicket<T> {
+    fun taskTicket(includeResponse: Boolean = true): TaskTicket<T> {
         if (status != Status.FINISHED && id == null) {
             throw IllegalStateException("Long running tasks can't be serialized without id")
         }
 
-        return TaskTicket(id, startedAt, status, currentStats(), result)
+        val duration = Duration.between(startedAt, endedAt ?: Instant.now())
+        return TaskTicket(id, startedAt, duration, user, source, status, currentStats(), if (includeResponse) result else null)
     }
 
     @UppercaseEnum
@@ -173,7 +176,7 @@ abstract class Task<T, K>(val projectId: Int, val userId: Int?, private val isBa
         private val logger = Logger.getLogger(this::class.java.name)
 
         fun <Result, Stat> completedTask(auth: ProjectAuth, result: Result, stats: Stat): Task<Result, Stat> {
-            val value = object : Task<Result, Stat>(auth.projectId, auth.userId, false) {
+            val value = object : Task<Result, Stat>(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {}
 
                 override fun getStats() = stats

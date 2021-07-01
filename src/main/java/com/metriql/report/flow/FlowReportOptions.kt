@@ -1,6 +1,6 @@
 package com.metriql.report.flow
 
-import com.metriql.report.Dataset
+import com.metriql.report.data.Dataset
 import com.metriql.report.funnel.FunnelReportOptions
 import com.metriql.service.model.DimensionName
 import com.metriql.warehouse.spi.services.RecipeQuery

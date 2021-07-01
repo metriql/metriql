@@ -23,7 +23,7 @@ public class OptionMethodHttpService
     {
         DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
 
-        response.headers().set(ACCESS_CONTROL_ALLOW_HEADERS, "Origin, X-Requested-With, Content-Type, Accept, project");
+        response.headers().set(ACCESS_CONTROL_ALLOW_HEADERS, "Origin, X-Requested-With, Content-Type, Accept, project, Authorization");
         response.headers().set(ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS, PUT, DELETE");
         response.headers().set(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
 

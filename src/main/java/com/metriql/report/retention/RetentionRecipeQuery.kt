@@ -1,6 +1,6 @@
 package com.metriql.report.retention
 
-import com.metriql.report.RecipeDataset
+import com.metriql.report.data.RecipeDataset
 import com.metriql.service.model.DimensionName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.RecipeQuery

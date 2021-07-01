@@ -54,7 +54,7 @@ class TaskExecutorService constructor(val poolSize: Int) {
         this.threadPoolExecutor.execute {
             val span = Sentry.getSpan()?.startChild("query") ?: Sentry.startTransaction("query")
             span.description = task.getId().toString()
-            span.setTag("user", task.userId.toString())
+            span.setTag("user", task.user.toString())
             span.setTag("project", task.projectId.toString())
 
             try {

@@ -1,8 +1,8 @@
 package com.metriql.warehouse.spi.bridge
 
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportMetric
-import com.metriql.report.ReportMetric.ReportMeasure
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.service.jinja.MetriqlJinjaContext
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DimensionName
@@ -26,11 +26,13 @@ import com.metriql.service.model.RelationName
 import com.metriql.util.DefaultJinja
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
+import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.INTERMEDIATE_ACCUMULATE
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.INTERMEDIATE_MERGE
+import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.Companion.trinoVersion
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionType
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.RenderedFilter
 import com.metriql.warehouse.spi.filter.DateRange
@@ -54,6 +56,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         RFunction.CEIL to "CEIL({{value[0]}}, )",
         RFunction.FLOOR to "FLOOR({{value[0]}})",
         RFunction.ROUND to "FLOOR({{value[0]}})",
+        RFunction.VERSION to "'${stripLiteral(trinoVersion)}'",
     )
 
     override val supportedDBTTypes: Set<DBTType> = setOf()
@@ -92,7 +95,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                     .firstOrNull()?.relation?.name
 
                                 // the filter is not applicable to this model
-                                throw MetriqlException("Dimension is not applicable for context model", HttpResponseStatus.BAD_REQUEST)
+                                throw MetriqlException("Dimension is not applicable for context model: ${metricValue}", HttpResponseStatus.BAD_REQUEST)
                             } else metricValue.relationName
 
                             val renderedMetric = renderDimension(

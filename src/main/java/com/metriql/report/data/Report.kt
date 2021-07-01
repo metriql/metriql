@@ -1,6 +1,6 @@
-package com.metriql.report
+package com.metriql.report.data
 
-import com.metriql.dashboard.Dashboard
+import com.metriql.report.ReportType
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.time.Instant

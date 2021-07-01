@@ -1,7 +1,7 @@
 package com.metriql.service.jinja
 
 import com.hubspot.jinjava.interpret.TemplateStateException
-import com.metriql.report.ReportFilter
+import com.metriql.report.data.ReportFilter
 import com.metriql.service.auth.UserAttributeValues
 import com.metriql.service.model.Model
 import com.metriql.service.model.ModelDimension

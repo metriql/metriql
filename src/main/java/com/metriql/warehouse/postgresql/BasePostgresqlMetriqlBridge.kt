@@ -1,7 +1,7 @@
 package com.metriql.warehouse.postgresql
 
 import com.metriql.db.FieldType.TIMESTAMP
-import com.metriql.report.ReportMetric
+import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.Model
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge

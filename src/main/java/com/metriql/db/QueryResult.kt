@@ -86,19 +86,20 @@ data class QueryResult @JsonCreator constructor(
     }
 
     data class QueryStats(
-        val state: String,
+        val state: State,
+        val query: String?,
         val nodes: Int? = null,
-        val id: String? = null,
         val percentage: Double? = null,
         val elapsedTimeMillis: Long? = null,
         val totalBytes: Long? = null,
-        val processedBytes: Long? = null
+        val processedBytes: Long? = null,
     ) {
 
-        enum class State(val description: String) {
-            FINISHED("Finished"),
-            RUNNING("Running"),
-            CONNECTING_TO_DATABASE("Connecting to database");
+        enum class State {
+            QUEUED,
+            FINISHED,
+            RUNNING,
+            CONNECTING_TO_DATABASE
         }
     }
 

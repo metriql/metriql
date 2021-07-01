@@ -1,11 +1,13 @@
 package com.metriql.report.segmentation
 
 import com.metriql.dbt.DbtModelService
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE
-import com.metriql.report.ReportFilter.Type.METRIC_FILTER
-import com.metriql.report.ReportMetric
 import com.metriql.report.ReportType
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE
+import com.metriql.report.data.ReportFilter.Type.METRIC_FILTER
+import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
@@ -17,6 +19,7 @@ import com.metriql.warehouse.spi.DbtSettings.Companion.generateSchemaForModel
 import com.metriql.warehouse.spi.function.IPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
+import java.lang.IllegalArgumentException
 
 typealias ErrorMessage = String
 
@@ -92,37 +95,39 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             when (filter.value) {
                 is ReportFilter.FilterValue.Sql -> return Either.Right("SQL filters are not supported.")
                 is ReportFilter.FilterValue.MetricFilter -> {
-                    when (val metricValue = filter.value.metricValue) {
-                        is ReportMetric.ReportDimension -> {
-                            if (materializeQuery.dimensions?.contains(metricValue.toReference()) == true) {
-                                newFilters.add(
-                                    ReportFilter(
-                                        METRIC_FILTER,
-                                        ReportFilter.FilterValue.MetricFilter(
-                                            ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                            metricValue.copy(relationName = null),
-                                            filter.value.filters
+                    filter.value.filters.forEach {
+                        when (val metricValue = it.metricValue ?: filter.value.metricValue) {
+                            is ReportMetric.ReportDimension -> {
+                                try {
+                                    newFilters.add(getFilterForDimension(materializeQuery, metricValue, filter.value.filters))
+                                } catch (e: IllegalArgumentException) {
+                                    return Either.Right(e.message) as Either<SegmentationReportOptions, ErrorMessage>
+                                }
+                            }
+                            is ReportMetric.ReportMeasure -> {
+                                val materializeIncludesMeasure = materializeQuery.measures.contains(metricValue.toMetricReference())
+                                if (materializeIncludesMeasure) {
+                                    newFilters.add(
+                                        ReportFilter(
+                                            METRIC_FILTER,
+                                            ReportFilter.FilterValue.MetricFilter(MEASURE, metricValue, filter.value.filters)
                                         )
                                     )
-                                )
-                            } else {
-                                return Either.Right("Materialize doesn't include query dimension ${encode(metricValue.toReference())}")
+                                } else {
+                                    return Either.Right("Materialize doesn't include query measure ${encode(metricValue.toMetricReference())}")
+                                }
                             }
-                        }
-                        is ReportMetric.ReportMeasure -> {
-                            val materializeIncludesMeasure = materializeQuery.measures.contains(metricValue.toMetricReference())
-                            if (materializeIncludesMeasure) {
-                                newFilters.add(
-                                    ReportFilter(
-                                        METRIC_FILTER,
-                                        ReportFilter.FilterValue.MetricFilter(MEASURE, metricValue, filter.value.filters)
-                                    )
-                                )
-                            } else {
-                                return Either.Right("Materialize doesn't include query measure ${encode(metricValue.toMetricReference())}")
+                            is ReportMetric.ReportMappingDimension -> {
+                                val dimensionName = sourceModel.mappings.get(metricValue.name) ?: throw IllegalArgumentException("")
+                                val dimension = ReportMetric.ReportDimension(dimensionName, materializeModel.name, null, metricValue.postOperation)
+                                try {
+                                    newFilters.add(getFilterForDimension(materializeQuery, dimension, filter.value.filters))
+                                } catch (e: IllegalArgumentException) {
+                                    return Either.Right(e.message) as Either<SegmentationReportOptions, ErrorMessage>
+                                }
+
                             }
-                        }
-                        is ReportMetric.ReportMappingDimension -> {
+                            else -> throw IllegalStateException()
                         }
                     }
                 }
@@ -172,6 +177,19 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
                 filters = newFilters
             )
         )
+    }
+
+    private fun getFilterForDimension(materializeQuery: SegmentationMaterialize, metricValue: ReportMetric.ReportDimension, filters: List<Filter>): ReportFilter {
+        if (materializeQuery.dimensions?.contains(metricValue.toReference()) == true) {
+            return ReportFilter(
+                    METRIC_FILTER,
+                    ReportFilter.FilterValue.MetricFilter(
+                        DIMENSION, metricValue.copy(relationName = null), filters
+                    )
+                )
+        } else {
+            throw IllegalArgumentException("Materialize doesn't include query dimension ${encode(metricValue.toReference())}")
+        }
     }
 
     private fun getModel(modelName: String, materializeQuery: SegmentationMaterialize, query: SegmentationReportOptions): Model {

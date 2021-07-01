@@ -30,11 +30,8 @@ class IsMetriqlQueryVisitor(private val defaultCatalog: String) : DefaultTravers
                     if (!isMetadata) {
                         context.set(true)
                     }
-                } else if (catalog != "system") {
-                    throw UnsupportedOperationException("$catalog catalog is not available. You `metriql` or `system`")
                 }
             }
-            else -> throw UnsupportedOperationException("${node.javaClass.name} operation is not supported.")
         }
 
         return null

@@ -7,6 +7,7 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.Scheduler
 import com.metriql.util.logging.ContextLogger
 import io.netty.handler.codec.http.HttpResponseStatus
+import java.util.Collections
 import java.util.Timer
 import java.util.TimerTask
 import java.util.UUID
@@ -16,7 +17,7 @@ import java.util.logging.Logger
 import javax.inject.Inject
 
 class TaskQueueService @Inject constructor(private val executor: TaskExecutorService) {
-    private val taskTickets = mutableMapOf<UUID, Task<*, *>>()
+    private val taskTickets = Collections.synchronizedMap(LinkedHashMap<UUID, Task<*, *>>())
     private val timer = Timer()
 
     init {
@@ -24,19 +25,14 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
             object : TimerTask() {
                 override fun run() {
                     val currentTimeMillis = System.currentTimeMillis()
-                    val tasksToBeDeleted = mutableListOf<UUID>()
                     taskTickets.forEach {
                         if (it.value.getLastAccessedAt() == null || (currentTimeMillis - it.value.getLastAccessedAt()!! > ORPHAN_TASK_AGE_MILLIS)) {
                             if (!it.value.isDone()) {
                                 ContextLogger.log(logger, "Cancelling orphan task: ${it.key}", ProjectAuth.systemUser(0, 0))
                                 it.value.cancel()
-                            } else {
-                                tasksToBeDeleted.add(it.key)
                             }
                         }
                     }
-
-                    tasksToBeDeleted.forEach { taskTickets.remove(it) }
                 }
             },
             ORPHAN_TASK_AGE_MILLIS, ORPHAN_TASK_AGE_MILLIS
@@ -76,18 +72,18 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         return task.taskTicket()
     }
 
-    fun currentTasks(): List<Task.TaskTicket<out Any?>> {
-        return taskTickets.map { it.value.taskTicket() }
+    fun currentTasks(includeResponse: Boolean = false, filterStatus : Task.Status? = null): List<Task.TaskTicket<out Any?>> {
+        val allTasks = taskTickets.map { it.value.taskTicket(includeResponse) }
+        return if(filterStatus == null) {
+            allTasks
+        } else {
+            allTasks.filter { it.status == filterStatus }
+        }
     }
 
     fun cancel(id: UUID) {
         val task = taskTickets[id] ?: throw MetriqlException("Task not found", HttpResponseStatus.NOT_FOUND)
         task.cancel()
-    }
-
-    companion object {
-        private val logger = Logger.getLogger(this::class.java.name)
-        private var ORPHAN_TASK_AGE_MILLIS = 1000 * 60 * 1L
     }
 
     fun <T, K> execute(runnable: Task<T, K>) {
@@ -105,6 +101,15 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         }
 
         taskTickets[taskId] = runnable
+        // if we reached the limit, remove the first item from the task list
+        if (taskTickets.size >= MAXIMUM_ITEMS_IN_TASK_LIST) {
+            val iterator = taskTickets.iterator()
+            val item = iterator.next()
+            if (!item.value.isDone()) {
+                throw IllegalStateException()
+            }
+            iterator.remove()
+        }
     }
 
     fun <T, K> execute(runnable: Task<T, K>, initialWaitInSeconds: Long): CompletableFuture<Task<T, K>> {
@@ -129,5 +134,11 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         }
 
         return future
+    }
+
+    companion object {
+        private val logger = Logger.getLogger(this::class.java.name)
+        private const val ORPHAN_TASK_AGE_MILLIS = 1000 * 60 * 1L
+        private const val MAXIMUM_ITEMS_IN_TASK_LIST = 1000
     }
 }

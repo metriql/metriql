@@ -15,7 +15,7 @@ class ConsoleAuditService @Inject constructor(val config: AuditConfig) {
 
     @Subscribe
     fun log(event: MetriqlEvents.AuditLog.SQLExecuteEvent) {
-        ContextLogger.log(logger, event.query, ProjectAuth.systemUser(event.auth.projectId, event.auth.userId ?: 0), Level.CONFIG) // CONFIG = DEBUG level
+        ContextLogger.log(logger, event.query, ProjectAuth.systemUser(event.auth.projectId, event.auth.userId), Level.CONFIG) // CONFIG = DEBUG level
     }
 
     companion object {

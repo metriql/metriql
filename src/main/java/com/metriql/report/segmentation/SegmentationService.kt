@@ -2,10 +2,10 @@ package com.metriql.report.segmentation
 
 import com.metriql.db.FieldType
 import com.metriql.report.IAdHocService
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportFilter.Companion.extractDateRangeForEventTimestamp
-import com.metriql.report.ReportMetric
 import com.metriql.report.ReportType
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilter.Companion.extractDateRangeForEventTimestamp
+import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationQueryReWriter.MaterializeTableCache
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
@@ -50,8 +50,6 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         materalizeName: String,
         materialize: SegmentationRecipeQuery.SegmentationMaterialize,
     ): Pair<Table, String> {
-        val auth = ProjectAuth.systemUser(projectId)
-
         val model = context.getModel(modelName)
         val reportOptions = materialize.toQuery(modelName).toReportOptions(context) as SegmentationReportOptions
         val eventTimestamp = model.mappings.get(EVENT_TIMESTAMP)
@@ -66,8 +64,8 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             }
         }
 
-        val (_, rawQuery) = renderQuery(auth, context, reportOptions, listOf(), useAggregate = false, forAccumulator = true)
-        val (materializeTable, _) = renderQuery(auth, context, reportOptions, listOf(), useAggregate = true, forAccumulator = true)
+        val (_, rawQuery) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = false, forAccumulator = true)
+        val (materializeTable, _) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = true, forAccumulator = true)
         return Pair(materializeTable!!, rawQuery)
     }
 

@@ -1,8 +1,8 @@
 package com.metriql.report.flow
 
 import com.metriql.report.IAdHocService
-import com.metriql.report.Recipe
-import com.metriql.report.ReportFilter
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth

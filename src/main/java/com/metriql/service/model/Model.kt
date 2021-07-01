@@ -7,10 +7,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.CaseFormat
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
-import com.metriql.report.Recipe
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportMetric
 import com.metriql.report.ReportType
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -53,7 +53,7 @@ data class Model(
     val dimensions: List<Dimension>,
     val measures: List<Measure>,
     val materializes: List<Materialize>? = null,
-    val alwaysFilters: List<Recipe.FilterReferences>? = null,
+    val alwaysFilters: List<OrFilters>? = null,
     val id: Int? = null,
     val recipeId: Int? = null,
     val recipePath: String? = null,

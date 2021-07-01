@@ -17,6 +17,9 @@ import com.google.cloud.bigquery.Schema
 import com.google.cloud.bigquery.TableResult
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats
+import com.metriql.db.QueryResult.QueryStats.State.CONNECTING_TO_DATABASE
+import com.metriql.db.QueryResult.QueryStats.State.FINISHED
+import com.metriql.db.QueryResult.QueryStats.State.RUNNING
 import com.metriql.report.QueryTask
 import com.metriql.service.audit.MetriqlEvents
 import com.metriql.util.MetriqlEventBus
@@ -33,14 +36,14 @@ import java.time.ZoneId
 
 class BigQueryQueryTask(
     private val bigQuery: BigQuery,
-    query: String,
+    val query: String,
     project: String,
     dataset: String,
     private val auth: WarehouseAuth,
     maximumBytesBilled: Long?,
     override val limit: Int,
     override val isBackgroundTask: Boolean
-) : WarehouseQueryTask, QueryTask(auth.projectId, auth.userId, isBackgroundTask) {
+) : WarehouseQueryTask, QueryTask(auth.projectId, auth.userId, auth.source, isBackgroundTask) {
 
     private val jobId: JobId
     private var queryConfig: QueryJobConfiguration
@@ -94,8 +97,9 @@ class BigQueryQueryTask(
         val jobStatistics = job.getStatistics<JobStatistics.QueryStatistics>()
         val timeline = jobStatistics.timeline
         if (timeline == null || timeline.size <= 0) {
-            return QueryStats(QueryStats.State.CONNECTING_TO_DATABASE.description, nodes = 1, id = job.jobId.job)
+            return QueryStats(CONNECTING_TO_DATABASE, query)
         }
+
         val estimateBytesProcessed = job.getStatistics<JobStatistics.QueryStatistics>().estimatedBytesProcessed ?: 0
         val totalBytesProcessed = job.getStatistics<JobStatistics.QueryStatistics>().totalBytesProcessed ?: 0
         val percentage = (totalBytesProcessed + 1.0) / (estimateBytesProcessed + 1.0)
@@ -103,17 +107,18 @@ class BigQueryQueryTask(
         val activeUnits = (timeline.last().activeUnits ?: 0).toInt()
         val elapsedTimeMillis = (timeline.last().elapsedMs ?: 0)
         val baseStats = QueryStats(
-            QueryStats.State.CONNECTING_TO_DATABASE.description,
-            id = job.jobId.job,
+            CONNECTING_TO_DATABASE,
+            query,
             processedBytes = totalBytesProcessed,
             elapsedTimeMillis = elapsedTimeMillis,
             percentage = percentage
         )
+
         return when (job.status.state) {
-            PENDING -> baseStats.copy(state = QueryStats.State.CONNECTING_TO_DATABASE.description, id = job.jobId.job, nodes = activeUnits)
-            RUNNING -> baseStats.copy(state = QueryStats.State.RUNNING.description, id = job.jobId.job, nodes = activeUnits)
-            DONE -> baseStats.copy(state = QueryStats.State.FINISHED.description, percentage = 100.0, id = job.jobId.job, nodes = activeUnits)
-            else -> QueryStats(QueryStats.State.CONNECTING_TO_DATABASE.description, id = job.jobId.job, nodes = activeUnits)
+            PENDING -> baseStats.copy(state = CONNECTING_TO_DATABASE, nodes = activeUnits)
+            RUNNING -> baseStats.copy(state = QueryStats.State.RUNNING, nodes = activeUnits)
+            DONE -> baseStats.copy(state = FINISHED, percentage = 100.0, nodes = activeUnits)
+            else -> QueryStats(CONNECTING_TO_DATABASE, query, nodes = activeUnits)
         }
     }
 

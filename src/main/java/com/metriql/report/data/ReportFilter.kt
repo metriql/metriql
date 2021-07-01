@@ -1,4 +1,4 @@
-package com.metriql.report
+package com.metriql.report.data
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.DatabindContext
@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
+import com.metriql.report.data.recipe.OrFilters
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.model.Model
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -35,14 +37,14 @@ data class ReportFilter(
         override fun getValueClass() = clazz.java
     }
 
-    fun toReference(): Recipe.FilterReferences? {
+    fun toReference(): OrFilters? {
         return when (value) {
             is FilterValue.Sql -> throw IllegalStateException()
             is FilterValue.MetricFilter -> {
                 if (value.filters.isEmpty()) {
                     null
                 } else {
-                    val references = Recipe.FilterReferences()
+                    val references = OrFilters()
                     value.filters.map {
                         val metricValue = it.metricValue ?: value.metricValue ?: throw IllegalStateException()
                         val operator = toCamelCase(it.operator.name)

@@ -45,7 +45,7 @@ object LogService {
         sentryEvent.throwable = event.e
 
         sentryEvent.setTag("project-id", "${event.task.projectId}")
-        sentryEvent.setTag("user-id", "${event.task.userId}")
+        sentryEvent.setTag("user", "${event.task.user}")
         sentryEvent.setTag("task-status", event.task.status.serializableName)
         sentryEvent.setTag("task-class", event.task.javaClass.toGenericString())
         sentryEvent.setTag("task-duration", "${event.task.getDuration().seconds} sec")

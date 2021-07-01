@@ -1,7 +1,7 @@
 package com.metriql
 
 import com.metriql.db.FieldType
-import com.metriql.report.Recipe
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.IsMetriqlQueryVisitor
 import com.metriql.service.jinja.JinjaRendererService
@@ -34,7 +34,7 @@ class Test {
             null,
             "select 1 as a",
             null,
-            dimensions = mapOf("a" to Recipe.RecipeModel.Metric.RecipeDimension(sql = "{{this}}.a * 2", type = FieldType.STRING))
+            dimensions = mapOf("a" to Recipe.RecipeModel.Metric.RecipeDimension(sql = "{{this}}.a * 2", type = FieldType.STRING)),
         )
     ).map { it.toModel("", PostgresqlMetriqlBridge, -1) }
 
@@ -73,7 +73,7 @@ class Test {
             null,
             null,
         )
-        val output = MetriqlSqlFormatter.formatSql(stmt, null!!, context, models)
+        val output = MetriqlSqlFormatter.formatSql(stmt, null!!, context)
         println(output)
     }
 }

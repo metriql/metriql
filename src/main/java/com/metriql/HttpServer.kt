@@ -4,6 +4,7 @@ import com.google.common.cache.CacheBuilderSpec
 import com.google.common.collect.ImmutableMap
 import com.google.common.net.HostAndPort
 import com.metriql.Commands.Companion.parseUserNamePass
+import com.metriql.bootstrap.OptionMethodHttpService
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
@@ -38,8 +39,6 @@ import io.netty.channel.epoll.Epoll
 import io.netty.channel.epoll.EpollEventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.handler.codec.http.HttpHeaders
-import io.netty.handler.codec.http.HttpResponseStatus
-import io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED
 import io.swagger.util.PrimitiveType
 import io.trino.sql.SqlToSegmentation
 import org.rakam.server.http.HttpRequestException
@@ -51,7 +50,7 @@ object HttpServer {
     private fun getServices(modelService: RecipeModelService, dataSource: DataSource, enableJdbc: Boolean, timezone: ZoneId?): MutableSet<HttpService> {
         val services = mutableSetOf<HttpService>()
 
-        services.add(BaseHttpService())
+        services.add(OptionMethodHttpService())
 
         val queryService = getQueryService(modelService, dataSource, timezone)
         services.add(queryService)
@@ -59,7 +58,7 @@ object HttpServer {
         services.add(TaskHttpService(queryService.taskQueueService))
 
         if (enableJdbc) {
-            jdbcServices(queryService).forEach { services.add(it) }
+            jdbcServices(queryService, timezone).forEach { services.add(it) }
         }
 
         return services
@@ -77,7 +76,7 @@ object HttpServer {
         return QueryHttpService(modelService, { dataSource }, reportService, taskQueueService, services)
     }
 
-    private fun jdbcServices(queryService: QueryHttpService): Set<HttpService> {
+    private fun jdbcServices(queryService: QueryHttpService, timezone: ZoneId?): Set<HttpService> {
         return setOf(
             NodeInfoService(),
             StatementService(queryService.taskQueueService, queryService.reportService, queryService.dataSourceFetcher, queryService.modelService),
@@ -106,13 +105,13 @@ object HttpServer {
             ReportType.FUNNEL to FunnelService(modelService, segmentationService),
             ReportType.RETENTION to RetentionService(modelService, segmentationService),
             ReportType.SQL to SqlService(),
-            ReportType.MQL to MqlService(modelService, SqlToSegmentation(segmentationService, modelService)),
+            ReportType.MQL to MqlService(SqlToSegmentation(segmentationService, modelService)),
         )
     }
 
     fun start(
         address: HostAndPort,
-        apiSecret: String?,
+        oauthApiSecret: String?,
         usernamePass: String?,
         numberOfThreads: Int,
         isDebug: Boolean,
@@ -132,15 +131,20 @@ object HttpServer {
             val (user, pass) = parseUserNamePass(usernamePass);
             {
                 if (it.user == user && it.pass == pass) {
-                    ProjectAuth(-1, -1, false, false, null, null, mapOf(), timezone)
-                } else {
-                    throw MetriqlException(UNAUTHORIZED)
-                }
+                    ProjectAuth(
+                        -1, -1, isOwner = true,
+                        isSuperuser = true, email = null, permissions = null,
+                        attributes = mapOf(), timezone = timezone, source = null
+                    )
+                } else null
             }
         } else null
 
+        val services = getServices(modelService, dataSource, enableJdbc, timezone)
+        val baseService = BaseHttpService()
+
         val httpServer = HttpServerBuilder()
-            .setHttpServices(getServices(modelService, dataSource, enableJdbc, timezone))
+            .setHttpServices(services + listOf(baseService))
             .setMaximumBody(104_857_600)
             .setEventLoopGroup(eventExecutors)
             .setMapper(JsonHelper.getMapper())
@@ -155,7 +159,7 @@ object HttpServer {
             }
             .setOverridenMappings(ImmutableMap.of(ZoneId::class.java, PrimitiveType.STRING))
             .setCustomRequestParameters(
-                mapOf("userContext" to MetriqlAuthRequestParameterFactory(apiSecret, basicAuthLoader))
+                mapOf("userContext" to MetriqlAuthRequestParameterFactory(oauthApiSecret, basicAuthLoader, timezone))
             )
             .addPostProcessor { response ->
                 if (origin != null) {
@@ -172,14 +176,7 @@ object HttpServer {
 
         val build = httpServer.build()
 
-        build.setNotFoundHandler {
-            it.response("404", HttpResponseStatus.NOT_FOUND)
-            if (origin != null) {
-                it.addResponseHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true")
-                it.addResponseHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, origin)
-            }
-            it.end()
-        }
+        build.setNotFoundHandler { baseService.main(it) }
 
         build.bind(address.host, address.port)
     }

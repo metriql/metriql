@@ -87,7 +87,7 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
                 val result = JsonHelper.convert(cacheResult.value, QueryResult::class.java)
                 result.setQueryProperties(query, limit)
                 result.setProperty("cacheTime", cacheResult.createdAt)
-                val stats = QueryStats(QueryStats.State.FINISHED.description, nodes = 1, percentage = 100.0)
+                val stats = QueryStats(QueryStats.State.FINISHED, query, nodes = 1, percentage = 100.0)
                 return Task.completedTask(auth, result, stats)
             }
         }

@@ -1,7 +1,7 @@
 package com.metriql.warehouse.spi.bridge
 
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportMetric
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.DimensionName
 import com.metriql.service.model.MeasureName
 import com.metriql.service.model.Model
@@ -20,6 +20,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
 import com.metriql.warehouse.spi.services.ServiceType
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
+import io.trino.jdbc.TrinoDriver
 import java.time.ZoneId
 import kotlin.IllegalArgumentException
 import kotlin.jvm.Throws
@@ -203,6 +204,7 @@ interface WarehouseMetriqlBridge {
 
     companion object {
         val allAggregations = Model.Measure.AggregationType.values().toList()
+        val trinoVersion: String = TrinoDriver::class.java.getPackage().implementationVersion ?: "<unknown>"
     }
 
     fun generateQuery(viewModels: Map<ModelName, String>, rawQuery: String, comments: List<String> = listOf()): String

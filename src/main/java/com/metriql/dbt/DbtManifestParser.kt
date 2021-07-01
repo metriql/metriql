@@ -1,7 +1,7 @@
 package com.metriql.dbt
 
 import com.fasterxml.jackson.databind.DeserializationFeature
-import com.metriql.report.Recipe
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.util.JsonHelper
 
 object DbtManifestParser {

@@ -105,6 +105,11 @@
             <version>5.1.47</version>
         </dependency>
         <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>activation</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-bigquery</artifactId>
             <version>1.93.0</version>
@@ -391,6 +396,12 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>trino-tpch</artifactId>
+            <version>${trino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-main</artifactId>
             <version>${trino.version}</version>
         </dependency>
@@ -554,6 +565,27 @@
     <build>
         <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
         <plugins>
+            <plugin>
+                <groupId>se.bjurr.gitchangelog</groupId>
+                <artifactId>git-changelog-maven-plugin</artifactId>
+                <version>1.78</version>
+                <executions>
+                    <execution>
+                        <id>GenerateGitChangelogTemplateFromFileAndToken</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>git-changelog</goal>
+                        </goals>
+                        <configuration>
+                            <gitHubApi>https://api.github.com/repos/metriql/metriql</gitHubApi>
+                            <gitHubIssuePattern>#([0-9]*)</gitHubIssuePattern>
+                            <readableTagName>-([^-]+?)$</readableTagName>
+                            <file>CHANGELOG.md</file>
+                            <ignoreCommitsIfMessageMatches>^\[maven-release-plugin\].*</ignoreCommitsIfMessageMatches>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>

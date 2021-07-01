@@ -339,21 +339,8 @@ public class LocalQueryRunner {
         pluginManager.installPlugin(plugin, plugin.getClass()::getClassLoader);
     }
 
-    public void addFunctions(List<? extends SqlFunction> functions) {
-        metadata.addFunctions(functions);
-    }
-
-    public void createCatalog(String catalogName, String connectorName, Map<String, String> properties) {
-        nodeManager.addCurrentNodeConnector(new CatalogName(catalogName));
-        connectorManager.createCatalog(catalogName, connectorName, properties);
-    }
-
-    public MaterializedResultWithPlanHeader executeWithPlan(RakamHttpRequest request, String sql, UUID id, WarningCollector warningCollector) {
-        GroupProviderManager groupProviderManager = new GroupProviderManager();
-        MultivaluedMap<String, String> headerMap = new GuavaMultivaluedMap<>();
-        request.headers().forEach(header -> headerMap.add(header.getKey(), header.getValue()));
-        QueryId queryId = QueryId.valueOf(id.toString().replace('-', '_'));
-        Session session = sessionSupplier.createSession(queryId, new HttpRequestSessionContext(headerMap, Optional.of("Presto"), request.getUri(), Optional.empty(), groupProviderManager));
+    public MaterializedResultWithPlanHeader executeWithPlan(UUID queryId, HttpRequestSessionContext sessionContext, String sql, WarningCollector warningCollector) {
+        Session session = sessionSupplier.createSession(QueryId.valueOf(queryId.toString().replace('-', '_')), sessionContext);
         return inTransaction(session, transactionSession -> executeInternal(transactionSession, sql, warningCollector));
     }
 

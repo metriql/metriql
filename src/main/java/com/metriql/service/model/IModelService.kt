@@ -1,6 +1,6 @@
 package com.metriql.service.model
 
-import com.metriql.report.Recipe
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.auth.ProjectAuth
 
 interface IModelService {

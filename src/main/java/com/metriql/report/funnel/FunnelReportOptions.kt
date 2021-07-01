@@ -2,9 +2,9 @@ package com.metriql.report.funnel
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.metriql.report.Dataset
-import com.metriql.report.Recipe
-import com.metriql.report.ReportMetric
+import com.metriql.report.data.Dataset
+import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.model.DimensionName
 import com.metriql.service.model.RelationName
 import com.metriql.util.RPeriod

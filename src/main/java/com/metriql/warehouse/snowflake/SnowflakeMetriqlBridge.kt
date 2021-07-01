@@ -1,7 +1,7 @@
 package com.metriql.warehouse.snowflake
 
 import com.metriql.db.FieldType
-import com.metriql.report.ReportMetric
+import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.Model
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
@@ -43,7 +43,7 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "DATEADD({{value[1]}}, {{value[2]}}, {{value[0]}})",
         RFunction.HEX_TO_INT to "TO_NUMBER({{value[0]}}, 'XXXXXXXXXXXXXXXX')",
-    )
+    ) + super.functions
 
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
     override val metricRenderHook = object : WarehouseMetriqlBridge.MetricRenderHook {

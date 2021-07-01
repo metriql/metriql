@@ -247,6 +247,7 @@ public class JsonHelper {
 
         // TODO: change this
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
         mapper.configure(DeserializationFeature.FAIL_ON_MISSING_EXTERNAL_TYPE_ID_PROPERTY, false);
 
         mapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
@@ -463,6 +464,10 @@ public class JsonHelper {
                     Enum<?>[] values = (Enum<?>[]) am.getType().getRawClass().getEnumConstants();
 
                     String name = p.getText().toUpperCase(Locale.ENGLISH);
+                    // TODO: find a more reliable way to see if the value is null
+                    if(name.equals("NULL")) {
+                        return null;
+                    }
                     Object value = checkForName(values, name);
                     if (value != null) {
                         return value;

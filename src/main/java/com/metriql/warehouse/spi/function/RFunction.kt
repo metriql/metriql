@@ -80,5 +80,11 @@ enum class RFunction(val description: String?, val returnType: FieldType, val pa
         listOf(
             "number" to listOf(FieldType.DOUBLE)
         )
-    )
+    ),
+
+    VERSION(
+        "Returns Trino version",
+        STRING,
+        listOf()
+    ),
 }

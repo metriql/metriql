@@ -1,0 +1,200 @@
+/*
+  Base styles for Rakam-BI
+  - Variables
+  - Typography
+  - Resets
+  - Mixins
+  - Utility classes
+
+  Based on "Simple Structure" by Milan Savov - https://www.webdesignerdepot.com/2020/12/2-smartest-ways-to-structure-sass/
+*/
+
+/*
+  Variables
+  Namespace: rkm
+----------------------------------- */
+:root {
+  /*
+    Colors
+
+    - Conventions
+      - Normal color: --[namespace]-color-[name of the color]: [hex code];
+      - Opacity color: --[namespace]-color-[name of th color]-a[amount of opacity]: [rgba value];
+    - All colors name were obtained using the provided designs and Chir.arg website (https://chir.ag/projects/name-that-color/#F6F8FA)
+  */
+  --rkm-color-charcoal: #313330;
+  --rkm-color-cornflower-blue: #4e65cd;
+  --rkm-color-vivid-purple: #930aff;
+  --rkm-color-tealish: #2fadbf;
+  --rkm-color-purple-pink: #ed2db4;
+  --rkm-color-elecric-violet: #7d0cfe;
+  --rkm-color-mine-shaft: #2b2828;
+  --rkm-color-shark: #25292c;
+  --rkm-color-aqua-haze: #f6f8fa;
+  --rkm-color-white: #ffffff;
+  --rkm-color-white-a60: rgba(255, 255, 255, 0.6);
+  --rkm-color-steel-blue: #4f91bd;
+  --rkm-color-steel-blue-a20: rgba(79, 145, 189, 0.2);
+
+  /*
+    Typography
+  */
+  // Base font sizes
+  --rkm-font-size-base: 16;
+  --rkm-font-size-base-px: calc(var(--rkm-font-size-base) * 1px);
+
+  // Font sizes (rem)
+  --rkm-micro: 0.75rem;
+  --rkm-small: 0.875rem;
+  --rkm-base: 1rem;
+  --rkm-mid: 1.125rem;
+  --rkm-large: 1.25rem;
+  --rkm-jumbo: 1.375rem;
+
+  // Font stacks
+  --rkm-font-family-system: "Inter", Helvetica, Open-Sans, sans-serif;
+  --rkm-font-family-base: var(--rkm-font-family-system);
+
+  // Font weights
+  --rkm-font-weight-regular: 400;
+  --rkm-font-weight-medium: 500;
+  --rkm-font-weight-bold: bold;
+
+  // Headings
+  --rkm-font-family-headings: var(--rkm-font-family-base);
+  --rkm-font-weight-headings: var(--rkm-font-weight-bold);
+  --rkm-line-height-headings: 1;
+
+  /*
+    Spacing
+  */
+  --rkm-border-radius-small: 6px;
+  --rkm-border-radius-base: 8px;
+  --rkm-border-radius-mid: 12px;
+
+  /*
+    Components
+  */
+  // App default colors
+  --rkm-app-background-color: var(--rkm-color-aqua-haze);
+  --rkm-app-color: var(--rkm-color-charcoal);
+  --rkm-app-headings-color: var(--rkm-color-shark);
+
+  // Navbar
+  --rkm-navbar-background-color: var(--rkm-color-shark);
+  --rkm-navbar-link-color: var(--rkm-color-white-a60);
+  --rkm-navbar-hover-color: var(--rkm-color-white);
+  --rkm-navbar-active-background-color: var(--rkm-color-steel-blue-a20);
+  --rkm-navbar-active-color: var(--rkm-color-white);
+
+  // Subnavbar
+  --rkm-subnav-background-color: var(--rkm-color-white);
+  --rkm-subnav-link-color: var(--rkm-color-mine-shaft);
+  --rkm-subnav-hover-link-color: var(--rkm-color-cornflower-blue);
+  --rkm-subnav-active-link-color: var(--rkm-color-cornflower-blue);
+  --rkm-subnav-active-border-color: var(--rkm-color-cornflower-blue);
+}
+
+/*
+  Typography rules for Rakam-BI
+  - Fonts
+  - Paragraphs
+  - Headings
+  - Type sizes
+  - Misc
+  - Utilities
+  ----------------------------------- */
+
+// Fonts
+
+/* Inter-Regular */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  src: local("../fonts/Inter/Inter-Regular.eot"); /* IE9 Compat Modes */
+  src: local(""),
+    local("../fonts/Inter/Inter-Regular.eot?#iefix") format("embedded-opentype"), /* IE6-IE8 */
+    local("../fonts/Inter/Inter-Regular.woff2") format("woff2"), /* Super Modern Browsers */
+    local("../fonts/Inter/Inter-Regular.woff") format("woff"), /* Modern Browsers */
+    local("../fonts/Inter/Inter-Regular.ttf") format("truetype"), /* Safari, Android, iOS */
+    local("../fonts/Inter/Inter-Regular.svg#Inter") format("svg"); /* Legacy iOS */
+}
+/* Inter-Medium */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  src: local("../fonts/Inter/Inter-Medium.eot"); /* IE9 Compat Modes */
+  src: local(""),
+    local("../fonts/Inter/Inter-Medium.eot?#iefix") format("embedded-opentype"), /* IE6-IE8 */
+    local("../fonts/Inter/Inter-Medium.woff2") format("woff2"), /* Super Modern Browsers */
+    local("../fonts/Inter/Inter-Medium.woff") format("woff"), /* Modern Browsers */
+    local("../fonts/Inter/Inter-Medium.ttf") format("truetype"), /* Safari, Android, iOS */
+    local("../fonts/Inter/Inter-Medium.svg#Inter") format("svg"); /* Legacy iOS */
+}
+
+#rkm-app {
+  font-family: var(--rkm-font-family-base);
+  color: var(--rkm-app-color);
+  font-size: var(--rkm-font-size-base-px);
+
+  // Paragraphs
+  p {
+    font-family: var(--rkm-font-family-base);
+    font-size: var(--rkm-base);
+    margin-top: 0;
+  }
+
+  // Headings
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    font-family: var(--rkm-font-family-headings);
+    color: var(--rkm-app-headings-color);
+    font-weight: var(--rkm-font-weight-headings);
+    line-height: var(--rkm-line-height-headings);
+    text-rendering: optimizelegibility; // Fix the character spacing for headings
+
+    small {
+      font-weight: var(--rkm-font-weight-regular);
+    }
+  }
+
+  h1 {
+    font-size: var(--rkm-jumbo);
+  }
+  h2 {
+    font-size: var(--rkm-large);
+  }
+  h3 {
+    font-size: var(--rkm-mid);
+  }
+  h4 {
+    font-size: var(--rkm-base);
+  }
+  h5 {
+    font-size: var(--rkm-small);
+  }
+  h6 {
+    font-size: var(--rkm-micro);
+  }
+
+  /**
+  * Miscellaneous
+  */
+
+  // Emphasis
+  strong,
+  b {
+    font-weight: var(--rkm-font-weight-bold);
+  }
+  // Links
+  a {
+    text-decoration: none;
+  }
+}

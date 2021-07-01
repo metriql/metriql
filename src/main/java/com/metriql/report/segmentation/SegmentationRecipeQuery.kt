@@ -2,7 +2,8 @@ package com.metriql.report.segmentation
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.report.Recipe
+import com.metriql.report.data.recipe.OrFilters
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationReportOptions.Order.Type.MEASURE
 import com.metriql.service.model.ModelName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -14,7 +15,7 @@ data class SegmentationRecipeQuery(
     val dataset: ModelName,
     val measures: List<Recipe.MetricReference>,
     val dimensions: List<Recipe.DimensionReference>?,
-    val filters: List<Recipe.FilterReferences>?,
+    val filters: List<OrFilters>?,
     val reportOptions: SegmentationReportOptions.ReportOptions? = null,
     val limit: Int? = null,
     val orders: Map<Recipe.MetricReference, Recipe.OrderType>? = null
@@ -41,7 +42,7 @@ data class SegmentationRecipeQuery(
     data class SegmentationMaterialize(
         val measures: List<Recipe.MetricReference>,
         val dimensions: List<Recipe.DimensionReference>?,
-        val filters: List<Recipe.FilterReferences>?
+        val filters: List<OrFilters>?
     ) : MaterializeQuery {
         override fun toQuery(modelName: ModelName): RecipeQuery {
             return SegmentationRecipeQuery(modelName, measures, dimensions, filters)

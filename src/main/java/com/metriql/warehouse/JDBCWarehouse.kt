@@ -294,11 +294,11 @@ abstract class JDBCWarehouse(
     companion object {
         val pool = ConcurrentHashMap<Properties, HikariDataSource>()
 
-        fun syncStats(isRunning: Boolean): QueryResult.QueryStats {
+        fun syncStats(isRunning: Boolean, query: String): QueryResult.QueryStats {
             return if (isRunning) {
-                QueryResult.QueryStats(QueryResult.QueryStats.State.RUNNING.description, nodes = 1, percentage = 100.0)
+                QueryResult.QueryStats(QueryResult.QueryStats.State.RUNNING, query, nodes = 1, percentage = 100.0)
             } else {
-                QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED.description, nodes = 1)
+                QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED, query, nodes = 1)
             }
         }
 
@@ -327,7 +327,7 @@ abstract class JDBCWarehouse(
         limit: Int?,
         ignoredErrorCodes: List<String> = listOf(),
     ): QueryTask {
-        return object : QueryTask(auth.projectId, auth.userId, false) {
+        return object : QueryTask(auth.projectId, auth.userId, auth.source, false) {
             private var resultSet: ResultSet? = null
             private lateinit var statement: Statement
 
@@ -372,7 +372,7 @@ abstract class JDBCWarehouse(
 
             override fun getStats(): QueryResult.QueryStats {
 //                val unwrap = resultSet!!.unwrap(SnowflakeResultSet::class.java)
-                return syncStats(status != Status.FINISHED)
+                return syncStats(!isDone(), query)
             }
         }
     }

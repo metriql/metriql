@@ -1,9 +1,9 @@
 package com.metriql.report.funnel
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.metriql.report.Recipe
-import com.metriql.report.RecipeDataset
-import com.metriql.report.ReportMetric
+import com.metriql.report.data.RecipeDataset
+import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.model.DimensionName
 import com.metriql.util.RPeriod
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext

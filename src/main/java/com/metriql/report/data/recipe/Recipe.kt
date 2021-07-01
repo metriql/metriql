@@ -1,20 +1,21 @@
-package com.metriql.report
+package com.metriql.report.data.recipe
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.metriql.dashboard.Dashboard
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifest
 import com.metriql.dbt.DbtManifest.Companion.extractFields
+import com.metriql.report.ReportType
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DimensionName
@@ -26,7 +27,6 @@ import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.serializableName
-import com.metriql.util.toCamelCase
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.function.TimestampPostOperation
@@ -44,7 +44,7 @@ data class Recipe(
     val packageName: String?,
     val dependencies: Dependencies? = null,
     val models: List<RecipeModel>? = null,
-    val dashboards: List<ExportDashboard>? = null,
+    val dashboards: List<RecipeDashboard>? = null,
     val reports: List<SaveReport>? = null,
 ) {
     @JsonIgnoreProperties
@@ -122,7 +122,7 @@ data class Recipe(
         val materializes: Map<String, Map<String, SegmentationRecipeQuery.SegmentationMaterialize>>? = null,
         val aggregates: Map<String, SegmentationRecipeQuery.SegmentationMaterialize>? = null,
         @JsonAlias("always_filters")
-        val alwaysFilters: List<FilterReferences>? = null,
+        val alwaysFilters: List<OrFilters>? = null,
         @JsonIgnore
         val _path: String? = null,
     ) {
@@ -395,6 +395,7 @@ data class Recipe(
                     }
                 }.toMap()
 
+                val aggregates = model.materializes?.filter { it.reportType == ReportType.SEGMENTATION }?.map { it.name to it.value }?.toMap()
                 return RecipeModel(
                     model.name,
                     if (model.hidden === true) true else null,
@@ -410,7 +411,7 @@ data class Recipe(
                     null,
                     recipeMeasures,
                     null,
-                    null,
+                    aggregates,
                     model.alwaysFilters,
                     model.recipePath
                 )
@@ -719,145 +720,6 @@ data class Recipe(
                     hidden
                 )
             }
-        }
-    }
-
-    data class ExportDashboard(
-        val name: String,
-        val description: String? = null,
-        val category: String? = null,
-        @JsonAlias("filterSchema")
-        val filters: Map<String, RecipeFilterSchema>? = null,
-        val reports: List<Reports?>,
-        @JsonIgnore
-        val _path: String?,
-    ) {
-        data class RecipeFilterSchema(
-            val model: String?,
-            val dimension: DimensionReference?,
-            val mappingDimension: DimensionReference?,
-            @JsonAlias("operation")
-            val timeframe: String?,
-            val default: Any?,
-            val required: Boolean?,
-        ) {
-
-            fun toDashboardFilterSchemaItem(
-                context: IQueryGeneratorContext,
-                name: String,
-            ): Dashboard.DashboardFilterSchemaItem {
-                val (type, value) = when {
-                    dimension != null -> {
-                        val modelName = model ?: throw MetriqlException(
-                            "Model is required in `$name` for dimension filter",
-                            BAD_REQUEST
-                        )
-                        val dim = dimension.toDimension(modelName, dimension.getType(context::getModel, modelName))
-                        Pair(
-                            ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                            ReportMetric.ReportDimension(dim.name, modelName, null, dim.postOperation)
-                        )
-                    }
-                    mappingDimension != null -> {
-                        Pair(
-                            ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION,
-                            ReportMetric.ReportMappingDimension(
-                                JsonHelper.convert(mappingDimension.name, Model.MappingDimensions.CommonMappings::class.java),
-                                null
-                            )
-                        )
-                    }
-                    else -> {
-                        throw MetriqlException(
-                            "One of `dimension` or `mappingDimension` must be set in filter `$name`",
-                            BAD_REQUEST
-                        )
-                    }
-                }
-
-                return Dashboard.DashboardFilterSchemaItem(name, type, value, default, timeframe, required ?: true)
-            }
-        }
-
-        @JsonIgnoreProperties(value = ["ttl"])
-        data class Reports(
-            val name: String,
-            val description: String? = null,
-            val x: Int? = null,
-            val y: Int? = null,
-            @JsonAlias("h")
-            val height: Int,
-            @JsonAlias("w")
-            val width: Int,
-            val component: String,
-            val type: ReportType,
-            @com.metriql.util.PolymorphicTypeStr<ReportType>(
-                externalProperty = "type",
-                valuesEnum = ReportType::class,
-                isNamed = true,
-                name = "recipe"
-            )
-            @JsonAlias("reportOptions")
-            val options: com.metriql.warehouse.spi.services.RecipeQuery,
-        )
-    }
-
-    @JsonFormat(with = [JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY])
-    class FilterReferences : ArrayList<FilterReference>() {
-        @JsonIgnore
-        fun toReportFilter(
-            context: IQueryGeneratorContext,
-            modelName: ModelName,
-        ): ReportFilter {
-            val orFilters = map { filter ->
-                val metricType = when {
-                    filter.dimension != null -> ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
-                    filter.measure != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE
-                    filter.mapping != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION
-                    else -> throw IllegalStateException("One of dimension, measure or mapping is required")
-                }
-
-                var (fieldType, metricValue) = when {
-                    filter.dimension != null -> {
-                        val type = filter.dimension.getType(context::getModel, modelName)
-                        Pair(type, filter.dimension.toDimension(modelName, type))
-                    }
-                    filter.measure != null -> {
-                        Pair(filter.measure.getType(context, modelName), filter.measure.toMeasure(modelName))
-                    }
-                    filter.mapping != null -> {
-                        val type = JsonHelper.read(filter.mapping, Model.MappingDimensions.CommonMappings::class.java)
-                        Pair(type.fieldType, ReportMetric.ReportMappingDimension(type, null))
-                    }
-                    else -> {
-                        throw IllegalStateException("One of dimension, measure or mapping is required")
-                    }
-                }
-
-                try {
-                    JsonHelper.convert(filter.operator, FieldType.UNKNOWN.operatorClass.java)
-                    fieldType = FieldType.UNKNOWN
-                } catch (e: Exception) {
-                    null
-                }
-
-                val operatorBean: Enum<*> = try {
-                    JsonHelper.convert(filter.operator, fieldType.operatorClass.java)
-                } catch (e: Exception) {
-                    val values = fieldType.operatorClass.java.enumConstants.joinToString(", ") { toCamelCase(it.name) }
-                    throw MetriqlException("Invalid operator `${filter.operator}`, available values for type $fieldType is $values", BAD_REQUEST)
-                }
-
-                ReportFilter.FilterValue.MetricFilter.Filter(metricType, metricValue, fieldType, operatorBean, filter.value)
-            }
-
-            return ReportFilter(
-                ReportFilter.Type.METRIC_FILTER,
-                ReportFilter.FilterValue.MetricFilter(
-                    null, null,
-                    orFilters
-                )
-            )
         }
     }
 

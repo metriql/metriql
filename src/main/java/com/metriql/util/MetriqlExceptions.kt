@@ -68,16 +68,15 @@ enum class MetriqlExceptions {
             get() = throw UnsupportedOperationException("This is a custom exception.")
 
         override fun exceptionFromObject(e: Any, isUserException: Boolean): MetriqlException {
-            when (e) {
-                is Pair<*, *> -> {
-                    return MetriqlException(
-                        "Filter value '${e.first}' can not be casted to class '${e.second}'",
-                        this.httpCode,
-                        isUserException
-                    )
-                }
-                else -> throw UnsupportedOperationException("Only KClass<*> is supported.")
-            }
+            return exceptionFromObject(e as Pair<Any?, Class<*>>, isUserException)
+        }
+
+        private fun exceptionFromObject(e: Pair<Any?, Class<*>>, isUserException: Boolean): MetriqlException {
+            return MetriqlException(
+                "Filter value '${e.first}' is not valid for the field, expected type is '${e.second}'",
+                this.httpCode,
+                isUserException
+            )
         }
     },
 

@@ -1,9 +1,9 @@
 package com.metriql.tests
 
 import com.metriql.db.FieldType
-import com.metriql.report.ReportFilter
-import com.metriql.report.ReportFilter.FilterValue.MetricFilter
-import com.metriql.report.ReportMetric.ReportDimension
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
+import com.metriql.report.data.ReportMetric.ReportDimension
 import com.metriql.service.model.ModelName
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.filter.BooleanOperatorType

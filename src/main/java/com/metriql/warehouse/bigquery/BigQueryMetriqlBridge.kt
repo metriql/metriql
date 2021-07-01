@@ -1,7 +1,7 @@
 package com.metriql.warehouse.bigquery
 
 import com.metriql.db.FieldType
-import com.metriql.report.ReportMetric
+import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.warehouse.spi.DBTType

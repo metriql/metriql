@@ -18,7 +18,7 @@ import java.lang.reflect.Method
 const val IS_LABEL = "_label"
 const val IS_MATCH = "_match"
 
-class DbtJinjaRenderer() {
+class DbtJinjaRenderer {
     val jinjava = Jinjava(
         JinjavaConfig.newBuilder()
             .build()

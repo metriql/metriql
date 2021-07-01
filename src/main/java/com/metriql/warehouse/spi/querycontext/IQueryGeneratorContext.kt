@@ -1,8 +1,8 @@
 package com.metriql.warehouse.spi.querycontext
 
 import com.metriql.report.ReportExecutor
-import com.metriql.report.ReportMetric
 import com.metriql.report.ReportType
+import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher

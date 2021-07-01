@@ -1,6 +1,7 @@
 package com.metriql.report
 
 import com.metriql.db.QueryResult
+import com.metriql.report.data.ReportFilter
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.audit.MetriqlEvents
 import com.metriql.service.auth.ProjectAuth
@@ -64,7 +65,7 @@ open class ReportService(
                 reportFilters,
             )
         } catch (e: Exception) {
-            return Task.completedTask(auth, QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED.name))
+            return Task.completedTask(auth, QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED, null))
         }
 
         val queryOptions = sqlQueryOptions ?: SqlReportOptions.QueryOptions(options.getQueryLimit() ?: WarehouseQueryTask.DEFAULT_LIMIT, null, null, useCache)

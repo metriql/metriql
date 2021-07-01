@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AcceptedValues
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AnyValue
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.Relationships
-import com.metriql.report.Recipe
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.Model
 import com.metriql.util.PolymorphicTypeStr

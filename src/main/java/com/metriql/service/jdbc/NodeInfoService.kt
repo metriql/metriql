@@ -1,5 +1,6 @@
 package com.metriql.service.jdbc
 
+import com.metriql.service.auth.ProjectAuth
 import io.airlift.units.Duration
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.trino.client.NodeVersion
@@ -10,16 +11,17 @@ import org.rakam.server.http.RakamHttpRequest
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 
 @Path("/v1/info")
 class NodeInfoService : HttpService() {
-    val startTime = Instant.now()!!
+    private val startTime = Instant.now()!!
 
     @GET
     @Path("/")
-    fun main(): ServerInfo {
+    fun main(@Named("userContext") auth: ProjectAuth): ServerInfo {
         val durationInSeconds = Instant.now().epochSecond - startTime.epochSecond
         return ServerInfo(
             NodeVersion.UNKNOWN,
@@ -32,13 +34,13 @@ class NodeInfoService : HttpService() {
 
     @GET
     @Path("/state")
-    fun state(): NodeState {
+    fun state(@Named("userContext") auth: ProjectAuth): NodeState {
         return NodeState.ACTIVE
     }
 
     @GET
     @Path("/coordinator")
-    fun state(request: RakamHttpRequest) {
+    fun state(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth) {
         request.response(byteArrayOf(), HttpResponseStatus.OK)
     }
 }

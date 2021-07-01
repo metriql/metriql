@@ -11,6 +11,7 @@ import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DataSource
+import io.airlift.jaxrs.testing.GuavaMultivaluedMap
 import io.airlift.json.ObjectMapperProvider
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpHeaders.Names.HOST
@@ -23,27 +24,34 @@ import io.trino.client.QueryError
 import io.trino.client.QueryResults
 import io.trino.client.StageStats
 import io.trino.client.StatementStats
+import io.trino.server.HttpRequestSessionContext
 import io.trino.sql.analyzer.TypeSignatureTranslator
 import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.parser.SqlParser
 import io.trino.sql.tree.Query
+import io.trino.testing.TestingGroupProvider
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
 import org.rakam.server.http.annotations.QueryParam
 import java.net.URI
 import java.time.Instant
+import java.time.ZoneId
+import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
+import java.util.function.Consumer
+import javax.inject.Named
 import javax.ws.rs.DELETE
 import javax.ws.rs.GET
 import javax.ws.rs.POST
 import javax.ws.rs.Path
+import javax.ws.rs.core.MultivaluedMap
 
 @Path("/v1/statement")
 class StatementService(
     val taskQueueService: TaskQueueService,
     val reportService: ReportService,
-    val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
+    private val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
     val modelService: IModelService
 ) : HttpService() {
     private val runner = LightweightQueryRunner(modelService.list(ProjectAuth.singleProject(null)))
@@ -70,34 +78,35 @@ class StatementService(
             true
         } else {
             IsMetriqlQueryVisitor(defaultCatalog).process(stmt, isMetadata)
-            isMetadata.get()?.let { !it } ?: true
+            isMetadata.get()?.let { !it } ?: false
         }
     }
 
-//    @JsonInclude(JsonInclude.Include.NON_NULL)
-//    class MetriqlQueryResults(
-//        id: String,
-//        infoUri: URI?,
-//        partialCancelUri: URI?,
-//        nextUri: URI?,
-//        columns: List<Column>?,
-//        data: List<List<Any?>>?,
-//        stats: StatementStats?,
-//        error: QueryError?,
-//        warnings: List<Warning>?,
-//        updateType: String?,
-//        updateCount: Long?
-//    ) :
-//        QueryResults(id, infoUri, partialCancelUri, nextUri, columns, data, stats, error, warnings, updateType, updateCount)
+    private val groupProviderManager = TestingGroupProvider()
+
+    private fun createSessionContext(request: RakamHttpRequest): HttpRequestSessionContext {
+        val headerMap: MultivaluedMap<String, String> = GuavaMultivaluedMap()
+        request.headers().forEach(
+            Consumer { header: Map.Entry<String, String> ->
+                headerMap.add(
+                    header.key,
+                    header.value
+                )
+            }
+        )
+        return HttpRequestSessionContext(headerMap, Optional.of("Presto"), request.uri, Optional.empty(), groupProviderManager)
+    }
 
     @Path("/")
     @POST
-    fun query(request: RakamHttpRequest) {
+    fun query(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth) {
         request.bodyHandler { body ->
             val sql = String(body.readAllBytes())
             println("$sql")
 
-            val auth = ProjectAuth.singleProject(null)
+            val sessionContext = createSessionContext(request)
+
+            val auth = auth.copy(userId = sessionContext.identity.user, source = sessionContext.source)
 
             val mode = nativeRegex.find(sql)?.groupValues?.get(0)
 
@@ -108,7 +117,7 @@ class StatementService(
             }
 
             val task = if (reportType == ReportType.MQL && isMetadataQuery(sql, "metriql")) {
-                runner.createTask(auth, request, sql)
+                runner.createTask(auth, sessionContext, sql)
             } else {
                 reportService.queryTask(
                     auth,
@@ -188,16 +197,12 @@ class StatementService(
             null
         )
 
-        if (task.isDone()) {
-            println(task.result?.result?.size)
-        }
-
         return results
     }
 
     @Path("/queued")
     @GET
-    fun status(request: RakamHttpRequest, @QueryParam("id") id: String) {
+    fun status(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("id") id: String) {
         val idUUID = try {
             UUID.fromString(id)
         } catch (e: Exception) {
@@ -210,7 +215,7 @@ class StatementService(
 
     @DELETE
     @Path("/queued")
-    fun delete(request: RakamHttpRequest, @QueryParam("id") id: String, @QueryParam("maxWait", required = false) maxWait: String?) {
+    fun delete(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("id") id: String, @QueryParam("maxWait", required = false) maxWait: String?) {
         taskQueueService.cancel(UUID.fromString(id))
         request.response(byteArrayOf(), HttpResponseStatus.OK)
     }

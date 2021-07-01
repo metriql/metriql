@@ -4,9 +4,9 @@ import com.hubspot.jinjava.Jinjava
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
 import com.hubspot.jinjava.lib.filter.Filter
 import com.metriql.db.FieldType
-import com.metriql.report.Recipe
-import com.metriql.report.Recipe.Dependencies.DbtDependency
 import com.metriql.report.ReportType
+import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService

@@ -68,6 +68,9 @@ open class QueryHttpService(
         return compiled.query
     }
 
+    @ApiOperation(value = "Run metriql queries")
+    @JsonRequest
+    @Path("/query")
     fun query(
         request: RakamHttpRequest,
         @Named("userContext") auth: ProjectAuth,

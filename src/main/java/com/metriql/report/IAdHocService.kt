@@ -1,5 +1,6 @@
 package com.metriql.report
 
+import com.metriql.report.data.ReportFilter
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.auth.ProjectAuth

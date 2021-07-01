@@ -1,7 +1,8 @@
-package com.metriql.report
+package com.metriql.report.data
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.model.DimensionName
 import com.metriql.service.model.MeasureName
 import com.metriql.service.model.Model

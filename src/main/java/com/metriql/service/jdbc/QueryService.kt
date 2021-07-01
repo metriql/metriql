@@ -14,18 +14,18 @@ class QueryService(val taskQueueService: TaskQueueService) : HttpService() {
     @GET
     @Path("/")
     fun listActiveQueries(): List<BasicQueryInfo> {
-        return listOf()
+        TODO()
     }
 
     @GET
     @Path("/*")
     fun activeQuery(): QueryInfo {
-        return null!!
+        TODO()
     }
 
     @DELETE
     @Path("/*")
     fun cancelQuery(request: RakamHttpRequest) {
-        request.response(byteArrayOf())
+        TODO()
     }
 }
