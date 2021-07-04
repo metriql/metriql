@@ -15,12 +15,15 @@ package io.trino.sql;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.metriql.service.model.Model;
+import com.metriql.util.MetriqlException;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.trino.sql.tree.*;
+import kotlin.Pair;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -31,6 +34,7 @@ import static io.trino.sql.ExpressionFormatter.formatWindowSpecification;
 import static io.trino.sql.MetriqlExpressionFormatter.formatExpression;
 import static io.trino.sql.MetriqlExpressionFormatter.formatStringLiteral;
 import static io.trino.sql.RowPatternFormatter.formatPattern;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
 public final class MetriqlSqlFormatter {
@@ -51,10 +55,11 @@ public final class MetriqlSqlFormatter {
                 .collect(joining("."));
     }
 
-    private static class Formatter extends AstVisitor<Void, Integer> {
+    public static class Formatter extends AstVisitor<Void, Integer> {
         private final StringBuilder builder;
         private final IQueryGeneratorContext context;
         private final SqlToSegmentation reWriter;
+        private final Set<String> withs = new HashSet<>();
 
         public Formatter(StringBuilder builder, SqlToSegmentation reWriter, IQueryGeneratorContext context) {
             this.builder = builder;
@@ -143,6 +148,7 @@ public final class MetriqlSqlFormatter {
                 Iterator<WithQuery> queries = with.getQueries().iterator();
                 while (queries.hasNext()) {
                     WithQuery query = queries.next();
+                    withs.add(query.getName().getValue());
                     append(indent, formatExpression(query.getName(), reWriter, context));
                     query.getColumnNames().ifPresent(columnNames -> appendAliasColumns(builder, columnNames, reWriter, context));
                     builder.append(" AS ");
@@ -170,13 +176,36 @@ public final class MetriqlSqlFormatter {
             return null;
         }
 
+
         @Override
         protected Void visitQuerySpecification(QuerySpecification node, Integer indent) {
-            String proxyQuery = reWriter.convert(context, node);
-            append(indent, proxyQuery);
+            if (node.getOffset().isPresent()) {
+                throw new MetriqlException("Offset is not supported", HttpResponseStatus.BAD_REQUEST);
+            }
+            if (!node.getWindows().isEmpty()) {
+                throw new MetriqlException("WINDOW operations not supported", HttpResponseStatus.BAD_REQUEST);
+            }
+
+            Relation from = node.getFrom().orElse(null);
+            String alias = null;
+            if(from instanceof AliasedRelation) {
+                AliasedRelation aliasedRelation = (AliasedRelation) from;
+                alias = aliasedRelation.getAlias().getValue();
+                from = aliasedRelation.getRelation();
+            }
+
+            if(from == null || from instanceof TableSubquery) {
+                internalVisitQuerySpecification(node, indent);
+            } else{
+                Pair<Model, String> modelAlias = SqlToSegmentation.Companion.getModel(context, from);
+                modelAlias = modelAlias.copy(modelAlias.getFirst(), alias != null ? alias : modelAlias.getSecond());
+                String proxyQuery = reWriter.convert(context, modelAlias, node.getSelect().getSelectItems(), node.getWhere(),
+                        node.getHaving(), node.getLimit(), node.getOrderBy());
+                append(indent, proxyQuery);
+            }
+
             return null;
         }
-
 
         protected void internalVisitQuerySpecification(QuerySpecification node, Integer indent) {
             process(node.getSelect(), indent);
@@ -222,6 +251,45 @@ public final class MetriqlSqlFormatter {
             if (node.getLimit().isPresent()) {
                 process(node.getLimit().get(), indent);
             }
+        }
+
+        private String formatGroupBy(List<GroupingElement> groupingElements)
+        {
+            ImmutableList.Builder<String> resultStrings = ImmutableList.builder();
+
+            for (GroupingElement groupingElement : groupingElements) {
+                String result = "";
+                if (groupingElement instanceof SimpleGroupBy) {
+                    List<Expression> columns = groupingElement.getExpressions();
+                    if (columns.size() == 1) {
+                        result = formatExpression(getOnlyElement(columns), reWriter, context);
+                    }
+                    else {
+                        result = formatGroupingSet(columns);
+                    }
+                }
+                else if (groupingElement instanceof GroupingSets) {
+                    result = format("GROUPING SETS (%s)", Joiner.on(", ").join(
+                            ((GroupingSets) groupingElement).getSets().stream()
+                                    .map(set -> formatGroupingSet(set))
+                                    .iterator()));
+                }
+                else if (groupingElement instanceof Cube) {
+                    result = format("CUBE %s", formatGroupingSet(groupingElement.getExpressions()));
+                }
+                else if (groupingElement instanceof Rollup) {
+                    result = format("ROLLUP %s", formatGroupingSet(groupingElement.getExpressions()));
+                }
+                resultStrings.add(result);
+            }
+            return Joiner.on(", ").join(resultStrings.build());
+        }
+
+        private static String formatGroupingSet(List<Expression> groupingSet)
+        {
+            return format("(%s)", Joiner.on(", ").join(groupingSet.stream()
+                    .map(ExpressionFormatter::formatExpression)
+                    .iterator()));
         }
 
         @Override

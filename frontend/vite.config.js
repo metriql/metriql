@@ -4,9 +4,10 @@ import Markdown from 'vite-plugin-md'
  * @type {import('vite').UserConfig}
  */
 export default {
+  base: '/ui',
   plugins: [vue(
     {
-      include: [/\.vue$/, /\.md$/, /\.svg$/, /\.png$/, ], // <--
+      include: [/\.vue$/, /\.md$/ ], // <--
     }
   ), Markdown()]
 }

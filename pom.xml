@@ -394,11 +394,11 @@
             <version>${trino.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-tpch</artifactId>
-            <version>${trino.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>io.trino</groupId>-->
+<!--            <artifactId>trino-tpch</artifactId>-->
+<!--            <version>${trino.version}</version>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>io.trino</groupId>

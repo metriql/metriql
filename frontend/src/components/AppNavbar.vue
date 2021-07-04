@@ -7,11 +7,11 @@
     </div>
     <ul role="menubar" class="rkm-c-navbar__menu">
       <li role="none" class="rkm-c-navbar__item" :class="{ 'is-active': ('Integrations' === $route.name) }">
-        <router-link role="menuitem" to="/" class="rkm-c-navbar__link">Integrations</router-link>
+        <router-link role="menuitem" :to="baseUrl" class="rkm-c-navbar__link">Integrations</router-link>
       </li>
       <li role="none" class="rkm-c-navbar__item" :class="{ 'is-active': ('Monitoring' === $route.name) }">
         <el-badge :value="activeTaskCount" :hidden="!(activeTaskCount > 0)" type="info">
-          <router-link role="menuitem" to="/monitoring" class="rkm-c-navbar__link">Live Queries</router-link>
+          <router-link role="menuitem" :to="`${baseUrl}monitoring`" class="rkm-c-navbar__link">Live Queries</router-link>
         </el-badge>
       </li>
     </ul>
@@ -53,7 +53,9 @@ export default {
       activeTaskCount.value = count[1]
     })
 
-    return {syncing, activeTaskCount}
+    const baseUrl = ref(import.meta.env.BASE_URL)
+
+    return {syncing, baseUrl, activeTaskCount}
   }
 }
 </script>

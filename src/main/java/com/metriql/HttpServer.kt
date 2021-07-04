@@ -20,6 +20,7 @@ import com.metriql.service.auth.UserAttribute
 import com.metriql.service.auth.UserAttributeDefinition
 import com.metriql.service.auth.UserAttributeValues
 import com.metriql.service.cache.InMemoryCacheService
+import com.metriql.service.integration.IntegrationHttpService
 import com.metriql.service.jdbc.NodeInfoService
 import com.metriql.service.jdbc.QueryService
 import com.metriql.service.jdbc.StatementService
@@ -39,6 +40,7 @@ import io.netty.channel.epoll.Epoll
 import io.netty.channel.epoll.EpollEventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.handler.codec.http.HttpHeaders
+import io.netty.handler.codec.http.HttpResponseStatus
 import io.swagger.util.PrimitiveType
 import io.trino.sql.SqlToSegmentation
 import org.rakam.server.http.HttpRequestException
@@ -47,24 +49,29 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
-    private fun getServices(modelService: RecipeModelService, dataSource: DataSource, enableJdbc: Boolean, timezone: ZoneId?): MutableSet<HttpService> {
+    private fun getServices(modelService: RecipeModelService, dataSource: DataSource, enableJdbc: Boolean): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
+        val postRun = mutableListOf<() -> Unit>()
 
         services.add(OptionMethodHttpService())
+        services.add(BaseHttpService())
+        services.add(IntegrationHttpService(modelService))
 
-        val queryService = getQueryService(modelService, dataSource, timezone)
+        val queryService = getQueryService(modelService, dataSource)
         services.add(queryService)
 
         services.add(TaskHttpService(queryService.taskQueueService))
 
         if (enableJdbc) {
-            jdbcServices(queryService, timezone).forEach { services.add(it) }
+            val jdbcServices = jdbcServices(queryService)
+            jdbcServices.first.forEach { services.add(it) }
+            postRun.add(jdbcServices.second)
         }
 
-        return services
+        return services to { postRun.forEach { it.invoke() } }
     }
 
-    private fun getQueryService(modelService: RecipeModelService, dataSource: DataSource, timezone: ZoneId?): QueryHttpService {
+    private fun getQueryService(modelService: RecipeModelService, dataSource: DataSource): QueryHttpService {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
@@ -76,12 +83,14 @@ object HttpServer {
         return QueryHttpService(modelService, { dataSource }, reportService, taskQueueService, services)
     }
 
-    private fun jdbcServices(queryService: QueryHttpService, timezone: ZoneId?): Set<HttpService> {
-        return setOf(
+    private fun jdbcServices(queryService: QueryHttpService): Pair<Set<HttpService>, () -> Unit> {
+        val statementService = StatementService(queryService.taskQueueService, queryService.reportService, queryService.dataSourceFetcher, queryService.modelService)
+        val services = setOf(
             NodeInfoService(),
-            StatementService(queryService.taskQueueService, queryService.reportService, queryService.dataSourceFetcher, queryService.modelService),
             QueryService(queryService.taskQueueService),
+            statementService,
         )
+        return services to { statementService.startServices() }
     }
 
     private fun getAttributes(auth: ProjectAuth): UserAttributeValues {
@@ -140,11 +149,10 @@ object HttpServer {
             }
         } else null
 
-        val services = getServices(modelService, dataSource, enableJdbc, timezone)
-        val baseService = BaseHttpService()
+        val (services, postRun) = getServices(modelService, dataSource, enableJdbc)
 
         val httpServer = HttpServerBuilder()
-            .setHttpServices(services + listOf(baseService))
+            .setHttpServices(services)
             .setMaximumBody(104_857_600)
             .setEventLoopGroup(eventExecutors)
             .setMapper(JsonHelper.getMapper())
@@ -176,8 +184,16 @@ object HttpServer {
 
         val build = httpServer.build()
 
-        build.setNotFoundHandler { baseService.main(it) }
+        build.setNotFoundHandler {
+            it.response("404", HttpResponseStatus.NOT_FOUND)
+            if (origin != null) {
+                it.addResponseHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true")
+                it.addResponseHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, origin)
+            }
+            it.end()
+        }
 
         build.bind(address.host, address.port)
+        postRun.invoke()
     }
 }

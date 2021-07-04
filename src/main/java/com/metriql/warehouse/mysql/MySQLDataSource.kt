@@ -1,5 +1,6 @@
 package com.metriql.warehouse.mysql
 
+import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.JDBCWarehouse
@@ -52,7 +53,7 @@ class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWar
 
     override fun createQueryTask(
         auth: WarehouseAuth,
-        query: String,
+        query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
         limit: Int?,

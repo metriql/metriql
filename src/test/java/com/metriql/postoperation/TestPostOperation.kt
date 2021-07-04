@@ -1,5 +1,6 @@
 package com.metriql.postoperation
 
+import com.metriql.db.QueryResult
 import com.metriql.db.TestingServer
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.DataSource
@@ -34,7 +35,7 @@ abstract class TestPostOperation {
     private fun runQuery(query: String): List<Any?>? {
         val task = dataSource.createQueryTask(
             ProjectAuth.singleProject(ZoneId.of("UTC")).warehouseAuth(),
-            query,
+            QueryResult.QueryStats.QueryInfo.rawSql(query),
             null,
             null,
             null,

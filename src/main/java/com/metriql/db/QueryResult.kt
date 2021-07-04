@@ -2,7 +2,10 @@ package com.metriql.db
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.metriql.report.ReportType
+import com.metriql.report.sql.SqlReportOptions
 import com.metriql.util.MetriqlException
+import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
@@ -87,13 +90,21 @@ data class QueryResult @JsonCreator constructor(
 
     data class QueryStats(
         val state: State,
-        val query: String?,
+        val info: QueryInfo?,
         val nodes: Int? = null,
         val percentage: Double? = null,
         val elapsedTimeMillis: Long? = null,
         val totalBytes: Long? = null,
         val processedBytes: Long? = null,
     ) {
+
+        data class QueryInfo(val reportType: ReportType, val query: ServiceReportOptions, val compiledQuery: String) {
+            companion object {
+                fun rawSql(query: String): QueryInfo {
+                    return QueryInfo(ReportType.SQL, SqlReportOptions(query, null, null, null), query)
+                }
+            }
+        }
 
         enum class State {
             QUEUED,
@@ -117,8 +128,8 @@ data class QueryResult @JsonCreator constructor(
             return QueryResult(null, null, error, null)
         }
 
-        fun errorResult(error: QueryError, query: String): QueryResult {
-            return QueryResult(null, null, error, mapOf("query" to query))
+        fun errorResult(error: QueryError, query: QueryStats.QueryInfo): QueryResult {
+            return QueryResult(null, null, error, mapOf("query" to query.compiledQuery))
         }
 
         fun empty(): QueryResult {

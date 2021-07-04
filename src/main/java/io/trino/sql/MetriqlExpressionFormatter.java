@@ -18,6 +18,10 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.hubspot.jinjava.Jinjava;
 import com.metriql.service.model.Model;
+import com.metriql.util.JsonHelper;
+import com.metriql.warehouse.presto.PrestoMetriqlBridge;
+import com.metriql.warehouse.presto.PrestoMetriqlBridge.PrestoReverseAggregation;
+import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge;
 import com.metriql.warehouse.spi.function.RFunction;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
 import io.trino.sql.tree.*;
@@ -30,14 +34,13 @@ import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC;
 import static io.trino.sql.MetriqlSqlFormatter.formatSql;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public final class MetriqlExpressionFormatter {
-    private static final ThreadLocal<DecimalFormat> doubleFormatter = ThreadLocal.withInitial(
-            () -> new DecimalFormat("0.###################E0###", new DecimalFormatSymbols(Locale.US)));
     private static final Jinjava renderer = new Jinjava();
 
     private MetriqlExpressionFormatter() {
@@ -167,13 +170,12 @@ public final class MetriqlExpressionFormatter {
 
         @Override
         protected String visitDoubleLiteral(DoubleLiteral node, Void context) {
-            return doubleFormatter.get().format(node.getValue());
+            return String.valueOf(node.getValue());
         }
 
         @Override
         protected String visitDecimalLiteral(DecimalLiteral node, Void context) {
-            // TODO return node value without "DECIMAL '..'" when FeaturesConfig#parseDecimalLiteralsAsDouble switch is removed
-            return "DECIMAL '" + node.getValue() + "'";
+            return node.getValue();
         }
 
         @Override
@@ -275,7 +277,19 @@ public final class MetriqlExpressionFormatter {
             try {
                 functionTemplate = functions.get(RFunction.valueOf(name));
             } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException(String.format("Function %s not supported", node.getName().getSuffix()));
+                try {
+                    PrestoReverseAggregation reverseAggregation = PrestoReverseAggregation.valueOf(name);
+
+                    Model.Measure.AggregationType aggregation;
+                    if(node.isDistinct()) {
+                        aggregation = reverseAggregation.getDistinctAggregation();
+                    } else {
+                        aggregation = reverseAggregation.getAggregation();
+                    }
+                    functionTemplate = queryContext.getWarehouseBridge().performAggregation("{{value[0]}}", aggregation, WarehouseMetriqlBridge.AggregationContext.ADHOC);
+                } catch (IllegalArgumentException illegalArgumentException) {
+                    throw new IllegalArgumentException(String.format("Function %s not supported", node.getName().getSuffix()));
+                }
             }
 
             if (functionTemplate == null) {
@@ -690,38 +704,7 @@ public final class MetriqlExpressionFormatter {
             };
         }
 
-        private String formatGroupBy(List<GroupingElement> groupingElements, IQueryGeneratorContext bridge, List<Model> models) {
-            ImmutableList.Builder<String> resultStrings = ImmutableList.builder();
 
-            for (GroupingElement groupingElement : groupingElements) {
-                String result = "";
-                if (groupingElement instanceof SimpleGroupBy) {
-                    List<Expression> columns = groupingElement.getExpressions();
-                    if (columns.size() == 1) {
-                        result = formatExpression(getOnlyElement(columns), reWriter, bridge);
-                    } else {
-                        result = formatGroupingSet(columns);
-                    }
-                } else if (groupingElement instanceof GroupingSets) {
-                    result = format("GROUPING SETS (%s)", Joiner.on(", ").join(
-                            ((GroupingSets) groupingElement).getSets().stream()
-                                    .map(i -> formatGroupingSet(i))
-                                    .iterator()));
-                } else if (groupingElement instanceof Cube) {
-                    result = format("CUBE %s", formatGroupingSet(groupingElement.getExpressions()));
-                } else if (groupingElement instanceof Rollup) {
-                    result = format("ROLLUP %s", formatGroupingSet(groupingElement.getExpressions()));
-                }
-                resultStrings.add(result);
-            }
-            return Joiner.on(", ").join(resultStrings.build());
-        }
-
-        private String formatGroupingSet(List<Expression> groupingSet) {
-            return format("(%s)", Joiner.on(", ").join(groupingSet.stream()
-                    .map(i -> formatExpression(i, reWriter, queryContext))
-                    .iterator()));
-        }
 
         private String formatFrame(WindowFrame windowFrame) {
             StringBuilder builder = new StringBuilder();

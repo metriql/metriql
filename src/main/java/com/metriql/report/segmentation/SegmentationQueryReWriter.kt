@@ -125,7 +125,6 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
                                 } catch (e: IllegalArgumentException) {
                                     return Either.Right(e.message) as Either<SegmentationReportOptions, ErrorMessage>
                                 }
-
                             }
                             else -> throw IllegalStateException()
                         }
@@ -182,11 +181,11 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
     private fun getFilterForDimension(materializeQuery: SegmentationMaterialize, metricValue: ReportMetric.ReportDimension, filters: List<Filter>): ReportFilter {
         if (materializeQuery.dimensions?.contains(metricValue.toReference()) == true) {
             return ReportFilter(
-                    METRIC_FILTER,
-                    ReportFilter.FilterValue.MetricFilter(
-                        DIMENSION, metricValue.copy(relationName = null), filters
-                    )
+                METRIC_FILTER,
+                ReportFilter.FilterValue.MetricFilter(
+                    DIMENSION, metricValue.copy(relationName = null), filters
                 )
+            )
         } else {
             throw IllegalArgumentException("Materialize doesn't include query dimension ${encode(metricValue.toReference())}")
         }

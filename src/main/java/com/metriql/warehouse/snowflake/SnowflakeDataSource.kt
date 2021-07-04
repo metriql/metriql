@@ -2,6 +2,7 @@ package com.metriql.warehouse.snowflake
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.metriql.db.FieldType
+import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.util.JsonHelper
 import com.metriql.util.ValidationUtil.stripLiteral
@@ -93,7 +94,7 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
 
     override fun createQueryTask(
         auth: WarehouseAuth,
-        query: String,
+        query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
         limit: Int?,

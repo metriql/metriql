@@ -135,25 +135,24 @@ object HttpUtil {
     }
 
     @JvmStatic
-    fun sanitizeUri(directory: File, uri: String): String? {
+    fun sanitizeUri(directory: File, uri: String, prefix: String = "/"): String {
         var uri = uri
         uri = try {
             URLDecoder.decode(uri, "UTF-8")
         } catch (e: UnsupportedEncodingException) {
             throw Error(e)
         }
-        if (uri.isEmpty() || uri[0] != '/') {
-            return null
+        if (uri.isEmpty() || !uri.startsWith(prefix)) {
+            throw MetriqlException(HttpResponseStatus.NOT_FOUND)
         }
         uri = uri.replace('/', File.separatorChar)
 
-        // Simplistic dumb security check.
-        // You will have to do something serious in the production environment.
+        // TODO: Simplistic dumb security check. Check for security issues
         return if (uri.contains(File.separator + '.') ||
             uri.contains('.'.toString() + File.separator) || uri[0] == '.' || uri[uri.length - 1] == '.' ||
             INSECURE_URI.matcher(uri).matches()
         ) {
-            null
-        } else directory.path + File.separator + uri
+            throw MetriqlException(HttpResponseStatus.NOT_FOUND)
+        } else directory.path + File.separator + uri.substring(prefix.length)
     }
 }

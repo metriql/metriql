@@ -1,6 +1,7 @@
 package com.metriql.warehouse.azure
 
 import com.metriql.db.FieldType
+import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.mssqlserver.MSSQLWarehouse
@@ -45,7 +46,7 @@ class AzureSQLDataSource(
 
     override fun createQueryTask(
         auth: WarehouseAuth,
-        query: String,
+        query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
         limit: Int?,

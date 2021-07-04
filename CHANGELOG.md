@@ -23,6 +23,11 @@ Changelog for metriql metriql.
 
 ### No issue
 
+**Implement embedded admin interface**
+
+
+[86b896f63fbd852](https://github.com/metriql/metriql/commit/86b896f63fbd852) buremba *2021-07-01 23:19:15*
+
 **Create LICENSE**
 
 

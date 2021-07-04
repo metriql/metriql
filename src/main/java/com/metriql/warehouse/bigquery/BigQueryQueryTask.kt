@@ -19,7 +19,6 @@ import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats
 import com.metriql.db.QueryResult.QueryStats.State.CONNECTING_TO_DATABASE
 import com.metriql.db.QueryResult.QueryStats.State.FINISHED
-import com.metriql.db.QueryResult.QueryStats.State.RUNNING
 import com.metriql.report.QueryTask
 import com.metriql.service.audit.MetriqlEvents
 import com.metriql.util.MetriqlEventBus
@@ -36,7 +35,7 @@ import java.time.ZoneId
 
 class BigQueryQueryTask(
     private val bigQuery: BigQuery,
-    val query: String,
+    val query: QueryStats.QueryInfo,
     project: String,
     dataset: String,
     private val auth: WarehouseAuth,
@@ -51,7 +50,7 @@ class BigQueryQueryTask(
 
     init {
         var queryConfigBuilder = QueryJobConfiguration
-            .newBuilder(query)
+            .newBuilder(query.compiledQuery)
             .setUseQueryCache(true)
             .setDefaultDataset(DatasetId.of(project, dataset))
 

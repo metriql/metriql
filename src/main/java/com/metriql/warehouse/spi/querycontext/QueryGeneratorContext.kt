@@ -27,7 +27,6 @@ import com.metriql.util.TextUtil
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
-import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 import java.util.LinkedHashMap
 import java.util.concurrent.ConcurrentHashMap
@@ -59,7 +58,7 @@ class QueryGeneratorContext(
     override fun getModel(modelName: ModelName): Model {
         return models.computeIfAbsent(modelName) {
             modelService.getModel(auth, modelName)
-                ?: throw MetriqlException("Model '$modelName' not found", BAD_REQUEST)
+                ?: throw MetriqlException("Model '$modelName' not found", NOT_FOUND)
         }
     }
 

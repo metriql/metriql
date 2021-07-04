@@ -19,7 +19,21 @@ const val CURRENT_PATH = "/api/$CURRENT_VERSION"
 class BaseHttpService : HttpService() {
     val directory: File = File("metriql/frontend/dist").absoluteFile
 
+    @Path("/")
+    @GET
     fun main(request: RakamHttpRequest) {
+        request.response("switch to /ui").end()
+    }
+
+    @Path("/ui")
+    @GET
+    fun uiMain(request: RakamHttpRequest) {
+        ui(request)
+    }
+
+    @Path("/ui/*")
+    @GET
+    fun ui(request: RakamHttpRequest) {
         if (!request.decoderResult.isSuccess) {
             sendError(request, HttpResponseStatus.BAD_REQUEST)
             return
@@ -31,11 +45,11 @@ class BaseHttpService : HttpService() {
         }
 
         val uri: String = request.path()
-        val requestedFile = File(sanitizeUri(directory, uri)).absoluteFile
-        if (!requestedFile.startsWith(directory.absolutePath) || !requestedFile.exists()) {
+        val requestedFile = File(sanitizeUri(directory, uri, prefix = "/ui")).absoluteFile
+        if (!requestedFile.startsWith(directory.absolutePath)) {
             sendError(request, HttpResponseStatus.NOT_FOUND)
         } else {
-            val file = if (requestedFile.isDirectory) File(directory, "index.html") else requestedFile
+            val file = if (requestedFile.isDirectory || !requestedFile.exists()) File(directory, "index.html") else requestedFile
             sendFile(request, file)
         }
     }

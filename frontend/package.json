@@ -6,11 +6,13 @@
     "build": "vite build"
   },
   "dependencies": {
+    "ag-grid-community": "^25.3.0",
+    "ag-grid-vue3": "^25.3.0",
     "axios": "^0.21.1",
     "bulma": "^0.9.3",
     "date-fns": "^2.22.1",
     "echarts": "^5.1.2",
-    "element-plus": "latest",
+    "element-plus": "1.0.2-beta.54",
     "monaco-editor": "^0.25.0",
     "monaco-yaml": "^2.5.1",
     "vite-plugin-md": "^0.6.7",

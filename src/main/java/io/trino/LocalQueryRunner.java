@@ -127,15 +127,15 @@ import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 
 public class LocalQueryRunner {
+    public final SqlParser sqlParser;
+    public final InMemoryNodeManager nodeManager;
+
     private final EventListenerManager eventListenerManager = new EventListenerManager(new EventListenerConfig());
 
     private final ExecutorService notificationExecutor;
     private final ScheduledExecutorService yieldExecutor;
     private final FinalizerService finalizerService;
-
-    private final SqlParser sqlParser;
     private final PlanFragmenter planFragmenter;
-    public final InMemoryNodeManager nodeManager;
     private final TypeOperators typeOperators;
     private final BlockTypeOperators blockTypeOperators;
     private final MetadataManager metadata;
@@ -340,7 +340,8 @@ public class LocalQueryRunner {
     }
 
     public MaterializedResultWithPlanHeader executeWithPlan(UUID queryId, HttpRequestSessionContext sessionContext, String sql, WarningCollector warningCollector) {
-        Session session = sessionSupplier.createSession(QueryId.valueOf(queryId.toString().replace('-', '_')), sessionContext);
+        String queryIdForTrino = queryId.toString().replace('-', '_');
+        Session session = sessionSupplier.createSession(QueryId.valueOf(queryIdForTrino), sessionContext);
         return inTransaction(session, transactionSession -> executeInternal(transactionSession, sql, warningCollector));
     }
 

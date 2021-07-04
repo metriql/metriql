@@ -75,10 +75,10 @@ class MetriqlAuthRequestParameterFactory(
                     else -> null
                 }
 
-                if(auth == null) {
+                if (auth == null) {
                     val redirectUri = ""
                     val tokenUri = ""
-                    request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE,  "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
+                    request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
                     if (basicAuthLoader != null) {
                         request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
                     }

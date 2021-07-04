@@ -9,7 +9,7 @@
       </div>
       <div class="column is-narrow">
         <el-radio-group v-model="activeState">
-          <el-radio-button v-for="state in states" :label="state" :key="state">{{ state }}</el-radio-button>
+          <el-radio-button v-for="(state, key) in states" :label="key" :key="key">{{ key }}</el-radio-button>
         </el-radio-group>
       </div>
     </div>
@@ -21,7 +21,7 @@
       height="450">
       <el-table-column label="Status" width="100">
         <template #default="scope">
-          <el-tag size="small" :type="getTypeForState(scope.row.status)">{{ scope.row.status }}</el-tag>
+          <el-tag size="small" :type="states[scope.row.status].type">{{ scope.row.status }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="Started at" width="230">
@@ -33,6 +33,11 @@
                        :filter-method="(value, row) => row.user == value"></el-table-column>
       <el-table-column label="Source" prop="source" width="200" :filters="distinctSources"
                        :filter-method="(value, row) => row.source == value"></el-table-column>
+      <el-table-column label="Type" width="150">
+        <template #default="scope">
+            {{ scope.row.update.info.reportType }}
+        </template>
+      </el-table-column>
       <el-table-column label="Query">
         <template #default="scope">
           <a @click="activeTask = scope.row">
@@ -49,12 +54,14 @@
     </el-table>
 
     <el-dialog
-      title="SQL"
       v-if="activeTask != null"
+      :title="activeTask.update.info.reportType"
       :modelValue="activeTask != null"
       @update:modelValue="$event == false ? (activeTask = null) : null"
       width="50%">
-      <pre>{{ activeTask.update.query }}</pre>
+      <pre>{{ activeTask.update.info.query }}</pre>
+      <h4 style="margin:15px 0">Compiled:</h4>
+      <pre>{{ activeTask.update.info.compiledQuery }}</pre>
       <template #footer>
           <span class="dialog-footer">
             <el-button @click="activeTask = null">OK</el-button>
@@ -83,7 +90,12 @@ use([
   LegendComponent
 ])
 
-const states = ['queued', 'running', 'canceled', 'finished']
+const states = {
+  'queued': {type: 'info'},
+  'running': {type: 'warning'},
+  'canceled': {type: 'error'},
+  'finished': {type: 'success'},
+}
 
 const getFilters = function (tableData, property) {
   if (tableData == null) {
@@ -134,11 +146,8 @@ export default {
         + (minutes < 10 ? `0${minutes}` : minutes) + ':'
         + (seconds < 10 ? `0${seconds}` : seconds)
     },
-    getTypeForState: function (state) {
-      return 'success'
-    },
     getTrimmedQuery: function (task) {
-      let query = task.update.query
+      let query = task.update.info.compiledQuery
       if (query.length > 100) {
         return query.substring(0, 100)
       } else {
@@ -214,7 +223,7 @@ export default {
 
     const filteredTableData = computed(() => {
       let hasSearchTerm = searchTerm.value != ''
-      if(hasSearchTerm && tableData != null) {
+      if (hasSearchTerm && tableData != null) {
         return tableData.value.filter(task => {
           return task.update?.query?.toLowerCase()?.includes(searchTerm.value)
         })

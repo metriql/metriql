@@ -294,7 +294,7 @@ abstract class JDBCWarehouse(
     companion object {
         val pool = ConcurrentHashMap<Properties, HikariDataSource>()
 
-        fun syncStats(isRunning: Boolean, query: String): QueryResult.QueryStats {
+        fun syncStats(isRunning: Boolean, query: QueryResult.QueryStats.QueryInfo): QueryResult.QueryStats {
             return if (isRunning) {
                 QueryResult.QueryStats(QueryResult.QueryStats.State.RUNNING, query, nodes = 1, percentage = 100.0)
             } else {
@@ -302,7 +302,7 @@ abstract class JDBCWarehouse(
             }
         }
 
-        fun getErrorQueryResult(auth: WarehouseAuth, e: Exception, query: String, ignoredExceptionCodes: List<String>): QueryResult {
+        fun getErrorQueryResult(auth: WarehouseAuth, e: Exception, query: QueryResult.QueryStats.QueryInfo, ignoredExceptionCodes: List<String>): QueryResult {
             return when (e) {
                 is SQLException -> {
                     if (!ignoredExceptionCodes.isNullOrEmpty() &&
@@ -321,7 +321,7 @@ abstract class JDBCWarehouse(
 
     fun createSyncQueryTask(
         auth: WarehouseAuth,
-        query: String,
+        query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
         limit: Int?,
@@ -349,7 +349,7 @@ abstract class JDBCWarehouse(
 
 //                        resultSet = statement.unwrap(SnowflakeStatement::class.java).executeAsyncQuery(query)
                         markAsRunning()
-                        resultSet = statement.executeQuery(query)
+                        resultSet = statement.executeQuery(query.compiledQuery)
 
                         val value = JdbcUtil.toQueryResult(
                             resultSet!!,

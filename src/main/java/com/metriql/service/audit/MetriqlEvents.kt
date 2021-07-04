@@ -22,16 +22,13 @@ class MetriqlEvents {
         data class SQLExecuteEvent(
             override val auth: ProjectAuth,
             val query: String,
-            val queryType: SQLContext?,
-            val value: Any?,
+            val value: SQLContext?,
             val durationInMillis: Long,
             val error: QueryResult.QueryError?
         ) : AuditLog(auth, 1) {
-            enum class SQLContext {
-                ADHOC_REPORT, SUGGESTION;
-
-                data class AdhocReport(val type: ReportType, val options: ServiceReportOptions)
-                data class Suggestion(val modelName: ModelName, val dimensionName: DimensionName, val filter: String?)
+            sealed class SQLContext(val type: String) {
+                data class AdhocReport(val reportType: ReportType, val options: ServiceReportOptions) : SQLContext("ADHOC_REPORT")
+                data class Suggestion(val modelName: ModelName, val dimensionName: DimensionName, val filter: String?) : SQLContext("SUGGESTION")
             }
 
             override fun toString(): String {

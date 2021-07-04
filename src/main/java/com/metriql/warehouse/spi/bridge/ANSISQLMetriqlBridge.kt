@@ -95,7 +95,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                     .firstOrNull()?.relation?.name
 
                                 // the filter is not applicable to this model
-                                throw MetriqlException("Dimension is not applicable for context model: ${metricValue}", HttpResponseStatus.BAD_REQUEST)
+                                throw MetriqlException("Dimension is not applicable for context model: $metricValue", HttpResponseStatus.BAD_REQUEST)
                             } else metricValue.relationName
 
                             val renderedMetric = renderDimension(

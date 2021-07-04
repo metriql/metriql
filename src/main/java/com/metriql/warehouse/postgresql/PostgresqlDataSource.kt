@@ -1,6 +1,7 @@
 package com.metriql.warehouse.postgresql
 
 import com.metriql.db.FieldType
+import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.util.JdbcUtil
 import com.metriql.util.ValidationUtil.stripLiteral
@@ -67,7 +68,7 @@ open class PostgresqlDataSource(override val config: PostgresqlWarehouse.Postgre
 
     override fun createQueryTask(
         auth: WarehouseAuth,
-        query: String,
+        query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
         limit: Int?,

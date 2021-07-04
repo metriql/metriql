@@ -44,7 +44,8 @@ class TaskHttpService @Inject constructor(val service: TaskQueueService) : HttpS
     @Path("/list")
     @GET
     fun list(
-        @Named("userContext") auth: ProjectAuth, @QueryParam("showResults", required = false) showResults: Boolean?,
+        @Named("userContext") auth: ProjectAuth,
+        @QueryParam("showResults", required = false) showResults: Boolean?,
         @QueryParam("status", required = false) status: Task.Status?
     ): List<Task.TaskTicket<out Any?>> {
         if (!auth.isSuperuser) {

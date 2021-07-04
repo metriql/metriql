@@ -27,7 +27,6 @@ import io.trino.client.StatementStats
 import io.trino.server.HttpRequestSessionContext
 import io.trino.sql.analyzer.TypeSignatureTranslator
 import io.trino.sql.parser.ParsingOptions
-import io.trino.sql.parser.SqlParser
 import io.trino.sql.tree.Query
 import io.trino.testing.TestingGroupProvider
 import org.rakam.server.http.HttpService
@@ -35,7 +34,6 @@ import org.rakam.server.http.RakamHttpRequest
 import org.rakam.server.http.annotations.QueryParam
 import java.net.URI
 import java.time.Instant
-import java.time.ZoneId
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
@@ -54,22 +52,23 @@ class StatementService(
     private val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
     val modelService: IModelService
 ) : HttpService() {
-    private val runner = LightweightQueryRunner(modelService.list(ProjectAuth.singleProject(null)))
+    private val runner = LightweightQueryRunner(modelService)
     private val mapper = ObjectMapperProvider().get()
+    private val groupProviderManager = TestingGroupProvider()
 
-    init {
+    fun startServices() {
         runner.start()
     }
 
     companion object {
-        val parser = SqlParser()
+        val defaultParsingOptions = ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL)
         val nativeRegex = "[ ]*\\-\\-[ ]*\\@mode\\:([a-zA-Z]+) ".toRegex()
     }
 
     private fun isMetadataQuery(sql: String, defaultCatalog: String): Boolean {
         val isMetadata = AtomicReference<Boolean?>()
         val stmt = try {
-            parser.createStatement(sql, ParsingOptions())
+            runner.runner.sqlParser.createStatement(sql, defaultParsingOptions)
         } catch (e: Exception) {
             // since it's a trino query, let the executor handle the exception
             return true
@@ -81,8 +80,6 @@ class StatementService(
             isMetadata.get()?.let { !it } ?: false
         }
     }
-
-    private val groupProviderManager = TestingGroupProvider()
 
     private fun createSessionContext(request: RakamHttpRequest): HttpRequestSessionContext {
         val headerMap: MultivaluedMap<String, String> = GuavaMultivaluedMap()

@@ -2,10 +2,13 @@ package io.trino
 
 import com.google.common.collect.ImmutableList
 import com.metriql.db.FieldType
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
+import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
 import io.trino.connector.system.SystemTablesProvider
 import io.trino.spi.connector.ColumnMetadata
+import io.trino.spi.connector.ConnectorPageSource
 import io.trino.spi.connector.ConnectorSession
 import io.trino.spi.connector.ConnectorTableMetadata
 import io.trino.spi.connector.ConnectorTransactionHandle
@@ -28,13 +31,21 @@ import io.trino.spi.type.VarcharType
 import io.trino.type.UnknownType
 import java.util.Optional
 
-class MetriqlMetadata(val models: List<Model>) : SystemTablesProvider {
+class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
 
-    override fun listSystemTables(session: ConnectorSession?): Set<SystemTable> {
+    private fun getModels(session: ConnectorSession): List<Model> {
+        // TODO: Find a way to pass projects
+//        val projectId = session.getProperty("project", Int::class.java)
+        return modelService.list(ProjectAuth.systemUser(-1, session.user))
+    }
+
+    override fun listSystemTables(session: ConnectorSession): Set<SystemTable> {
+        val models = getModels(session)
         return models.map { ModelProxy(models, it) }.toSet()
     }
 
-    override fun getSystemTable(session: ConnectorSession?, tableName: SchemaTableName): Optional<SystemTable> {
+    override fun getSystemTable(session: ConnectorSession, tableName: SchemaTableName): Optional<SystemTable> {
+        val models = getModels(session)
         val modelCategory = getCategoryFromSchema(tableName.schemaName)
         val propertiesForModel = extractModelNameFromPropertiesTable(tableName.tableName)
         val name = propertiesForModel ?: tableName.tableName
@@ -73,6 +84,11 @@ class MetriqlMetadata(val models: List<Model>) : SystemTablesProvider {
     }
 
     class ModelProxy(val models: List<Model>, val model: Model) : SystemTable {
+
+        override fun pageSource(transactionHandle: ConnectorTransactionHandle, session: ConnectorSession, constraint: TupleDomain<Int>): ConnectorPageSource {
+            throw UnsupportedOperationException("Metadata queries doesn't support data processing")
+        }
+
         override fun getDistribution() = SystemTable.Distribution.SINGLE_COORDINATOR
 
         private fun toColumnMetadata(it: Model.Measure, relation: String? = null): ColumnMetadata? {

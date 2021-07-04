@@ -5,12 +5,13 @@ import Monitoring from '/src/pages/monitoring.vue'
 import Login from '/src/pages/login.vue'
 import NotFound from '/src/components/NotFound.vue'
 
+const base = import.meta.env.BASE_URL
 const routes = [
-  {path: '/login', name: 'Login', component: Login},
-  {path: '/', name: 'Integrations', component: Integrations},
+  {path: base + '/login', name: 'Login', component: Login},
+  {path:  base + '/', name: 'Integrations', component: Integrations},
   // {path: '/playground', name: 'Playground', component: Playground},
-  {path: '/monitoring', name: 'Monitoring', component: Monitoring},
-  { path: "/:catchAll(.*)", name: "404", component: NotFound }
+  {path:  base + '/monitoring', name: 'Monitoring', component: Monitoring},
+  { path:  base + "/:catchAll(.*)", name: "404", component: NotFound }
 ]
 
 export default createRouter({

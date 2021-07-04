@@ -39,6 +39,7 @@
 
 <script>
 import integrations from '/library/integrations'
+import tableauLogo from '../assets/images/integrations/tableau.png'
 
 export default {
   name: 'Integrations',

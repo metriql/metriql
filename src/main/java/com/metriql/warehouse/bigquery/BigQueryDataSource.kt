@@ -25,7 +25,6 @@ import com.metriql.service.task.Task
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.MetriqlExceptions
-import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.bigquery.BigQueryWarehouse.bridge
 import com.metriql.warehouse.spi.DataSource
@@ -72,7 +71,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 }
 
                 override fun getStats(): QueryResult.QueryStats {
-                    return QueryResult.QueryStats(FINISHED, "preview($target)", nodes = 1, percentage = 100.0)
+                    return QueryResult.QueryStats(FINISHED, null, nodes = 1, percentage = 100.0)
                 }
             }
         } else {
@@ -244,7 +243,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
 
     override fun createQueryTask(
         warehouseAuth: WarehouseAuth,
-        query: String,
+        query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
         limit: Int?,

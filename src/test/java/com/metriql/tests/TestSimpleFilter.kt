@@ -1,6 +1,7 @@
 package com.metriql.tests
 
 import com.metriql.db.FieldType
+import com.metriql.db.QueryResult
 import com.metriql.db.TestingServer
 import com.metriql.interfaces.TestModelService
 import com.metriql.service.auth.ProjectAuth
@@ -60,7 +61,7 @@ abstract class TestSimpleFilter {
     private fun runQuery(query: String): List<Any?>? {
         val task = dataSource.createQueryTask(
             ProjectAuth.singleProject(ZoneId.of("UTC")).warehouseAuth(),
-            query,
+            QueryResult.QueryStats.QueryInfo.rawSql(query),
             null,
             null,
             null,

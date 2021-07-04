@@ -53,7 +53,7 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
         queryOptions: SqlReportOptions.QueryOptions,
         isBackgroundTask: Boolean,
         postProcessors: List<PostProcessor> = listOf(),
-        info: Pair<SQLContext, Any>? = null,
+        info: SQLContext? = null,
     ): QueryTask {
         val limit = if (queryOptions.limit != null && queryOptions.limit > WarehouseQueryTask.MAX_LIMIT) {
             WarehouseQueryTask.MAX_LIMIT
@@ -73,6 +73,10 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
         }
 
         val cacheIdentifier = QueryIdentifierForCache(query, queryOptions)
+        val queryInfo = when (info) {
+            is SQLContext.AdhocReport -> QueryStats.QueryInfo(info.reportType, info.options, query)
+            else -> QueryStats.QueryInfo.rawSql(query)
+        }
 
         if (queryOptions.useCache) {
             val cacheResult = cacheService.getCache(
@@ -87,15 +91,15 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
                 val result = JsonHelper.convert(cacheResult.value, QueryResult::class.java)
                 result.setQueryProperties(query, limit)
                 result.setProperty("cacheTime", cacheResult.createdAt)
-                val stats = QueryStats(QueryStats.State.FINISHED, query, nodes = 1, percentage = 100.0)
+                val stats = QueryStats(QueryStats.State.FINISHED, queryInfo, nodes = 1, percentage = 100.0)
                 return Task.completedTask(auth, result, stats)
             }
         }
 
-        val queryWithComments = bridge.generateQuery(context.viewModels, rawSqlQuery, context.comments)
+        val compiledQuery = bridge.generateQuery(context.viewModels, rawSqlQuery, context.comments)
         val task = dataSource.createQueryTask(
             auth.warehouseAuth(),
-            queryWithComments,
+            queryInfo.copy(compiledQuery = compiledQuery),
             queryOptions.defaultSchema,
             queryOptions.defaultDatabase,
             limit,
@@ -116,12 +120,12 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
                 )
             }
 
-            MetriqlEventBus.publish(SQLExecuteEvent(auth, queryWithComments, info?.first, info?.second, task.getDuration().toMillis(), it?.error))
+            MetriqlEventBus.publish(SQLExecuteEvent(auth, compiledQuery, info, task.getDuration().toMillis(), it?.error))
             runningTasks.remove(identifierForTask)
         }
 
         task.addPostProcessor {
-            it.setQueryProperties(queryWithComments, limit)
+            it.setQueryProperties(compiledQuery, limit)
             it
         }
 

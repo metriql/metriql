@@ -6,6 +6,9 @@ import 'element-plus/lib/theme-chalk/index.css'
 import 'bulma/bulma.sass'
 import '/src/assets/style/main.scss'
 
+import "ag-grid-community/dist/styles/ag-grid.css";
+import "ag-grid-community/dist/styles/ag-theme-alpine.css";
+
 import {
   ElSkeleton,
   ElAlert,

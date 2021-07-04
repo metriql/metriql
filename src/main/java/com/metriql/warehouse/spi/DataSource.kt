@@ -1,5 +1,6 @@
 package com.metriql.warehouse.spi
 
+import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.Model
@@ -47,7 +48,7 @@ interface DataSource {
     // Query execution
     fun createQueryTask(
         auth: WarehouseAuth,
-        query: String,
+        query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
         limit: Int?,

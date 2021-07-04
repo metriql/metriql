@@ -10,22 +10,23 @@ import com.metriql.report.data.ReportFilter.Type.METRIC_FILTER
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
+import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
+import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
+import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
 import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.presto.PrestoMetriqlBridge.quoteIdentifier
 import com.metriql.warehouse.presto.PrestoWarehouse
-import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
+import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.TOTAL_ROWS_MEASURE
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
-import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.parser.SqlParser
-import io.trino.sql.tree.AliasedRelation
 import io.trino.sql.tree.AllColumns
 import io.trino.sql.tree.BetweenPredicate
 import io.trino.sql.tree.BooleanLiteral
@@ -38,132 +39,96 @@ import io.trino.sql.tree.Identifier
 import io.trino.sql.tree.InPredicate
 import io.trino.sql.tree.IsNotNullPredicate
 import io.trino.sql.tree.IsNullPredicate
-import io.trino.sql.tree.Join
 import io.trino.sql.tree.LikePredicate
 import io.trino.sql.tree.Limit
 import io.trino.sql.tree.Literal
 import io.trino.sql.tree.LogicalBinaryExpression
 import io.trino.sql.tree.LongLiteral
 import io.trino.sql.tree.Node
-import io.trino.sql.tree.QuerySpecification
+import io.trino.sql.tree.OrderBy
 import io.trino.sql.tree.Relation
-import io.trino.sql.tree.Select
 import io.trino.sql.tree.SelectItem
-import io.trino.sql.tree.SimpleGroupBy
 import io.trino.sql.tree.SingleColumn
 import io.trino.sql.tree.SortItem
 import io.trino.sql.tree.StringLiteral
 import io.trino.sql.tree.Table
+import java.util.Optional
 
 typealias Reference = Pair<MetricType, String>
 
 class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
     val parser = SqlParser()
 
-    private fun throwErrorForScalarMode(operation: String) {
-        throw MetriqlException("$operation operation not supported if you're not referencing any model", HttpResponseStatus.BAD_REQUEST)
-    }
+    fun convert(
+        context: IQueryGeneratorContext,
+        modelAlias: Pair<Model, String>,
+        selectItems: MutableList<out SelectItem>,
+        where: Optional<Expression>,
+        having: Optional<Expression>,
+        limit: Optional<Node>,
+        orderBy: Optional<OrderBy>
+    ): String {
+        val (model, alias) = modelAlias
 
-    fun convert(context: IQueryGeneratorContext, query: QuerySpecification): String {
-        if (query.offset.isPresent) {
-            throw MetriqlException("Offset is not supported", HttpResponseStatus.BAD_REQUEST)
+        val references = mutableMapOf<Node, Reference>()
+        model.relations.forEach { relation ->
+            val relationModel = context.getModel(relation.modelName)
+            buildReferences(references, relationModel, context, alias, relation = relation)
         }
-        if (query.windows.isNotEmpty()) {
-            throw MetriqlException("WINDOW operations not supported", HttpResponseStatus.BAD_REQUEST)
-        }
 
-        return if (query.from.isEmpty) {
-            if (query.groupBy.isPresent) {
-                throwErrorForScalarMode("GROUP BY")
-            }
-            if (query.having.isPresent) {
-                throwErrorForScalarMode("HAVING")
-            }
-            if (query.where.isPresent) {
-                throwErrorForScalarMode("WHERE")
-            }
-            if (query.orderBy.isPresent) {
-                throwErrorForScalarMode("ORDER BY")
-            }
-            "SELECT ${rewriteScalarQuery(context, query.select)}"
-        } else {
-            val (model, alias) = getModel(context, query.from.get())
+        // override values if they already exist
+        buildReferences(references, model, context, alias, relation = null)
 
-            val references = mutableMapOf<Node, Reference>()
-            model.relations.forEach { relation ->
-                val relationModel = context.getModel(relation.modelName)
-                buildReferences(references, relationModel, context, alias, relation = relation)
-            }
+        val measures = mutableListOf<String>()
+        val dimensions = mutableListOf<String>()
 
-            // override values if they already exist
-            buildReferences(references, model, context, alias, relation = null)
+        // TODO: see how we can use it
+//        val groupings = query.groupBy.orElse(null)?.groupingElements?.flatMap {
+//            if (it !is SimpleGroupBy) {
+//                throw UnsupportedOperationException()
+//            }
+//            it.expressions.map { exp -> getReference(query.select.selectItems, exp) }
+//        }?.toList() ?: listOf()
 
-            val measures = mutableListOf<String>()
-            val dimensions = mutableListOf<String>()
-
-            // TODO: see how we can use it
-            val groupings = query.groupBy.orElse(null)?.groupingElements?.flatMap {
-                if (it !is SimpleGroupBy) {
-                    throw UnsupportedOperationException()
-                }
-                it.expressions.map { exp -> getReference(query.select.selectItems, exp) }
-            }?.toList() ?: listOf()
-
-            val projectionColumns = query.select.selectItems.map {
-                when (it) {
-                    is AllColumns -> throw TODO()
-                    is SingleColumn -> {
-                        val alias = it.alias.orElse(null)?.let { identifier -> identifier.value }
-                            ?: deferenceExpression(it.expression, model.name)?.let { exp -> getIdentifierValue(exp) }
-                        val projection = MetriqlSegmentationQueryRewriter(context, model, references, dimensions, measures).process(it.expression, null)
-                        Pair(projection, alias)
-                    }
-                    else -> throw IllegalStateException()
-                }
-            }
-
-            val whereFilters = query.where.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
-            val havingFilters = query.having.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
-
-            val query = SegmentationRecipeQuery(
-                model.name,
-                measures.map { Recipe.MetricReference.fromName(it) },
-                dimensions.map { Recipe.DimensionReference.fromName(it) },
-                (whereFilters + havingFilters).mapNotNull { it.toReference() },
-                limit = parseLimit(query.limit.orElse(null)),
-                orders = parseOrders(references, query)
-            ).toReportOptions(context)
-
-            val (renderedQuery, _, _) = segmentationService.renderQuery(context.auth, context, query)
-
-            if (projectionColumns.any { it.first != it.second && it.second != null }) {
-                val quotedAlias = context.warehouseBridge.quoteIdentifier(alias)
-                """SELECT ${
-                projectionColumns.joinToString(", ") { col ->
-                    val alias = col.second?.let { context.warehouseBridge.quoteIdentifier(it) }
-                    if (col.first != col.second) "${col.first}${alias?.let { " AS $it" } ?: ""}" else col.first
-                }
-                } FROM (
-                |$renderedQuery
-                |) AS $quotedAlias""".trimMargin()
-            } else {
-                renderedQuery
-            }
-        }
-    }
-
-    private fun rewriteScalarQuery(context: IQueryGeneratorContext, select: Select): String {
-        return select.selectItems.joinToString(", ") { selectItem ->
-            when (selectItem) {
-                is AllColumns -> throw UnsupportedOperationException("* is not supported without from")
+        val projectionColumns = selectItems.map {
+            when (it) {
+                is AllColumns -> throw TODO()
                 is SingleColumn -> {
-                    val content = MetriqlExpressionFormatter.formatExpression(selectItem.expression, this, context)
-                    val alias = selectItem.alias.orElse(null)?.let { identifier -> identifier.value }
-                        ?: deferenceExpression(selectItem.expression, null)?.let { exp -> getIdentifierValue(exp) }
-                    content + (alias?.let { " AS $it" } ?: "")
+                    val alias = it.alias.orElse(null)?.let { identifier -> identifier.value }
+                        ?: deferenceExpression(it.expression, model.name)?.let { exp -> getIdentifierValue(exp) }
+                    val projection = MetriqlSegmentationQueryRewriter(context, model, references, dimensions, measures).process(it.expression, null)
+                    Pair(projection, alias)
                 }
                 else -> throw IllegalStateException()
             }
+        }
+
+        val whereFilters = where.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
+        val havingFilters = having.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
+
+        val query = SegmentationRecipeQuery(
+            model.name,
+            measures.map { Recipe.MetricReference.fromName(it) },
+            dimensions.map { Recipe.DimensionReference.fromName(it) },
+            (whereFilters + havingFilters).mapNotNull { it.toReference() },
+            limit = parseLimit(limit.orElse(null)),
+            orders = parseOrders(references, selectItems, orderBy)
+        ).toReportOptions(context)
+
+        val (renderedQuery, _, _) = segmentationService.renderQuery(context.auth, context, query)
+
+        return if (projectionColumns.any { it.first != it.second && it.second != null }) {
+            val quotedAlias = context.warehouseBridge.quoteIdentifier(alias)
+            """SELECT ${
+            projectionColumns.joinToString(", ") { col ->
+                val alias = col.second?.let { context.warehouseBridge.quoteIdentifier(it) }
+                if (col.first != col.second) "${col.first}${alias?.let { " AS $it" } ?: ""}" else col.first
+            }
+            } FROM (
+                |$renderedQuery
+                |) AS $quotedAlias""".trimMargin()
+        } else {
+            renderedQuery
         }
     }
 
@@ -248,8 +213,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         override fun visitDereferenceExpression(node: DereferenceExpression, context: Void?): String? {
             val reference = references[node]
             return if (reference != null) {
-                dimensions.add(reference.second)
-                queryContext.warehouseBridge.quoteIdentifier(node.field.value)
+                rewriteValueForReference(reference, node.field.value)
             } else {
                 super.visitDereferenceExpression(node, context)
             }
@@ -258,22 +222,26 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         override fun visitIdentifier(node: Identifier, context: Void?): String {
             val reference = references[node]
             return if (reference != null) {
-                when (reference.first) {
-                    MetricType.DIMENSION -> {
-                        dimensions.add(reference.second)
-                        val ref = Recipe.DimensionReference.fromName(node.value)
-                        val dimension = ref.toDimension(model.name, ref.getType(queryContext::getModel, model.name))
-                        queryContext.getDimensionAlias(dimension.name, dimension.relationName, dimension.postOperation)
-                    }
-                    MetricType.MEASURE -> {
-                        measures.add(reference.second)
-                        val ref = Recipe.MetricReference.fromName(node.value)
-                        queryContext.getMeasureAlias(ref.name, ref.relation)
-                    }
-                    else -> TODO()
-                }
+                rewriteValueForReference(reference, node.value)
             } else {
                 super.visitIdentifier(node, context)
+            }
+        }
+
+        private fun rewriteValueForReference(reference: Reference, value: String): String {
+            return when (reference.first) {
+                MetricType.DIMENSION -> {
+                    dimensions.add(reference.second)
+                    val ref = Recipe.DimensionReference.fromName(value)
+                    val dimension = ref.toDimension(model.name, ref.getType(queryContext::getModel, model.name))
+                    queryContext.getDimensionAlias(dimension.name, dimension.relationName, dimension.postOperation)
+                }
+                MetricType.MEASURE -> {
+                    measures.add(reference.second)
+                    val ref = Recipe.MetricReference.fromName(value)
+                    queryContext.getMeasureAlias(ref.name, ref.relation)
+                }
+                else -> TODO()
             }
         }
     }
@@ -305,29 +273,12 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getModel(context: IQueryGeneratorContext, from: Relation): Pair<Model, String> {
-        return when (from) {
-            is AliasedRelation -> {
-                Pair(getModel(context, from.relation).first, from.alias.value)
-            }
-            is Table -> {
-                val table = DbtJinjaRenderer.renderer.renderModelNameRegex(from.name.suffix)
-                val model = context.getModel(table)
-                Pair(model, table)
-            }
-            is Join -> throw MetriqlSqlFormatter.joinException()
-            else -> {
-                throw UnsupportedOperationException(String.format("Unsupported operation %s", from.javaClass.name))
-            }
-        }
-    }
-
-    private fun parseOrders(references: Map<Node, Reference>, query: QuerySpecification): Map<Recipe.MetricReference, Recipe.OrderType>? {
-        if (!query.orderBy.isPresent) {
+    private fun parseOrders(references: Map<Node, Reference>, selectItems: List<SelectItem>, orderBy: Optional<OrderBy>): Map<Recipe.MetricReference, Recipe.OrderType>? {
+        if (!orderBy.isPresent) {
             return null
         }
 
-        return query.orderBy.get().sortItems.map {
+        return orderBy.get().sortItems.map {
             val orderType = when (it.ordering) {
                 SortItem.Ordering.DESCENDING -> Recipe.OrderType.DESC
                 SortItem.Ordering.ASCENDING -> Recipe.OrderType.ASC
@@ -335,7 +286,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             if (it.nullOrdering != SortItem.NullOrdering.UNDEFINED) {
                 throw MetriqlException("NULL ORDERING is not supported yet", HttpResponseStatus.BAD_REQUEST)
             }
-            val reference = getReference(query.select.selectItems, it.sortKey)
+            val reference = getReference(selectItems, it.sortKey)
             val metric = Recipe.MetricReference.fromName(references[reference]?.second ?: throw TODO())
             metric to orderType
         }.toMap()
@@ -505,26 +456,40 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     }
 
     private fun getMeasureStr(context: IQueryGeneratorContext, model: Model, measure: Model.Measure, tableAlias: String, prefix: String?): List<String> {
+        // TODO: make it a flag?
+        val aggregations = if (measure.value.agg == APPROXIMATE_UNIQUE) {
+            listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE)
+        } else listOfNotNull(measure.value.agg)
+
         return when (val value = measure.value) {
             is Model.Measure.MeasureValue.Column -> {
                 val columnValues = value.column?.let {
                     val suffix = "${prefix ?: ""}${value.column}"
                     listOf(suffix, "$tableAlias.$suffix")
                 } ?: listOf("")
+
                 // we support Presto warehouse as the Sql dialect so we can only support Presto aggregations
-                columnValues.map {
-                    PrestoWarehouse.bridge.performAggregation(it, value.aggregation, WarehouseMetriqlBridge.AggregationContext.ADHOC)
+                columnValues.flatMap {
+                    aggregations.map { aggregation ->
+                        PrestoWarehouse.bridge.performAggregation(it, aggregation, ADHOC)
+                    }
                 }
             }
-            is Model.Measure.MeasureValue.Sql -> listOf(context.renderSQL(value.sql, model.name))
+            is Model.Measure.MeasureValue.Sql -> {
+                val sql = context.renderSQL(value.sql, model.name)
+                if (aggregations.isEmpty()) {
+                    // no aggregation is set for the sql so it's computed
+                    listOf(sql)
+                } else {
+                    aggregations.map { aggregation -> PrestoWarehouse.bridge.performAggregation(sql, aggregation, ADHOC) }
+                }
+            }
             is Model.Measure.MeasureValue.Dimension -> {
-                val dim = model.dimensions.find { d -> d.name == value.dimension } ?: throw TODO()
-                getDimensionStr(dim, tableAlias, prefix).map {
-                    PrestoWarehouse.bridge.performAggregation(
-                        it.first,
-                        value.aggregation,
-                        WarehouseMetriqlBridge.AggregationContext.ADHOC
-                    )
+                val dim = model.dimensions.find { d -> d.name == value.dimension } ?: throw java.lang.IllegalStateException()
+                getDimensionStr(dim, tableAlias, prefix).flatMap {
+                    aggregations.map { aggregation ->
+                        PrestoWarehouse.bridge.performAggregation(it.first, aggregation, ADHOC)
+                    }
                 }
             }
         }
@@ -574,6 +539,21 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     }
 
     private fun parseExpression(expression: String): Expression {
-        return parser.createExpression(expression, ParsingOptions())
+        return parser.createExpression(expression, defaultParsingOptions)
+    }
+
+    companion object {
+        fun getModel(context: IQueryGeneratorContext, from: Relation): Pair<Model, String> {
+            return when (from) {
+                is Table -> {
+                    val table = DbtJinjaRenderer.renderer.renderModelNameRegex(from.name.suffix)
+                    val model = context.getModel(table)
+                    Pair(model, table)
+                }
+                else -> {
+                    throw UnsupportedOperationException(String.format("Unsupported operation %s", from.javaClass.name))
+                }
+            }
+        }
     }
 }

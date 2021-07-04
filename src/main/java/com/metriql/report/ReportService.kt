@@ -76,7 +76,7 @@ open class ReportService(
             query,
             queryOptions,
             isBackgroundTask,
-            info = Pair(MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.ADHOC_REPORT, MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.AdhocReport(reportType, options)),
+            info = MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.AdhocReport(reportType, options),
             postProcessors = postProcessors
         )
     }

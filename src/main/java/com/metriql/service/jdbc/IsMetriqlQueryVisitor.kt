@@ -30,6 +30,8 @@ class IsMetriqlQueryVisitor(private val defaultCatalog: String) : DefaultTravers
                     if (!isMetadata) {
                         context.set(true)
                     }
+                } else if (catalog == "system") {
+                    context.set(false)
                 }
             }
         }

@@ -1,6 +1,6 @@
 package io.trino
 
-import com.metriql.service.model.Model
+import com.metriql.service.model.IModelService
 import io.trino.connector.system.SystemHandleResolver
 import io.trino.connector.system.SystemPageSourceProvider
 import io.trino.connector.system.SystemSplitManager
@@ -18,19 +18,19 @@ import io.trino.spi.transaction.IsolationLevel
 import io.trino.transaction.InternalConnector
 import io.trino.transaction.TransactionId
 
-class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManager, val models: List<Model>) : ConnectorFactory {
+class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManager, val modelService: IModelService) : ConnectorFactory {
     override fun getName() = "metriql"
 
     override fun create(catalogName: String?, config: MutableMap<String, String>?, context: ConnectorContext?): Connector {
-        return MetriqlConnector(internalNodeManager, models)
+        return MetriqlConnector(internalNodeManager, modelService)
     }
 
     override fun getHandleResolver(): ConnectorHandleResolver {
         return SystemHandleResolver()
     }
 
-    class MetriqlConnector(private val nodeManager: InternalNodeManager, val models: List<Model>) : InternalConnector {
-        val metadata = MetriqlMetadata(models)
+    class MetriqlConnector(private val nodeManager: InternalNodeManager, val modelService: IModelService) : InternalConnector {
+        val metadata = MetriqlMetadata(modelService)
 
         override fun beginTransaction(transactionId: TransactionId, isolationLevel: IsolationLevel?, readOnly: Boolean): ConnectorTransactionHandle {
             return MetriqlTransactionHandle(transactionId)

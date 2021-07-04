@@ -2,14 +2,15 @@ package com.metriql.service.jdbc
 
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.report.ReportType
+import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.Model
+import com.metriql.service.model.IModelService
 import com.metriql.warehouse.spi.WarehouseAuth
 import io.trino.LocalQueryRunner
 import io.trino.MetriqlConnectorFactory
 import io.trino.MetriqlMetadata.Companion.getMetriqlType
 import io.trino.execution.warnings.WarningCollector
-import io.trino.plugin.tpch.TpchConnectorFactory
 import io.trino.server.HttpRequestSessionContext
 import io.trino.spiller.NodeSpillConfig
 import io.trino.sql.analyzer.FeaturesConfig
@@ -19,19 +20,20 @@ import java.util.logging.Logger
 
 const val QUERY_TYPE = "QUERY_TYPE"
 
-class LightweightQueryRunner(private val models: List<Model>) {
-    lateinit var runner: LocalQueryRunner
+class LightweightQueryRunner(private val modelService: IModelService) {
+    val runner: LocalQueryRunner by lazy {
+        var internalRunner = LocalQueryRunner(FeaturesConfig(), NodeSpillConfig())
+        internalRunner.createCatalog("metriql", MetriqlConnectorFactory(internalRunner.nodeManager, modelService), mapOf())
+        // internalRunner.createCatalog("tpch", TpchConnectorFactory(), mapOf("tpch.produce-pages" to "true"))
+        internalRunner
+    }
 
     fun createTask(auth: ProjectAuth, sessionContext: HttpRequestSessionContext, sql: String): QueryTask {
         return TrinoQueryTask(sessionContext, sql, auth.warehouseAuth())
     }
 
     fun start() {
-        logger.info("Starting metadata query runner")
-        this.runner = LocalQueryRunner(FeaturesConfig(), NodeSpillConfig())
-        logger.info("Registering metriql catalog")
-        runner.createCatalog("metriql", MetriqlConnectorFactory(runner.nodeManager, models), mapOf())
-        runner.createCatalog("tpch", TpchConnectorFactory(), mapOf("tpch.produce-pages" to "true"))
+        runner
     }
 
     inner class TrinoQueryTask(private val sessionContext: HttpRequestSessionContext, val sql: String, auth: WarehouseAuth) :
@@ -43,7 +45,8 @@ class LightweightQueryRunner(private val models: List<Model>) {
                 Status.CANCELED -> QueryResult.QueryStats.State.FINISHED
                 Status.FINISHED -> QueryResult.QueryStats.State.FINISHED
             }
-            return QueryResult.QueryStats(state, sql)
+            val info = QueryResult.QueryStats.QueryInfo(ReportType.SQL, SqlReportOptions(sql, null, null, null), sql)
+            return QueryResult.QueryStats(state, info)
         }
 
         override fun run() {
@@ -57,7 +60,7 @@ class LightweightQueryRunner(private val models: List<Model>) {
                 val data = query.materializedResult?.materializedRows?.map { it.fields } ?: listOf()
                 setResult(QueryResult(columns, data, null, mapOf(QUERY_TYPE to query.updateType), query.responseHeaders))
             } catch (e: Exception) {
-                val fallbackErrorMessage = "Error running metadata query: ${e.message}"
+                val fallbackErrorMessage = "Error running metadata query"
                 logger.log(Level.WARNING, fallbackErrorMessage, e)
                 setResult(QueryResult.errorResult(e.message ?: fallbackErrorMessage))
             }
