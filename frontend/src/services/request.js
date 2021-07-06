@@ -3,8 +3,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { AuthService } from '/src/services/auth'
 import router from '../router'
 
-const xhrOptions = {
-  baseURL: 'http://127.0.0.1:5656',
+export const BASE_URL = import.meta.env.VITE_BACKEND_URL || ''
+
+export const xhrOptions = {
+  baseURL: BASE_URL,
   headers: {'content-type': 'application/json'}
 }
 
@@ -16,6 +18,9 @@ request.interceptors.request.use(request => {
 
   if (auth != null && commonHeaders['Authorization'] == null) {
     commonHeaders['Authorization'] = auth
+  }
+  if(BASE_URL != null) {
+    commonHeaders['Origin'] = BASE_URL
   }
   return request
 }, error => Promise.reject(error))

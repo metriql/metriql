@@ -5,14 +5,19 @@ import com.metriql.CURRENT_PATH
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IModelService
 import com.metriql.util.JsonHelper
+import com.metriql.util.MetriqlException
+import io.netty.handler.codec.http.HttpHeaders
+import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR
+import org.rakam.server.http.HttpServer.returnError
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
-import org.rakam.server.http.annotations.JsonRequest
+import org.rakam.server.http.annotations.QueryParam
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
+import javax.ws.rs.GET
 import javax.ws.rs.Path
 
 @Path("$CURRENT_PATH/integration")
@@ -28,53 +33,65 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
     )
 
     @Path("/tableau")
-    @JsonRequest
-    fun tableau(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, dataset: String) {
-        val model = modelService.getModel(auth, dataset)
-        val stdin = JsonHelper.encodeAsBytes(model)
-
-        runCommand(request, arrayOf("metriql2tableau", "--metriql-url", "http://123", "--dataset", dataset), stdin)
-    }
-
-    @Path("/looker")
-    @JsonRequest
-    fun looker(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth) {
+    @GET
+    fun tableau(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("dataset") dataset: String) {
         val models = modelService.list(auth)
         val stdin = JsonHelper.encodeAsBytes(models)
 
-        runCommand(request, arrayOf("metriql2lookml", "--metriql-url", "http://123"), stdin)
+        val apiUrl = request.headers().get("origin") ?: request.headers().get("host")?.let { "http://$it" }
+        ?: throw MetriqlException("Unable to identify metriql url", BAD_REQUEST)
+        val commands = listOf("metriql-tableau", "--metriql-url", apiUrl, "--dataset", dataset, "create-tds")
+        runCommand(request, commands, stdin, "$dataset.tds")
     }
 
-    private fun runCommand(request: RakamHttpRequest, commands: Array<String>, stdin: ByteArray) {
+    @Path("/looker")
+    @GET
+    fun looker(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("connection") connection: String) {
+        val models = modelService.list(auth)
+        val stdin = JsonHelper.encodeAsBytes(models)
+        runCommand(request, listOf("metriql-lookml", "--connection", connection), stdin, "$connection.zip")
+    }
+
+    private fun runCommand(request: RakamHttpRequest, commands: List<String>, stdin: ByteArray, fileName: String?) {
         executor.execute {
             try {
-                var process = Runtime.getRuntime().exec(
-                    commands,
-                    arrayOf()
-                )
-                process.outputStream.write(stdin)
+                val process = ProcessBuilder().command(commands).start()
+
+                val outputStream = process.outputStream
+                outputStream.write(stdin)
+                outputStream.write(System.lineSeparator().toByteArray())
+                outputStream.flush()
 
                 val exitVal = try {
                     process.waitFor(20, TimeUnit.SECONDS)
                 } catch (e: Exception) {
-                    request.response("Unable to execute: ${e.message}", INTERNAL_SERVER_ERROR).end()
+                    returnError(request, "Unable to execute: ${e.message}", INTERNAL_SERVER_ERROR)
                     return@execute
                 }
 
                 if (exitVal) {
                     val result = process.inputStream.bufferedReader().readText()
-                    process.errorStream.bufferedReader().readText()
-                    request.response(result).end()
+                    val error = process.errorStream.bufferedReader().readText()
+
+                    if (error.isEmpty()) {
+                        if (fileName != null) {
+                            request.addResponseHeader(HttpHeaders.Names.CONTENT_TYPE, "application/octet-stream")
+                            request.addResponseHeader("Content-Disposition", "attachment;filename=$fileName")
+                        }
+                        request.response(result).end()
+                    } else {
+                        returnError(request, error, BAD_REQUEST)
+                    }
                 } else {
                     try {
                         process.destroyForcibly()
                     } catch (e: Exception) {
                     }
 
-                    request.response("Unable to run command: timeout", INTERNAL_SERVER_ERROR).end()
+                    returnError(request, "Unable to run command: timeout after 20 seconds", INTERNAL_SERVER_ERROR)
                 }
             } catch (e: Exception) {
-                request.response("Unknown error executing command: ${e.message}", INTERNAL_SERVER_ERROR).end()
+                returnError(request, "Unknown error executing command: ${e}", INTERNAL_SERVER_ERROR)
             }
         }
     }

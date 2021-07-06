@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from "./router"
+import clipboard from "/src/plugins/clipboard"
 
 import 'element-plus/lib/theme-chalk/index.css'
 import 'bulma/bulma.sass'
@@ -191,5 +192,8 @@ let app = createApp(App)
 
 components.forEach(component => app.component(component.name, component))
 plugins.forEach(plugin => app.use(plugin))
+clipboard.install(app)
+
+app.config.globalProperties.$BASE_URL = import.meta.env.VITE_BACKEND_URL || window.location.host
 
 app.mount('#rkm-app')

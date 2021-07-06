@@ -13,10 +13,11 @@
           <el-input type="search" prefix-icon="el-icon-search" placeholder="type to search" v-model="searchTerm"></el-input>
         </div>
       </div>
-      <div v-for="(integration, index) in integrations" :key="index" class="integration-box">
-        <router-link :to="`?integrate=${integration.label}`">
+      <div v-for="(integration, index) in integrations" :key="index" class="integration-box" :class="{'not-ready': integration.ready == false}">
+        <router-link :to="integration.ready != false ? `?integrate=${integration.label}` : '#'">
             <img v-if="integration.logo != null" :src="integration.logo" class="integration-logo"/>
             <span v-else class="integration-logo">{{ integration.label }}</span>
+            <div v-if="integration.ready == false" class="soon-available">soon available</div>
         </router-link>
       </div>
       <div class="integration-box">
@@ -30,9 +31,10 @@
     </div>
     <div v-else class="integration-content-box" :class="{full: activeIntegration.full}">
       <el-page-header @back="$router.push($route.path)" :content="`Integrate ${activeIntegration.label} ${activeIntegrationSuffix}`" />
-      <img slot="content" v-if="activeIntegration.logo != null" :src="activeIntegration.logo" style="max-width: 200px;margin:30px"/>
+      <img v-if="activeIntegration.logo != null" :src="activeIntegration.logo" style="max-width: 200px;margin:30px"/>
+      <a v-if="activeIntegration.source" target="_blank" style="position:absolute;right:10px;top:20px"><i class="el-icon el-icon-link" />see source</a>
 
-      <component :is="activeIntegration.docs" class="integration-content-markdown"/>
+      <component :is="activeIntegration.docs" :value="activeIntegration" class="integration-content-markdown"/>
     </div>
   </main>
 </template>
@@ -79,10 +81,21 @@ export default {
 </script>
 
 <style lang="scss">
+.soon-available {
+  z-index: 100;
+  position: absolute;
+  font-size: 11px;
+  font-weight:bold;
+  color: #575701;
+  background: #f3f306;
+  padding: 4px;
+  opacity: .4
+}
 .integration-content-box {
   background-color: var(--rkm-subnav-background-color);
   box-shadow: 0 2px 4px 0 rgb(0 0 0 / 10%);
   border-radius: var(--rkm-border-radius-base);
+  position:relative;
   width: 800px;
   min-height: 300px;
   padding: 24px;
@@ -113,7 +126,12 @@ export default {
   position: relative;
   float:left;
 
-  &:nth-child(6) {
+  &.not-ready {
+    pointer-events:none;
+    opacity:.6;
+  }
+
+  &:nth-of-type(6n) {
     margin-right:0
   }
 

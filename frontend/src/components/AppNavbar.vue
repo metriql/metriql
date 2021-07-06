@@ -16,6 +16,11 @@
       </li>
     </ul>
     <div class="rkm-c-navbar__cta">
+      <el-popover v-if="connectError != null" placement="bottom" title="Error" trigger="hover" :content="`Unable to connect: ${connectError.message}`">
+        <template #reference>
+          <span class="connection-error">Unable to connect metriql</span>
+        </template>
+      </el-popover>
       <el-button type="primary" class="sync-button" @click="sync" :loading="syncing">
         <i class="el-icon-refresh" />
         Sync</el-button>
@@ -48,19 +53,36 @@ export default {
   setup() {
     const syncing = ref(false)
     const activeTaskCount = ref(null)
+    const connectError = ref(null)
 
     LiveStatistics.register(function(count) {
       activeTaskCount.value = count[1]
+    }, (err) => {
+      connectError.value = err
     })
+
+    const retry = function() {
+      connectError.value = null
+      LiveStatistics.retry()
+    }
 
     const baseUrl = ref(import.meta.env.BASE_URL)
 
-    return {syncing, baseUrl, activeTaskCount}
+    return {syncing, retry, baseUrl, connectError, activeTaskCount}
   }
 }
 </script>
 
 <style lang="scss" scoped>
+.connection-error {
+  font-size: 0.8em;
+  margin: 6px 15px;
+  border-radius: 4px;
+  background: #49494963;
+  font-weight: bold;
+  padding: 4px 7px;
+  color: #ff5959;
+}
 .sync-button {
   background: linear-gradient(33deg, rgb(154 91 215) 14%, rgb(135,12,254) 100%);
   border-color: rgb(154 89 217);
