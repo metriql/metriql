@@ -119,7 +119,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 val file = File(manifestLocation).absoluteFile
                 if (!file.exists()) {
                     echo(
-                        "manifest.json file (specified in --manifest-json option) could not found, please compile dbt models before running metriql, current uri is: $manifestJson",
+                        "manifest.json file (specified in --manifest-json option) could not found, please compile dbt models before running metriql, path is: $file",
                         err = true
                     )
                     null
@@ -250,9 +250,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         )
         private val manifestJson by option(
             "--manifest-json",
-            help = "The URI of the manifest.json, `file`, `http`, and `https` is supported",
+            help = "The URI of the manifest.json, `file`, `http`, and `https` is supported. The default is \$DBT_PROJECT_DIR/target/manifest.json",
             envvar = "DBT_MANIFEST_JSON"
-        ).defaultLazy { File("target/manifest.json").toURI().toString() }
+        )
 
         override fun run() {
             val apiSecret = when {
@@ -267,7 +267,8 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val dataSource = this.getDataSource()
 
-            val modelService = RecipeModelService(null, { this.parseRecipe(manifestJson) }, -1, dataSource.warehouse.bridge)
+            val modelService =
+                RecipeModelService(null, { this.parseRecipe(manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()) }, -1, dataSource.warehouse.bridge)
             HttpServer.start(
                 HostAndPort.fromParts(host, port), apiSecret, usernamePass, threads, debug, origin,
                 modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }
