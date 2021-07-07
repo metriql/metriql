@@ -559,15 +559,17 @@ data class Recipe(
                             Pair(Model.Measure.Type.SQL, Model.Measure.MeasureValue.Sql(sql, aggregation))
                         }
                         dimension != null -> {
+                            val agg = aggregation ?: throw MetriqlException("Aggregation is required for $modelName.$measureName", BAD_REQUEST)
                             Pair(
                                 Model.Measure.Type.DIMENSION,
-                                Model.Measure.MeasureValue.Dimension(aggregation!!, dimension)
+                                Model.Measure.MeasureValue.Dimension(agg, dimension)
                             )
                         }
                         else -> {
+                            val agg = aggregation ?: throw MetriqlException("Aggregation is required for $modelName.$measureName", BAD_REQUEST)
                             Pair(
                                 Model.Measure.Type.COLUMN,
-                                Model.Measure.MeasureValue.Column(aggregation!!, column)
+                                Model.Measure.MeasureValue.Column(agg, column)
                             )
                         }
                     }

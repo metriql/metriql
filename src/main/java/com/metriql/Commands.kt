@@ -115,6 +115,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                     null
                 } else response.body
             }
+            "dbt-cloud" -> {
+                TODO()
+            }
             "file" -> {
                 val file = File(manifestLocation).absoluteFile
                 if (!file.exists()) {

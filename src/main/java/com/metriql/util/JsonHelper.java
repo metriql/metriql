@@ -483,6 +483,11 @@ public class JsonHelper {
                         return null;
                     }
 
+                    if(ctxt.isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)) {
+                        // TODO: return the actual value
+                        return null;
+                    }
+
                     throw new MetriqlException(
                             String.format("`%s` is not valid, valid values are %s",
                                     p.getText(),

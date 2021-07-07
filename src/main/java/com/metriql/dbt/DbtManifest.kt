@@ -1,6 +1,7 @@
 package com.metriql.dbt
 
 import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AcceptedValues
@@ -96,7 +97,11 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
 
             @UppercaseEnum
             enum class Test(private val configClass: KClass<out DbtModelColumnTest>) : StrValueEnum {
-                UNIQUE(AnyValue::class), NOT_NULL(AnyValue::class), ACCEPTED_VALUES(AcceptedValues::class), RELATIONSHIPS(Relationships::class);
+                UNIQUE(AnyValue::class),
+                NOT_NULL(AnyValue::class),
+                ACCEPTED_VALUES(AcceptedValues::class),
+                RELATIONSHIPS(Relationships::class),
+                @JsonEnumDefaultValue UNKNOWN(AnyValue::class);
 
                 override fun getValueClass() = configClass.java
             }
