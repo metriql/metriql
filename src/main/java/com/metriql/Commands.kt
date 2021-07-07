@@ -44,13 +44,17 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         help = "Which directory to look in for the profiles.yml file. Default = ~/.dbt",
         envvar = "DBT_PROFILES_DIR"
     ).defaultLazy { "${System.getProperty("user.home")}/.dbt/" }
+    private val profilesContent by option(
+        help = "Profiles content as YML, overrides --profiles-dir option",
+        envvar = "DBT_PROFILES_CONTENT"
+    )
     val profile by option("--profile", help = "Which profile to load. Overrides setting in dbt_project.yml.", envvar = "PROFILE")
 
     val projectDir by option(
         "--project-dir",
         help = "Which directory to look in for the dbt_project.yml file. Default is the current working directory and its parents.",
         envvar = "DBT_PROJECT_DIR"
-    ).defaultLazy { File("").toURI().toString() }
+    ).defaultLazy { File("").absoluteFile.toURI().toString() }
 
     override fun run() {
     }
@@ -62,12 +66,18 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             } else null
         }
 
-        val profilesFile = File(profilesDir, "profiles.yml")
-        if (!profilesFile.exists()) {
-            echo("profiles.yml does not exist in ${profilesFile.absoluteFile}. Please set --profiles-dir option.", err = true)
-            exitProcess(1)
+        val content = if (profilesContent != null) {
+            profilesContent!!.toByteArray()
+        } else {
+            val profilesFile = File(profilesDir, "profiles.yml")
+            if (!profilesFile.exists()) {
+                echo("profiles.yml does not exist in ${profilesFile.absoluteFile}. Please set --profiles-dir option.", err = true)
+                exitProcess(1)
+            }
+            profilesFile.readBytes()
         }
-        val profiles = YamlHelper.mapper.readValue(profilesFile.readBytes(), DbtProfiles::class.java)
+
+        val profiles = YamlHelper.mapper.readValue(content, DbtProfiles::class.java)
         val currentProfile = profiles[profile ?: dbtProjectFile?.profile ?: "default"]
         if (currentProfile == null) {
             echo("profile $profile doesn't exist", err = true)
