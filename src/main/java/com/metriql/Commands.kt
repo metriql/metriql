@@ -42,7 +42,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
     private val profilesDir by option(
         "--profiles-dir",
         help = "Which directory to look in for the profiles.yml file. Default = ~/.dbt",
-        envvar = "PROJECT_DIR"
+        envvar = "DBT_PROFILES_DIR"
     ).defaultLazy { "${System.getProperty("user.home")}/.dbt/" }
     val profile by option("--profile", help = "Which profile to load. Overrides setting in dbt_project.yml.", envvar = "PROFILE")
 
@@ -106,7 +106,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 } else response.body
             }
             "file" -> {
-                val file = File(manifestLocation)
+                val file = File(manifestLocation).absoluteFile
                 if (!file.exists()) {
                     echo(
                         "manifest.json file (specified in --manifest-json option) could not found, please compile dbt models before running metriql, current uri is: $manifestJson",
