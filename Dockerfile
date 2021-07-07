@@ -8,8 +8,8 @@ RUN cd app
 # package our application code, we optimize with extra JVM flags and disable tests because Maven throws java.lang.OutOfMemoryError: GC overhead limit exceeded
 RUN export MAVEN_OPTS="-Xmx2500m -XX:MetaspaceSize=512M -XX:MaxMetaspaceSize=1024M -XX:-UseGCOverheadLimit -XX:PermSize=512m" && ./mvnw package -Dmaven.test.skip=true
 
-# the second stage of our build will use open jdk 8 on alpine 3.9
-FROM openjdk:11-jre-alpine3.9
+# the second stage of our build will use open jdk 11 on alpine
+FROM openjdk:11-jre-alpine
 
 # copy only the artifacts we need from the first stage and discard the rest
 COPY --from=MAVEN_BUILD /app/target/metriql-*-bundle /
