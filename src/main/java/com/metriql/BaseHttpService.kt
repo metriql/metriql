@@ -4,8 +4,11 @@ import com.metriql.util.HttpUtil.sanitizeUri
 import com.metriql.util.HttpUtil.sendError
 import com.metriql.util.HttpUtil.sendFile
 import com.metriql.util.TextUtil
+import io.netty.handler.codec.http.DefaultFullHttpResponse
+import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http.HttpVersion
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
 import java.io.File
@@ -22,7 +25,9 @@ class BaseHttpService : HttpService() {
     @Path("/")
     @GET
     fun main(request: RakamHttpRequest) {
-        request.response("switch to /ui").end()
+        val response = DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SEE_OTHER)
+        response.headers().set(HttpHeaders.Names.LOCATION, "/ui")
+        request.response(response).end()
     }
 
     @Path("/ui")

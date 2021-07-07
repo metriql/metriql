@@ -20,7 +20,7 @@ request.interceptors.request.use(request => {
     commonHeaders['Authorization'] = auth
   }
   if(BASE_URL != null) {
-    commonHeaders['Origin'] = BASE_URL
+    // commonHeaders['Origin'] = BASE_URL
   }
   return request
 }, error => Promise.reject(error))

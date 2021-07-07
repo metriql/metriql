@@ -64,7 +64,7 @@ export default [{
   full: true
 }, {
   label: 'CLI',
-  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/cli.md'), loadingComponent: ElSkeleton}),
+  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/cli.vue'), loadingComponent: ElSkeleton}),
   category: 'Development'
 }, {
   label: 'JDBC Driver',
