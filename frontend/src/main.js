@@ -194,6 +194,6 @@ components.forEach(component => app.component(component.name, component))
 plugins.forEach(plugin => app.use(plugin))
 clipboard.install(app)
 
-app.config.globalProperties.$BASE_URL = import.meta.env.VITE_BACKEND_URL || window.location.host
+app.config.globalProperties.$BASE_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 
 app.mount('#rkm-app')
