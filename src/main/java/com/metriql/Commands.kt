@@ -90,7 +90,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         return WarehouseLocator.getDataSource(config)
     }
 
-    protected fun parseRecipe(manifestJson: String): Recipe {
+    protected fun parseRecipe(manifestJson: String, packageName : String = "(inline)"): Recipe {
         if (version) {
             echo(TextUtil.version(), trailingNewline = true)
             exitProcess(0)
@@ -116,6 +116,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 } else response.body
             }
             "dbt-cloud" -> {
+//                "dbt-cloud://600685b9a9c63dfd8d9696e07ed8e1c15364dcd5@cloud.getdbt.com/api/v2/accounts/{accountId}/runs/job_definition_id=1234";
+//                "&limit=1&include_related"
+//                https://cloud.getdbt.com/api/v2/accounts/{accountId}/runs/{runId}/artifacts/manifest.json
                 TODO()
             }
             "file" -> {
@@ -155,7 +158,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                     throw manifestEx
                 }
             }
-            Recipe("local://metriql", "master", null, Recipe.Config("(inline)"), "(inline)", models = models)
+            Recipe("local://metriql", "master", null, Recipe.Config(packageName), packageName, models = models)
         }
     }
 
@@ -271,7 +274,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val dataSource = this.getDataSource()
 
             val modelService =
-                RecipeModelService(null, { this.parseRecipe(manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()) }, -1, dataSource.warehouse.bridge)
+                RecipeModelService(null, {
+                    val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
+                    this.parseRecipe(manifest) }, -1, dataSource.warehouse.bridge)
             HttpServer.start(
                 HostAndPort.fromParts(host, port), apiSecret, usernamePass, threads, debug, origin,
                 modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }

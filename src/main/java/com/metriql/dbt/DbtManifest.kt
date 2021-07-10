@@ -164,7 +164,8 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 target = Model.Target.TargetValue.Table(database, schema, alias ?: name),
                 dimensions = (recipeModel.dimensions ?: mapOf()) + columnDimensions,
                 measures = (recipeModel.measures ?: mapOf()) + columnMeasures,
-                _path = original_file_path
+                _path = original_file_path,
+                package_name = package_name
             )
 
             dependencies.mapNotNull { dbtManifest.nodes[it] }
@@ -207,7 +208,8 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 description = recipeModel.description ?: description,
                 dimensions = (recipeModel.dimensions ?: mapOf()) + columnDimensions,
                 measures = (recipeModel.measures ?: mapOf()) + columnMeasures,
-                _path = original_file_path
+                _path = original_file_path,
+                package_name = package_name
             )
 
             val finalModel = dependencies.mapNotNull { dbtManifest.nodes[it] }

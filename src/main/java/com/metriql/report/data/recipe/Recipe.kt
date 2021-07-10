@@ -125,6 +125,7 @@ data class Recipe(
         val alwaysFilters: List<OrFilters>? = null,
         @JsonIgnore
         val _path: String? = null,
+        val package_name: String? = null,
     ) {
 
         @JsonIgnore
@@ -418,7 +419,8 @@ data class Recipe(
             }
         }
 
-        fun toModel(packageName: String, bridge: WarehouseMetriqlBridge, recipeId: Int): Model {
+        fun toModel(packageNameFromModel: String, bridge: WarehouseMetriqlBridge, recipeId: Int): Model {
+            val packageName = this.package_name ?: packageNameFromModel
             val modelName = name ?: throw MetriqlException("Model name is required", BAD_REQUEST)
 
             val modelRelations = relations?.map { (relationName, relation) -> relation.toRelation(packageName, relationName) } ?: listOf()
