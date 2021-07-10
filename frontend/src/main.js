@@ -194,6 +194,10 @@ components.forEach(component => app.component(component.name, component))
 plugins.forEach(plugin => app.use(plugin))
 clipboard.install(app)
 
-app.config.globalProperties.$BASE_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
+const HOST = import.meta.env.VITE_BACKEND_HOST || window.location.host
+const PROTOCOL = import.meta.env.VITE_BACKEND_PROTOCOL || window.location.protocol
+const IS_LOCAL = HOST.startsWith('127.0.0.1:') || HOST.startsWith('localhost:')
+
+app.config.globalProperties.$BASE = {HOST, PROTOCOL, IS_LOCAL, URL: PROTOCOL + '//' + HOST}
 
 app.mount('#rkm-app')

@@ -4,7 +4,7 @@
       <dataset-selector v-model="dataset" />
     </li>
     <li style="margin-top:5px">
-      <el-link :href="`${$BASE_URL}/api/v0/integration/tableau?dataset=${dataset}`" :disabled="dataset == null" target="_blank">Download TDS file</el-link>
+      <el-link :href="`${$BASE.URL}/api/v0/integration/tableau?dataset=${dataset}`" :disabled="dataset == null" target="_blank">Download TDS file</el-link>
     </li>
     <li>
       Open TDS file with Tableau.

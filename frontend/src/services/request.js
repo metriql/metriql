@@ -3,7 +3,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { AuthService } from '/src/services/auth'
 import router from '../router'
 
-export const BASE_URL = import.meta.env.VITE_BACKEND_URL || ''
+let protocol = import.meta.env.VITE_BACKEND_PROTOCOL
+let host = import.meta.env.VITE_BACKEND_HOST
+export const BASE_URL = host ? ((protocol || 'http:') + '//' + host) : ''
 
 export const xhrOptions = {
   baseURL: BASE_URL,
