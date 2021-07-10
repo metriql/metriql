@@ -6,6 +6,7 @@ import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.SchemaName
 import com.metriql.warehouse.spi.WarehouseAuth
+import java.time.Instant
 import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
@@ -41,8 +42,10 @@ class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWar
 
         val customProperties = dataSourceProperties.clone() as Properties
 
-        val timezone = ValidationUtil.stripLiteral(timezone.getDisplayName(TextStyle.NARROW, Locale.ENGLISH))
-        customProperties["connectionInitSql"] = "SET time_zone = '$timezone'"
+        val offset = timezone.rules.getOffset(Instant.now())
+        // workaround for different values such as GMT, Z, UTC
+        val zone = if(offset.totalSeconds == 0) "+00:00" else offset
+        customProperties["connectionInitSql"] = "SET time_zone = '$zone'"
 
         return customProperties
     }
