@@ -52,12 +52,6 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
         limit: Int?,
         isBackgroundTask: Boolean
     ): QueryTask {
-        val connection = openConnection(auth.timezone)
-        // Set timezone here
-        if (connection is TrinoConnection) {
-            auth.timezone?.let { timeZone -> connection.timeZoneId = timeZone.id }
-        }
-
         return createSyncQueryTask(
             auth,
             query,
