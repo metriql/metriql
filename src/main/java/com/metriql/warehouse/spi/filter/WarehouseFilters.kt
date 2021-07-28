@@ -50,8 +50,8 @@ interface WarehouseFilters {
             is TimeOperatorType -> timeOperators[operator]
             is DateOperatorType -> dateOperators[operator]
             is ArrayOperatorType -> arrayOperators[operator]
-            else -> throw IllegalStateException("Operator for type not supported")
-        } ?: throw IllegalStateException("Operator not implemented")
+            else -> null
+        } ?: throw IllegalStateException("Operator $operator not supported")
         return op.invoke(metric, value, context)
     }
 
@@ -109,6 +109,14 @@ interface WarehouseFilters {
                 LocalTime::class.java -> LocalTime.parse(value.toString()) ?: throw SYSTEM_FILTER_TYPE_CANNOT_CAST.exceptionFromObject(Pair(value, expectedClazz.name))
                 else -> throw IllegalStateException("$expectedClazz parsing is not supported")
             } as T
+        }
+    }
+
+    fun validateTimestampOperator(value: Any?): Any {
+        return try {
+            validateFilterValue(value, Instant::class.java)
+        } catch (_: Throwable) {
+            validateFilterValue(value, LocalDate::class.java)
         }
     }
 }

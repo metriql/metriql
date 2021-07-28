@@ -320,11 +320,16 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         )
     }
 
+    private fun extractReference(exp : Expression) {
+
+    }
+
     private fun processWhereExpression(
         context: IQueryGeneratorContext,
         references: Map<Node, Reference>,
         model: Model,
         exp: Expression
+//    ): Pair<List<ReportFilter>?, List<String>>  {
     ): List<ReportFilter>? {
 
         return when (exp) {

@@ -30,11 +30,11 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
         ServiceType.FLOW to ANSISQLFlowQueryGenerator(),
     )
 
-    override val functions = mapOf(
+    override val functions = super.functions + mapOf(
         RFunction.DATE_ADD to "DATE_ADD({{value[0]}}, INTERVAL {{value[2]}} {{value[1]}})",
         RFunction.DATE_DIFF to "DATE_DIFF({{value[0]}}, {{value[1]}}, {{value[2]}})",
         RFunction.HEX_TO_INT to "CAST(CONCAT('0x', {{value[0]}}) AS INT64)",
-    ) + super.functions
+    )
 
     override val metricRenderHook: WarehouseMetriqlBridge.MetricRenderHook
         get() = object : WarehouseMetriqlBridge.MetricRenderHook {

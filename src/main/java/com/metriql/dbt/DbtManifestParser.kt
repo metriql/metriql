@@ -20,7 +20,7 @@ object DbtManifestParser {
         // An ugly hack for dbt tests as they can be custom as well
         val deserializationConfig = mapper.deserializationConfig.withHandler(object : DeserializationProblemHandler() {
             override fun handleUnknownTypeId(ctxt: DeserializationContext, baseType: JavaType, subTypeId: String, idResolver: TypeIdResolver, failureMsg: String?): JavaType {
-                return if(baseType.isTypeOrSubTypeOf(DbtManifest.Node.TestMetadata.DbtModelColumnTest::class.java)) {
+                return if (baseType.isTypeOrSubTypeOf(DbtManifest.Node.TestMetadata.DbtModelColumnTest::class.java)) {
                     ctxt.constructType(Void::class.java)
                 } else {
                     super.handleUnknownTypeId(ctxt, baseType, subTypeId, idResolver, failureMsg)
@@ -28,8 +28,7 @@ object DbtManifestParser {
             }
         })
 
-       mapper.setConfig(deserializationConfig)
-
+        mapper.setConfig(deserializationConfig)
     }
 
     fun parse(manifestFile: ByteArray): List<Recipe.RecipeModel> {

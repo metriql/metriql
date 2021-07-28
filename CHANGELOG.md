@@ -21,7 +21,96 @@ Changelog for metriql metriql.
 [0da41a0a1f31cff](https://github.com/metriql/metriql/commit/0da41a0a1f31cff) Burak Emre Kabakcı *2021-06-20 20:40:11*
 
 
+### Jira java-11   
+
+**Remove alpine from dockerfile**
+
+ * Reference: https://stackoverflow.com/questions/53375613/why-is-the-java-11-base-docker-image-so-large-openjdk11-jre-slim 
+
+[c1e208178f88d49](https://github.com/metriql/metriql/commit/c1e208178f88d49) buremba *2021-07-07 15:09:35*
+
+
 ### No issue
+
+**Use actual metriql urls in dashboard**
+
+
+[960b22fff90d39e](https://github.com/metriql/metriql/commit/960b22fff90d39e) buremba *2021-07-10 14:27:12*
+
+**Fix dbt package name issue**
+
+
+[35eb6b373ab512e](https://github.com/metriql/metriql/commit/35eb6b373ab512e) buremba *2021-07-10 14:26:56*
+
+**Fix mysql timezone issue**
+
+
+[a9d5da5d664a126](https://github.com/metriql/metriql/commit/a9d5da5d664a126) buremba *2021-07-10 14:26:28*
+
+**Fix origin issue**
+
+
+[72c461661cdedbc](https://github.com/metriql/metriql/commit/72c461661cdedbc) buremba *2021-07-09 07:14:57*
+
+**Fix bug in manifest parser**
+
+
+[da0a6c576ee5e83](https://github.com/metriql/metriql/commit/da0a6c576ee5e83) buremba *2021-07-07 23:57:22*
+
+**Build frontend in Docker image**
+
+
+[bb47ce2310ed6ab](https://github.com/metriql/metriql/commit/bb47ce2310ed6ab) buremba *2021-07-07 22:16:48*
+
+**Make manifest-json parameter optional**
+
+
+[9e5e014edeedf3b](https://github.com/metriql/metriql/commit/9e5e014edeedf3b) buremba *2021-07-07 21:28:20*
+
+**Add ability to pass profiles as environment variable**
+
+
+[d20244200fad2e7](https://github.com/metriql/metriql/commit/d20244200fad2e7) buremba *2021-07-07 20:52:41*
+
+**Fix typo in environment variable**
+
+
+[ec1ad545a25f2e4](https://github.com/metriql/metriql/commit/ec1ad545a25f2e4) buremba *2021-07-07 20:33:17*
+
+**Fic Docker file issue**
+
+
+[4bfa8bf97fbdc3f](https://github.com/metriql/metriql/commit/4bfa8bf97fbdc3f) buremba *2021-07-07 15:32:29*
+
+**Change Alpine package**
+
+
+[d823cadcbf7bd23](https://github.com/metriql/metriql/commit/d823cadcbf7bd23) buremba *2021-07-07 15:03:59*
+
+**Upgrade to Java 11 in Dockerfile**
+
+
+[a80eb947ec3d06b](https://github.com/metriql/metriql/commit/a80eb947ec3d06b) buremba *2021-07-07 14:53:56*
+
+**Update Dockerfile**
+
+
+[97f26462722ab0c](https://github.com/metriql/metriql/commit/97f26462722ab0c) buremba *2021-07-07 14:52:58*
+
+**Bundle integration packages**
+
+
+[50b98a7be0f3895](https://github.com/metriql/metriql/commit/50b98a7be0f3895) buremba *2021-07-07 14:47:38*
+
+**Call integrations from the backend API**
+
+
+[9cdcfa3fdfacff1](https://github.com/metriql/metriql/commit/9cdcfa3fdfacff1) buremba *2021-07-06 23:32:01*
+
+**Show report type in task statistics**
+
+
+[9685113d9a60ee8](https://github.com/metriql/metriql/commit/9685113d9a60ee8) buremba *2021-07-04 23:42:36*
 
 **Implement embedded admin interface**
 

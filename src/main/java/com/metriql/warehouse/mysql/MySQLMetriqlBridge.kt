@@ -19,8 +19,8 @@ object MySQLMetriqlBridge : ANSISQLMetriqlBridge() {
     override val quote = '`'
     override val supportedDBTTypes = setOf<DBTType>()
 
-    override val functions = mapOf(
+    override val functions = super.functions + mapOf(
         RFunction.DATE_ADD to "DATE_ADD({{value[0]}}, INTERVAL {{value[2]}} {{value[1]}})'",
         RFunction.HEX_TO_INT to "CONV({{value[0]}}, 16, 10)",
-    ) + super.functions
+    )
 }

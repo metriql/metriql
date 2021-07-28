@@ -39,7 +39,7 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
         val stdin = JsonHelper.encodeAsBytes(models)
 
         val apiUrl = request.headers().get("origin") ?: request.headers().get("host")?.let { "http://$it" }
-        ?: throw MetriqlException("Unable to identify metriql url", BAD_REQUEST)
+            ?: throw MetriqlException("Unable to identify metriql url", BAD_REQUEST)
         val commands = listOf("metriql-tableau", "--metriql-url", apiUrl, "--dataset", dataset, "create-tds")
         runCommand(request, commands, stdin, "$dataset.tds")
     }
@@ -91,7 +91,7 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
                     returnError(request, "Unable to run command: timeout after 20 seconds", INTERNAL_SERVER_ERROR)
                 }
             } catch (e: Exception) {
-                returnError(request, "Unknown error executing command: ${e}", INTERNAL_SERVER_ERROR)
+                returnError(request, "Unknown error executing command: $e", INTERNAL_SERVER_ERROR)
             }
         }
     }

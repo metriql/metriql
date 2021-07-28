@@ -42,7 +42,7 @@ interface DataSource {
     fun fillDefaultsToTarget(target: Model.Target): Model.Target
 
     fun dbtSettings(): DbtSettings {
-        throw IllegalStateException("Model `persist` is not supported for this database.")
+        throw IllegalStateException("dbt is not supported for this database")
     }
 
     // Query execution

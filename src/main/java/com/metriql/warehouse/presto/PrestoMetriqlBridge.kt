@@ -30,7 +30,7 @@ object PrestoMetriqlBridge : ANSISQLMetriqlBridge() {
         APPROX_DISTINCT(APPROXIMATE_UNIQUE),
     }
 
-    override val functions = mapOf(
+    override val functions = super.functions + mapOf(
         RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "{{value[0]}} + interval '{{value[2]}}' {{value[1]}}",
     )

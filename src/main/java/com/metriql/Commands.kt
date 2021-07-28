@@ -90,7 +90,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         return WarehouseLocator.getDataSource(config)
     }
 
-    protected fun parseRecipe(manifestJson: String, packageName : String = "(inline)"): Recipe {
+    protected fun parseRecipe(manifestJson: String, packageName: String = "(inline)"): Recipe {
         if (version) {
             echo(TextUtil.version(), trailingNewline = true)
             exitProcess(0)
@@ -274,9 +274,14 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val dataSource = this.getDataSource()
 
             val modelService =
-                RecipeModelService(null, {
-                    val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
-                    this.parseRecipe(manifest) }, -1, dataSource.warehouse.bridge)
+                RecipeModelService(
+                    null,
+                    {
+                        val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
+                        this.parseRecipe(manifest)
+                    },
+                    -1, dataSource.warehouse.bridge
+                )
             HttpServer.start(
                 HostAndPort.fromParts(host, port), apiSecret, usernamePass, threads, debug, origin,
                 modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }

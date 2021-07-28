@@ -14,6 +14,10 @@ object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
 
     override val timeframes = MSSQLTimeframes()
 
+    override val functions = super.functions + mapOf(
+        RFunction.DATE_ADD to "DATEADD({{value[1]}}, {{value[2]}}, {{value[0]}})",
+    )
+
     override val queryGenerators = mapOf(
         ServiceType.SEGMENTATION to object : ANSISQLSegmentationQueryGenerator() {
             override fun getMap(context: IQueryGeneratorContext, queryDSL: Segmentation): Map<String, Any?> {
@@ -23,10 +27,6 @@ object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
         },
         ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator()
     )
-
-    override val functions = mapOf(
-        RFunction.DATE_ADD to "DATEADD({{value[1]}}, {{value[2]}}, {{value[0]}})",
-    ) + super.functions
 
     override val supportedDBTTypes = setOf<DBTType>()
 }

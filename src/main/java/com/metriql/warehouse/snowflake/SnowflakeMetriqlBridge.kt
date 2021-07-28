@@ -39,11 +39,11 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         ServiceType.FLOW to ANSISQLFlowQueryGenerator(),
     )
 
-    override val functions = mapOf(
+    override val functions = super.functions + mapOf(
         RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "DATEADD({{value[1]}}, {{value[2]}}, {{value[0]}})",
         RFunction.HEX_TO_INT to "TO_NUMBER({{value[0]}}, 'XXXXXXXXXXXXXXXX')",
-    ) + super.functions
+    )
 
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
     override val metricRenderHook = object : WarehouseMetriqlBridge.MetricRenderHook {

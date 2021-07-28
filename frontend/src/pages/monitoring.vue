@@ -59,7 +59,7 @@
       :modelValue="activeTask != null"
       @update:modelValue="$event == false ? (activeTask = null) : null"
       width="50%">
-      <pre>{{ activeTask.update.info.query }}</pre>
+      <pre>{{ activeTask.update.info.query.query }}</pre>
       <h4 style="margin:15px 0">Compiled:</h4>
       <pre>{{ activeTask.update.info.compiledQuery }}</pre>
       <template #footer>

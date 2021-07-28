@@ -6,6 +6,7 @@ com.metriql.warehouse.mysql.MySQLWarehouseProxy
 com.metriql.warehouse.presto.PrestoWarehouseProxy
 com.metriql.warehouse.redshift.RedshiftWarehouseProxy
 com.metriql.warehouse.snowflake.SnowflakeWarehouseProxy
+com.metriql.warehouse.clickhouse.ClickhouseWarehouseProxy
 
 
 

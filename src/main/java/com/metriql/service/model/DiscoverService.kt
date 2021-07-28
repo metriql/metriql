@@ -61,7 +61,7 @@ class DiscoverService(private val dataSource: DataSource) {
         val dimensionsWithoutFieldType = dimensions
             .filter { it.fieldType == null && it.hidden != true }
 
-        if (dimensionsWithoutFieldType.isEmpty()) return dimensions
+        if (dimensionsWithoutFieldType.isEmpty() || true) return dimensions
 
         val query = dataSource.warehouse.bridge.generateDimensionMetaQuery(
             modelName,

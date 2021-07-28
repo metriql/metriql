@@ -2,14 +2,11 @@ package com.metriql.warehouse.mysql
 
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
-import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.SchemaName
 import com.metriql.warehouse.spi.WarehouseAuth
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.TextStyle
-import java.util.Locale
 import java.util.Properties
 
 class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWarehouse(
@@ -44,7 +41,7 @@ class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWar
 
         val offset = timezone.rules.getOffset(Instant.now())
         // workaround for different values such as GMT, Z, UTC
-        val zone = if(offset.totalSeconds == 0) "+00:00" else offset
+        val zone = if (offset.totalSeconds == 0) "+00:00" else offset
         customProperties["connectionInitSql"] = "SET time_zone = '$zone'"
 
         return customProperties

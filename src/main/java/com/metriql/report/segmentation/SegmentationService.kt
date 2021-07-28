@@ -273,7 +273,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                         reportDimension.name,
                         reportDimension.relationName,
                         reportDimension.postOperation,
-                        WarehouseMetriqlBridge.MetricPositionType.FILTER
+                        WarehouseMetriqlBridge.MetricPositionType.PROJECTION
                     ).metricValue
                 }.toSet()
             } else null,
