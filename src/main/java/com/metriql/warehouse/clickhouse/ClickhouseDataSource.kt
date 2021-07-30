@@ -21,7 +21,8 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
 
     override val dataSourceProperties: Properties by lazy {
         val properties = Properties()
-        properties["jdbcUrl"] = "jdbc:clickhouse://${config.host}:${config.port}/${config.database}"
+        val port = if (config.port === 9000) 8123 else config.port
+        properties["jdbcUrl"] = "jdbc:clickhouse://${config.host}:$port/${config.database}"
         properties["driverClassName"] = "ru.yandex.clickhouse.ClickHouseDriver"
 
         properties["dataSource.user"] = config.user
