@@ -84,7 +84,6 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             }
             profilesFile.readText(StandardCharsets.UTF_8)
         }
-        println(content)
 
         val varMap = if(vars != null) {
             YamlHelper.mapper.readValue(vars, object : TypeReference<Map<String, Any?>>() {})
@@ -92,9 +91,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
         val compiledProfiles = DbtJinjaRenderer.renderer.renderProfiles(content, varMap)
 
-        println(System.getenv("DB_HOST"))
-        println(compiledProfiles)
-
+        println(System.getenv())
 
         val profiles = YamlHelper.mapper.readValue(compiledProfiles, DbtProfiles::class.java)
         val currentProfile = profiles[profile ?: dbtProjectFile?.profile ?: "default"]
