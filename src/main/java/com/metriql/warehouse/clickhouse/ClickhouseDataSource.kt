@@ -3,9 +3,10 @@ package com.metriql.warehouse.clickhouse
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.WarehouseAuth
-import io.trino.jdbc.TrinoConnection
+import java.sql.Statement
 import java.util.Properties
 
 class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseConfig) : JDBCWarehouse(
@@ -59,5 +60,18 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
             defaultDatabase ?: config.database,
             limit
         )
+    }
+
+    override fun setupConnection(auth: WarehouseAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
+        val conn = statement.connection
+
+        // clickhouse only has schema, not catalog
+        if (conn.schema != defaultDatabase) {
+            conn.schema = defaultDatabase
+        }
+
+        if (statement.maxRows != limit) {
+            statement.maxRows = limit ?: WarehouseQueryTask.DEFAULT_LIMIT
+        }
     }
 }

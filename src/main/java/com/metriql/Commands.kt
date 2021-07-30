@@ -90,7 +90,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         return WarehouseLocator.getDataSource(config)
     }
 
-    protected fun parseRecipe(manifestJson: String, packageName: String = "(inline)"): Recipe {
+    protected fun parseRecipe(dataSource : DataSource, manifestJson: String, packageName: String = "(inline)"): Recipe {
         if (version) {
             echo(TextUtil.version(), trailingNewline = true)
             exitProcess(0)
@@ -149,7 +149,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             null!!
         } else {
             val models = try {
-                DbtManifestParser.parse(content)
+                DbtManifestParser.parse(dataSource, content)
             } catch (manifestEx: MismatchedInputException) {
                 // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
                 try {
@@ -186,7 +186,8 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val successfulCounts = AtomicInteger()
 
-            val recipe = parseRecipe(manifestFile.toURI().toString()).copy(dependencies = Recipe.Dependencies(DbtDependency(aggregatesDirectory = outputDir)))
+            val recipe = parseRecipe(dataSource, manifestFile.toURI().toString())
+                .copy(dependencies = Recipe.Dependencies(DbtDependency(aggregatesDirectory = outputDir)))
             val errors = service.addDbtFiles(
                 auth,
                 object : FileHandler {
@@ -278,7 +279,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                     null,
                     {
                         val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
-                        this.parseRecipe(manifest)
+                        this.parseRecipe(dataSource, manifest)
                     },
                     -1, dataSource.warehouse.bridge
                 )

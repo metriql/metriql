@@ -336,16 +336,7 @@ abstract class JDBCWarehouse(
                     openConnection(auth.timezone).use { conn ->
                         statement = conn.createStatement()
 
-                        if (conn.catalog != defaultDatabase) {
-                            conn.catalog = defaultDatabase
-                        }
-                        if (conn.schema != defaultSchema) {
-                            conn.schema = defaultSchema
-                        }
-
-                        if (statement.maxRows != limit) {
-                            statement.maxRows = limit ?: WarehouseQueryTask.DEFAULT_LIMIT
-                        }
+                        setupConnection(auth, statement, defaultDatabase, defaultSchema, limit)
 
 //                        resultSet = statement.unwrap(SnowflakeStatement::class.java).executeAsyncQuery(query)
                         markAsRunning()
@@ -374,6 +365,21 @@ abstract class JDBCWarehouse(
 //                val unwrap = resultSet!!.unwrap(SnowflakeResultSet::class.java)
                 return syncStats(!isDone(), query)
             }
+        }
+    }
+
+    open fun setupConnection(auth: WarehouseAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
+        val conn = statement.connection
+
+        if (conn.catalog != defaultDatabase) {
+            conn.catalog = defaultDatabase
+        }
+        if (conn.schema != defaultSchema) {
+            conn.schema = defaultSchema
+        }
+
+        if (statement.maxRows != limit) {
+            statement.maxRows = limit ?: WarehouseQueryTask.DEFAULT_LIMIT
         }
     }
 

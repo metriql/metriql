@@ -12,6 +12,7 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.gcardone.junidecode.Junidecode.unidecode
+import java.util.Locale
 
 class DiscoverService(private val dataSource: DataSource) {
 
@@ -61,7 +62,7 @@ class DiscoverService(private val dataSource: DataSource) {
         val dimensionsWithoutFieldType = dimensions
             .filter { it.fieldType == null && it.hidden != true }
 
-        if (dimensionsWithoutFieldType.isEmpty() || true) return dimensions
+        if (dimensionsWithoutFieldType.isEmpty()) return dimensions
 
         val query = dataSource.warehouse.bridge.generateDimensionMetaQuery(
             modelName,
@@ -134,8 +135,8 @@ class DiscoverService(private val dataSource: DataSource) {
             return preProcessed.replace(modelReplaceRegex, "_").take(120)
         }
 
-        fun discoverDimensionsFromTable(name: String, tableSchema: TableSchema, target: Model.Target): Model {
-            val dimensions = tableSchema.columns.map {
+        fun createDimensionsFromColumns(columns: List<TableSchema.Column>): List<Model.Dimension> {
+            return columns.map {
                 val type = if (it.sql == null) Model.Dimension.Type.COLUMN else Model.Dimension.Type.SQL
                 val value = if (it.sql == null) Model.Dimension.DimensionValue.Column(it.name) else Model.Dimension.DimensionValue.Sql(it.sql)
                 val dimensionName = toMetriqlConventionalName(it.name)
@@ -145,8 +146,8 @@ class DiscoverService(private val dataSource: DataSource) {
                     value,
                     null,
                     when {
-                        it.label != null && it.label.toLowerCase() != it.name -> it.label
-                        dimensionName != it.name.toLowerCase() -> it.name
+                        it.label != null && it.label.lowercase() != it.name -> it.label
+                        dimensionName != it.name.lowercase() -> it.name
                         else -> null
                     },
                     null,
@@ -157,6 +158,10 @@ class DiscoverService(private val dataSource: DataSource) {
                     it.type
                 )
             }
+        }
+
+        fun createModelFromTable(name: String, tableSchema: TableSchema, target: Model.Target): Model {
+            val dimensions = createDimensionsFromColumns(tableSchema.columns)
             return Model(
                 name,
                 false,

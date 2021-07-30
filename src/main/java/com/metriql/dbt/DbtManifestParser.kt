@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.util.JsonHelper
+import com.metriql.warehouse.spi.DataSource
 
 object DbtManifestParser {
     val mapper = JsonHelper.getMapper().copy()!!
@@ -31,9 +32,9 @@ object DbtManifestParser {
         mapper.setConfig(deserializationConfig)
     }
 
-    fun parse(manifestFile: ByteArray): List<Recipe.RecipeModel> {
+    fun parse(dataSource : DataSource, manifestFile: ByteArray): List<Recipe.RecipeModel> {
         val manifest = mapper.readValue(manifestFile, DbtManifest::class.java)
-        val models = manifest.nodes.mapNotNull { it.value.toModel(manifest) }
+        val models = manifest.nodes.mapNotNull { it.value.toModel(dataSource, manifest) }
         val sources = manifest.sources.mapNotNull { it.value.toModel(manifest) }
         return models + sources
     }

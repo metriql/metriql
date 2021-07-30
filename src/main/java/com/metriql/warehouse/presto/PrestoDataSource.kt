@@ -6,6 +6,7 @@ import com.metriql.report.QueryTask
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.WarehouseAuth
 import io.trino.jdbc.TrinoConnection
+import java.sql.Statement
 import java.util.Properties
 
 class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBCWarehouse(
@@ -78,12 +79,6 @@ class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBC
         limit: Int?,
         isBackgroundTask: Boolean
     ): QueryTask {
-        val connection = openConnection(auth.timezone)
-        // Set timezone here
-        if (connection is TrinoConnection) {
-            auth.timezone?.let { timeZone -> connection.timeZoneId = timeZone.id }
-        }
-
         return createSyncQueryTask(
             auth,
             query,
@@ -91,5 +86,13 @@ class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBC
             defaultSchema ?: config.schema,
             limit
         )
+    }
+
+    override fun setupConnection(auth: WarehouseAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
+        val connection = statement.connection
+        if (connection is TrinoConnection) {
+            auth.timezone?.let { timeZone -> connection.timeZoneId = timeZone.id }
+        }
+        super.setupConnection(auth, statement, defaultDatabase, defaultSchema, limit)
     }
 }

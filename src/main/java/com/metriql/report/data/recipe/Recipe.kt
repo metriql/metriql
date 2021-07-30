@@ -202,6 +202,37 @@ data class Recipe(
         }
 
         companion object {
+            fun fromDimension(dimension : Model.Dimension): Metric.RecipeDimension {
+                return when (dimension.value) {
+                    is Model.Dimension.DimensionValue.Sql -> Metric.RecipeDimension(
+                        dimension.label,
+                        dimension.description,
+                        dimension.category,
+                        null,
+                        dimension.postOperations,
+                        dimension.fieldType ?: FieldType.UNKNOWN,
+                        null,
+                        dimension.value.sql,
+                        dimension.reportOptions,
+                        null,
+                        dimension.primary
+                    )
+                    is Model.Dimension.DimensionValue.Column -> Metric.RecipeDimension(
+                        dimension.label,
+                        dimension.description,
+                        dimension.category,
+                        null,
+                        dimension.postOperations,
+                        dimension.fieldType ?: FieldType.UNKNOWN,
+                        dimension.value.column,
+                        null,
+                        dimension.reportOptions,
+                        null,
+                        dimension.primary
+                    )
+                }
+            }
+
             fun fromModel(model: Model): RecipeModel {
                 val recipeRelations = model.relations.map { relation ->
                     relation.name to when (relation.value) {
@@ -248,34 +279,7 @@ data class Recipe(
                 }.toMap()
 
                 val recipeDimensions = model.dimensions.map { dimension ->
-                    dimension.name to when (dimension.value) {
-                        is Model.Dimension.DimensionValue.Sql -> Metric.RecipeDimension(
-                            dimension.label,
-                            dimension.description,
-                            dimension.category,
-                            null,
-                            dimension.postOperations,
-                            dimension.fieldType ?: FieldType.UNKNOWN,
-                            null,
-                            dimension.value.sql,
-                            dimension.reportOptions,
-                            null,
-                            dimension.primary
-                        )
-                        is Model.Dimension.DimensionValue.Column -> Metric.RecipeDimension(
-                            dimension.label,
-                            dimension.description,
-                            dimension.category,
-                            null,
-                            dimension.postOperations,
-                            dimension.fieldType ?: FieldType.UNKNOWN,
-                            dimension.value.column,
-                            null,
-                            dimension.reportOptions,
-                            null,
-                            dimension.primary
-                        )
-                    }
+                    dimension.name to fromDimension(dimension)
                 }.toMap()
 
                 val recipeMeasures = model.measures.map { measure ->
