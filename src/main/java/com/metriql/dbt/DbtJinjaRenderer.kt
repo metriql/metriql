@@ -68,6 +68,10 @@ class DbtJinjaRenderer {
         )
     }
 
+    fun renderProfiles(content : String, vars : Map<String, Any?>): String? {
+        return jinjava.render(content, mapOf("_vars" to vars))
+    }
+
     fun render(
         dataSource: DataSource,
         content: String,
@@ -167,7 +171,7 @@ class DbtJinjaRenderer {
         }
 
         @JvmStatic
-        fun env_var(vararg args: Array<out String?>): String? {
+        fun env_var(vararg args: String?): String? {
             return System.getenv(args[0].toString())
         }
 

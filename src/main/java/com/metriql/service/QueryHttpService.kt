@@ -22,6 +22,7 @@ import org.rakam.server.http.annotations.ApiOperation
 import org.rakam.server.http.annotations.BodyParam
 import org.rakam.server.http.annotations.JsonRequest
 import org.rakam.server.http.annotations.QueryParam
+import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import javax.inject.Named
 import javax.ws.rs.GET
@@ -37,6 +38,7 @@ open class QueryHttpService(
     val taskQueueService: TaskQueueService,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>
 ) : HttpService() {
+    private var startTime : Instant = Instant.now()
 
     @ApiOperation(value = "Get metadata")
     @GET
@@ -45,11 +47,18 @@ open class QueryHttpService(
         return modelService.list(auth)
     }
 
+    fun getLastUpdateOnMetadata(): Instant {
+        return startTime
+    }
+
     @ApiOperation(value = "Update manifest.json file")
     @PUT
     @Path("/update-manifest")
     fun updateManifest(@Named("userContext") auth: ProjectAuth): SuccessMessage {
         modelService.update()
+        synchronized(this) {
+            startTime = Instant.now()
+        }
         return SuccessMessage.success()
     }
 

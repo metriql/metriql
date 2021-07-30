@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.google.common.net.HostAndPort
+import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifestParser
 import com.metriql.dbt.DbtModelService
 import com.metriql.dbt.DbtProfiles
@@ -55,6 +56,13 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         help = "Which directory to look in for the dbt_project.yml file. Default is the current working directory and its parents.",
         envvar = "DBT_PROJECT_DIR"
     ).defaultLazy { File("").absoluteFile.toURI().toString() }
+    val vars by option(
+        "--vars",
+        envvar = "METRIQL_VARS",
+        help = "Supply variables to the project. " +
+            "This argument overrides variables defined in your dbt_project.yml file. " +
+            "This argument should be a YAML string, eg. '{my_variable: my_value}'"
+    )
 
     override fun run() {
     }
@@ -67,17 +75,23 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         }
 
         val content = if (profilesContent != null) {
-            profilesContent!!.toByteArray()
+            profilesContent!!
         } else {
             val profilesFile = File(profilesDir, "profiles.yml")
             if (!profilesFile.exists()) {
                 echo("profiles.yml does not exist in ${profilesFile.absoluteFile}. Please set --profiles-dir option.", err = true)
                 exitProcess(1)
             }
-            profilesFile.readBytes()
+            profilesFile.readText(StandardCharsets.UTF_8)
         }
 
-        val profiles = YamlHelper.mapper.readValue(content, DbtProfiles::class.java)
+        val varMap = if(vars != null) {
+            YamlHelper.mapper.readValue(vars, object : TypeReference<Map<String, Any?>>() {})
+        } else mapOf()
+
+        val compiledProfiles = DbtJinjaRenderer.renderer.renderProfiles(content, varMap)
+
+        val profiles = YamlHelper.mapper.readValue(compiledProfiles, DbtProfiles::class.java)
         val currentProfile = profiles[profile ?: dbtProjectFile?.profile ?: "default"]
         if (currentProfile == null) {
             echo("profile $profile doesn't exist", err = true)
@@ -90,7 +104,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         return WarehouseLocator.getDataSource(config)
     }
 
-    protected fun parseRecipe(dataSource : DataSource, manifestJson: String, packageName: String = "(inline)"): Recipe {
+    protected fun parseRecipe(dataSource: DataSource, manifestJson: String, packageName: String = "(inline)"): Recipe {
         if (version) {
             echo(TextUtil.version(), trailingNewline = true)
             exitProcess(0)
@@ -231,13 +245,6 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
     class Run : Commands(help = "Spins up an HTTP server serving your datasets") {
         private val origin by option("--origin", help = "The origin HTTP server for CORS", envvar = "METRIQL_ORIGIN")
         private val enableJdbc by option("--jdbc", help = "Enable JDBC services via Trino Proxy", envvar = "METRIQL_ENABLE_JDBC").flag()
-        val vars by option(
-            "--vars",
-            envvar = "METRIQL_VARS",
-            help = "Supply variables to the project. " +
-                "This argument overrides variables defined in your dbt_project.yml file. " +
-                "This argument should be a YAML string, eg. '{my_variable: my_value}'"
-        )
         private val threads by option("--threads", help = "Specify number of threads to use serving requests. The default is [number of processors * 2]", envvar = "THREADS").int()
             .defaultLazy { Runtime.getRuntime().availableProcessors() * 2 }
         val port by option("--port", envvar = "METRIQL_RUN_PORT", help = "").int().default(5656)
