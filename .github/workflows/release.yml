@@ -16,6 +16,7 @@ jobs:
             name: buremba/metriql
             username: ${{ secrets.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
+            tags: "latest"
 #    runs-on: ubuntu-latest
 #    steps:
 #      - name: Checkout project
