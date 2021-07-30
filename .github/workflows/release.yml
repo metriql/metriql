@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    environment: deploy
     runs-on: ubuntu-latest
     steps:
         - uses: actions/checkout@master
