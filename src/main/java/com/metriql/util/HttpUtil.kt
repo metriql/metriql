@@ -152,7 +152,7 @@ object HttpUtil {
             uri.contains('.'.toString() + File.separator) || uri[0] == '.' || uri[uri.length - 1] == '.' ||
             INSECURE_URI.matcher(uri).matches()
         ) {
-            throw MetriqlException(HttpResponseStatus.NOT_FOUND)
+            throw MetriqlException("URI $uri is not valid", HttpResponseStatus.NOT_FOUND)
         } else directory.path + File.separator + uri.substring(prefix.length)
     }
 }
