@@ -16,7 +16,7 @@ class ClickhouseTimeframes : WarehouseTimeframes {
         TimestampPostOperation.DAY_OF_MONTH to "toDayOfMonth(%s)",
         TimestampPostOperation.WEEK_OF_YEAR to "toWeek(%s, 3)",
         TimestampPostOperation.MONTH_OF_YEAR to "dateName('month', %s)",
-        TimestampPostOperation.QUARTER_OF_YEAR to "'Q' ||dateName('quarter', %s)",
+        TimestampPostOperation.QUARTER_OF_YEAR to "CONCAT('Q', toString(toQuarter(%s)))",
         TimestampPostOperation.DAY_OF_WEEK to "toDayOfWeek(%s)"
     )
 

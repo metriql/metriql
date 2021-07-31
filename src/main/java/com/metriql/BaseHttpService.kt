@@ -45,14 +45,14 @@ class BaseHttpService : HttpService() {
         }
 
         if (request.method !== HttpMethod.GET) {
-            sendError(request, HttpResponseStatus.NOT_FOUND)
+            sendError(request, HttpResponseStatus.NOT_FOUND, "/ui path is reserved for the user interface, please use GET")
             return
         }
 
         val uri: String = request.path()
         val requestedFile = File(sanitizeUri(directory, uri, prefix = "/ui")).absoluteFile
         if (!requestedFile.startsWith(directory.absolutePath)) {
-            sendError(request, HttpResponseStatus.NOT_FOUND)
+            sendError(request, HttpResponseStatus.NOT_FOUND, "Invalid path")
         } else {
             val file = if (requestedFile.isDirectory || !requestedFile.exists()) File(directory, "index.html") else requestedFile
             sendFile(request, file)

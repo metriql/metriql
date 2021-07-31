@@ -116,8 +116,8 @@ object HttpUtil {
     }
 
     @JvmStatic
-    fun sendError(request: RakamHttpRequest, status: HttpResponseStatus) {
-        HttpServer.returnError(request, status.reasonPhrase(), status)
+    fun sendError(request: RakamHttpRequest, status: HttpResponseStatus, message: String? = null) {
+        HttpServer.returnError(request, message ?: status.reasonPhrase(), status)
     }
 
     fun sendNotModified(request: RakamHttpRequest, file: File) {
@@ -143,7 +143,7 @@ object HttpUtil {
             throw Error(e)
         }
         if (uri.isEmpty() || !uri.startsWith(prefix)) {
-            throw MetriqlException(HttpResponseStatus.NOT_FOUND)
+            throw MetriqlException("Invalid prefix", HttpResponseStatus.NOT_FOUND)
         }
         uri = uri.replace('/', File.separatorChar)
 
