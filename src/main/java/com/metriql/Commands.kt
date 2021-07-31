@@ -91,8 +91,6 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
         val compiledProfiles = DbtJinjaRenderer.renderer.renderProfiles(content, varMap)
 
-        println(System.getenv())
-
         val profiles = YamlHelper.mapper.readValue(compiledProfiles, DbtProfiles::class.java)
         val currentProfile = profiles[profile ?: dbtProjectFile?.profile ?: "default"]
         if (currentProfile == null) {

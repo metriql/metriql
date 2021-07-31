@@ -17,12 +17,13 @@ FROM openjdk:11-jre-slim
 
 # copy only the artifacts we need from the first stage and discard the rest
 COPY --from=backend /app/target/metriql-*-bundle /
-COPY --from=frontend /app/dist /metriql/frontend/dist
 
 # install packages required at runtime
 RUN apt-get update && apt-get install python-dev python3-pip -y && pip3 install "pip>=20" && pip3 install metriql-lookml==0.2 metriql-tableau==0.3
 
 RUN mv metriql-* app
+
+COPY --from=frontend /app/dist /app/frontend
 
 # set the startup command to execute the jar
 ENTRYPOINT ["java", "-cp", "app/lib/*", "com.metriql.ServiceStarterKt"]
