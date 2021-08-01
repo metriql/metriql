@@ -172,7 +172,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
 
             val dependencies = dbtManifest.child_map[unique_id] ?: listOf()
 
-            val recipeModel = (meta.metriql ?: Recipe.RecipeModel(null))
+            val recipeModel = meta.metriql
             val model = recipeModel.copy(
                 hidden = meta.metriql?.hidden ?: if (resource_type == SEED_RESOURCE_TYPE) (docs?.show?.let { !it } ?: true) else false,
                 name = modelName,
@@ -185,10 +185,10 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 package_name = package_name
             )
 
-            dependencies.mapNotNull { dbtManifest.nodes[it] }
+            val modelWithTests = dependencies.mapNotNull { dbtManifest.nodes[it] }
                 .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model, package_name) ?: model }
 
-            return getModelIfApplicable(model)
+            return getModelIfApplicable(modelWithTests)
         }
     }
 
