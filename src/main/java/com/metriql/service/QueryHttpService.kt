@@ -38,7 +38,8 @@ open class QueryHttpService(
     val taskQueueService: TaskQueueService,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>
 ) : HttpService() {
-    private var startTime : Instant = Instant.now()
+    private val startTime : Instant = Instant.now()
+    private var lastMetadataChangeTime : Instant = Instant.now()
 
     @ApiOperation(value = "Get metadata")
     @GET
@@ -47,8 +48,12 @@ open class QueryHttpService(
         return modelService.list(auth)
     }
 
-    fun getLastUpdateOnMetadata(): Instant {
-        return startTime
+    @ApiOperation(value = "Get ticker info")
+    @GET
+    @Path("/ticker")
+    fun ticker(): TickerInfo {
+        val activeTasks = taskQueueService.currentTasks().count { !it.isDone() }
+        return TickerInfo(activeTasks, lastMetadataChangeTime, startTime)
     }
 
     @ApiOperation(value = "Update manifest.json file")
@@ -57,7 +62,7 @@ open class QueryHttpService(
     fun updateManifest(@Named("userContext") auth: ProjectAuth): SuccessMessage {
         modelService.update()
         synchronized(this) {
-            startTime = Instant.now()
+            lastMetadataChangeTime = Instant.now()
         }
         return SuccessMessage.success()
     }
@@ -103,4 +108,7 @@ open class QueryHttpService(
         @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class, isNamed = true, name = "recipe")
         val report: RecipeQuery
     )
+
+    data class TickerInfo(val activeTasks : Int, val lastMetadataChangeTime : Instant, val startTime : Instant)
+
 }
