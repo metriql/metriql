@@ -104,7 +104,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                 ContextType.MEASURE -> {
                     when (value) {
                         is Model -> MeasureContext(value.name, context, zoneId)
-                        is ModelRelation -> DimensionContext(value.targetModelName, context, zoneId)
+                        is ModelRelation -> MeasureContext(value.targetModelName, context, zoneId)
                         else -> throw TemplateStateException("only models can have measures", -1)
                     }
                 }
