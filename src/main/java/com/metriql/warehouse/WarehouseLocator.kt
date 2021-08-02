@@ -18,13 +18,8 @@ object WarehouseLocator {
     private var services: List<Warehouse<*>> = ServiceLoader.load(Warehouse::class.java).toList()
 
     @JvmStatic
-    fun getWarehouse(slug: String, isMetriql: Boolean = true): Warehouse<Warehouse.Config> {
-        val service = if (isMetriql) {
-            services.find { it.names.metriql == slug }
-        } else {
-            services.find { it.names.dbt == slug }
-        }
-
+    fun getWarehouse(slug: String): Warehouse<Warehouse.Config> {
+        val service = services.find { it.names.metriql == slug || it.names.dbt == slug }
         val warehouse = service ?: throw MetriqlException("Unknown warehouse: $slug", HttpResponseStatus.BAD_REQUEST)
         return warehouse as Warehouse<Warehouse.Config>
     }

@@ -46,12 +46,13 @@ class TaskHttpService @Inject constructor(val service: TaskQueueService) : HttpS
     fun list(
         @Named("userContext") auth: ProjectAuth,
         @QueryParam("showResults", required = false) showResults: Boolean?,
-        @QueryParam("status", required = false) status: Task.Status?
+        @QueryParam("status", required = false) status: Task.Status?,
+        @QueryParam("project", required = false) projectId: Int?,
     ): List<Task.TaskTicket<out Any?>> {
         if (!auth.isSuperuser) {
             throw MetriqlException(HttpResponseStatus.FORBIDDEN)
         }
-        return service.currentTasks(showResults ?: false, status)
+        return service.currentTasks(showResults ?: false, status, projectId)
     }
 
     @ApiOperation(value = "Cancel a query")

@@ -344,8 +344,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 val primaryKey = renderDimension(context, contextModelName, primaryKeyDimension, null, null, MetricPositionType.FILTER)
 
                 val (aggregation, nullableNonSymmetricAggregatedValue) = when (measure.value.agg) {
-                    AVERAGE -> null to nonSymmetricAggregateSum(value, primaryKey.metricValue)
-                    SUM -> null to nonSymmetricAggregateAvg(value, primaryKey.metricValue)
+                    AVERAGE -> null to nonSymmetricAggregateAvg(value, primaryKey.metricValue)
+                    SUM -> null to nonSymmetricAggregateSum(value, primaryKey.metricValue)
                     COUNT -> COUNT_UNIQUE to if (value == "*") primaryKey.metricValue else "CASE WHEN $value IS NOT NULL THEN ${primaryKey.metricValue} ELSE NULL END"
                     else -> measure.value.agg to value
                 }
@@ -386,11 +386,13 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
     open fun nonSymmetricAggregateSum(sql: String, primaryKey: String): String? {
         val functionDefinition = functions[RFunction.HEX_TO_INT] ?: return null
+        val left = DefaultJinja.renderFunction(functionDefinition, listOf("LEFT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))
+        val right = DefaultJinja.renderFunction(functionDefinition, listOf("RIGHT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))
         return """COALESCE(CAST( ( SUM(DISTINCT (CAST(FLOOR(COALESCE( $sql,0)*(1000000*1.0)) AS DECIMAL(38,0))) + 
-            |CAST(${DefaultJinja.renderFunction(functionDefinition, listOf("LEFT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))} AS DECIMAL(38,0))* 1.0e8 + 
-            |CAST(${DefaultJinja.renderFunction(functionDefinition, listOf("RIGHT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))} AS DECIMAL(38,0)) ) - 
-            |SUM(DISTINCT CAST(${DefaultJinja.renderFunction(functionDefinition, listOf("LEFT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))} AS DECIMAL(38,0))* 1.0e8 + 
-            |CAST(${DefaultJinja.renderFunction(functionDefinition, listOf("RIGHT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))} AS DECIMAL(38,0))) )  AS DOUBLE PRECISION) /
+            |CAST($left AS DECIMAL(38,0)) * 1.0e8)+ 
+            |CAST($right AS DECIMAL(38,0)) ) - 
+            |SUM(DISTINCT CAST($left AS DECIMAL(38,0)) * 1.0e8 + 
+            |CAST($right AS DECIMAL(38,0))) )  AS DOUBLE PRECISION) /
             | CAST((1000000*1.0) AS DOUBLE PRECISION), 0)""".trimMargin()
     }
 

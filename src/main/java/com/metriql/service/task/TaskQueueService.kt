@@ -72,13 +72,15 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         return task.taskTicket()
     }
 
-    fun currentTasks(includeResponse: Boolean = false, filterStatus: Task.Status? = null): List<Task.TaskTicket<out Any?>> {
+    fun currentTasks(includeResponse: Boolean = false, filterStatus: Task.Status? = null, projectId : Int? = null): List<Task.TaskTicket<out Any?>> {
         val allTasks = taskTickets.map { it.value.taskTicket(includeResponse) }
-        return if (filterStatus == null) {
+        val ordered = if (filterStatus == null && projectId == null) {
             allTasks
         } else {
             allTasks.filter { it.status == filterStatus }
         }
+
+        return ordered.reversed()
     }
 
     fun cancel(id: UUID) {

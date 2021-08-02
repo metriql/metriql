@@ -676,9 +676,9 @@ data class Recipe(
         data class RecipeRelation(
             val label: String? = null,
             val description: String? = null,
-            @JsonAlias("relationType")
+            @JsonAlias("relationType", "relation")
             val relationship: Model.Relation.RelationType? = null,
-            @JsonAlias("joinType")
+            @JsonAlias("join", "joinType")
             val type: Model.Relation.JoinType? = null,
             @JsonAlias("modelName")
             val model: ModelName? = null,
