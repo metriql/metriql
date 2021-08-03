@@ -1,6 +1,7 @@
 package com.metriql.service.jinja
 
 import com.hubspot.jinjava.Jinjava
+import com.hubspot.jinjava.RecursiveJinjava
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
 import com.hubspot.jinjava.lib.fn.ELFunctionDefinition
 import com.hubspot.jinjava.lib.tag.Tag
@@ -20,7 +21,7 @@ import javax.inject.Inject
  * SqlRenderable
  * */
 class JinjaRendererService @Inject constructor() {
-    val jinja: Jinjava = Jinjava()
+    val jinja: Jinjava = RecursiveJinjava()
 
     init {
         val methods = Functions::class.java.declaredMethods

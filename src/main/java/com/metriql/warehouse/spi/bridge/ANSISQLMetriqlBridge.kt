@@ -389,7 +389,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         val left = DefaultJinja.renderFunction(functionDefinition, listOf("LEFT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))
         val right = DefaultJinja.renderFunction(functionDefinition, listOf("RIGHT(MD5(CAST( $primaryKey AS VARCHAR)),15)"))
         return """COALESCE(CAST( ( SUM(DISTINCT (CAST(FLOOR(COALESCE( $sql,0)*(1000000*1.0)) AS DECIMAL(38,0))) + 
-            |CAST($left AS DECIMAL(38,0)) * 1.0e8)+ 
+            |CAST($left AS DECIMAL(38,0)) * 1.0e8 + 
             |CAST($right AS DECIMAL(38,0)) ) - 
             |SUM(DISTINCT CAST($left AS DECIMAL(38,0)) * 1.0e8 + 
             |CAST($right AS DECIMAL(38,0))) )  AS DOUBLE PRECISION) /

@@ -3,6 +3,7 @@ package com.metriql.warehouse.clickhouse
 import com.metriql.db.FieldType
 import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.Model
+import com.metriql.util.DefaultJinja
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -30,8 +31,11 @@ object ClickhouseMetriqlBridge : ANSISQLMetriqlBridge() {
         RFunction.NOW to "NOW()",
         RFunction.DATE_ADD to "date_add({{value[1]}}, {{value[2]}}, {{value[0]}})",
         RFunction.DATE_DIFF to "date_diff({{value[2]}}, {{value[0]}}, {{value[0]})",
-        RFunction.HEX_TO_INT to "reinterpretAsInt64(reverse(unhex({{value[0]}})))"
+//        RFunction.HEX_TO_INT to "reinterpretAsInt64(reverse(unhex({{value[0]}})))"
+        RFunction.HEX_TO_INT to "{{value[0]}}"
     )
+
+
 
     override val supportedDBTTypes = setOf(DBTType.TABLE, DBTType.VIEW)
 
@@ -68,5 +72,11 @@ object ClickhouseMetriqlBridge : ANSISQLMetriqlBridge() {
                 else -> dimensionValue
             }
         }
+    }
+
+    override fun nonSymmetricAggregateSum(sql: String, primaryKey: String): String? {
+        val functionDefinition = functions[RFunction.HEX_TO_INT] ?: return null
+        val uniqueIdForRow = DefaultJinja.renderFunction(functionDefinition, listOf(primaryKey))
+        return """(SUM(DISTINCT $uniqueIdForRow + $sql) - SUM(DISTINCT $uniqueIdForRow))""".trimMargin()
     }
 }
