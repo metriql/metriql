@@ -18,6 +18,7 @@ enum class StringOperatorType : FilterOperator {
     EQUALS,
     NOT_EQUALS,
     IN,
+    NOT_IN,
     REGEX,
     CONTAINS,
     STARTS_WITH,

@@ -99,6 +99,14 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
                 "$dimension IN ${parseAnyValue(inValues, context)}"
             }
         },
+        StringOperatorType.NOT_IN to { dimension: String, value: Any?, context ->
+            val inValues = validateFilterValue(value, List::class.java)
+            if (inValues.isEmpty()) {
+                "FALSE"
+            } else {
+                "$dimension NOT IN ${parseAnyValue(inValues, context)}"
+            }
+        },
         StringOperatorType.CONTAINS to { dimension: String, value: Any?, context ->
             val validatedValue = "%${validateFilterValue(value, String::class.java)}%"
             "$dimension LIKE ${parseAnyValue(validatedValue, context)}"

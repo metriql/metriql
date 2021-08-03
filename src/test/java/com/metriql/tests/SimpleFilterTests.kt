@@ -259,6 +259,25 @@ object SimpleFilterTests {
             override val result: List<String> = listOf("alpha")
         },
 
+        NOT_IN {
+            override fun filter(modelName: ModelName): List<ReportFilter> {
+                return listOf(
+                    ReportFilter(
+                        ReportFilter.Type.METRIC_FILTER,
+                        MetricFilter(
+                            MetricFilter.MetricType.DIMENSION,
+                            ReportDimension("test_string", modelName, null, null),
+                            listOf(
+                                MetricFilter.Filter(null, null, FieldType.STRING, StringOperatorType.NOT_IN, listOf("alpha"))
+                            )
+                        )
+                    )
+                )
+            }
+
+            override val result: List<String> = listOf("alpha")
+        },
+
         EQUALS_MULTI {
             override fun filter(modelName: ModelName): List<ReportFilter> {
                 return listOf(
