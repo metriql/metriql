@@ -22,5 +22,5 @@ fun main(args: Array<String>) { // Intercepting redshift and postgresql drivers
     }
 
     Commands()
-        .subcommands(Commands.Generate(), Commands.Run()).main(args)
+        .subcommands(Commands.Generate(), Commands.Serve()).main(args)
 }
