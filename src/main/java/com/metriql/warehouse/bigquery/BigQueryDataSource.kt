@@ -1,7 +1,9 @@
 package com.metriql.warehouse.bigquery
 
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.google.auth.oauth2.OAuth2Credentials
 import com.google.auth.oauth2.ServiceAccountCredentials
+import com.google.auth.oauth2.UserCredentials
 import com.google.cloud.bigquery.BigQuery
 import com.google.cloud.bigquery.BigQuery.TableField
 import com.google.cloud.bigquery.BigQuery.TableOption
@@ -36,33 +38,65 @@ import com.metriql.warehouse.spi.TableSchema
 import com.metriql.warehouse.spi.WarehouseAuth
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.snowflake.client.jdbc.internal.amazonaws.util.StringInputStream
+import java.io.File
+import java.io.FileInputStream
 import java.util.UUID
 
 class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) : DataSource {
     override val warehouse = BigQueryWarehouse
+    private val bigQuery: BigQuery
+    private var credentialProjectId: String? = null
 
-    /** A public dataset can be the default project. However, we need to execute jobs on our own project */
-    private val serviceProjectId: String by lazy {
-        try {
-            JsonHelper.read<ObjectNode>(config.serviceAccountJSON)["project_id"].asText()
-        } catch (e: Exception) {
-            throw MetriqlException("Service account is not valid.", HttpResponseStatus.BAD_REQUEST)
+    init {
+        val bigQuery = BigQueryOptions.newBuilder()
+
+        if(config.project != null) {
+            bigQuery.setProjectId(config.project)
         }
+
+        when {
+            config.method == BigQueryWarehouse.BigQueryConfig.Method.`oauth-secrets` -> {
+                bigQuery.setCredentials(
+                    UserCredentials.newBuilder().setClientId(config.client_id)
+                        .setClientSecret(config.client_secret)
+                        .setRefreshToken(config.refresh_token).build()
+                )
+            }
+            config.serviceAccountJSON != null -> {
+                val fromStream = ServiceAccountCredentials.fromStream(StringInputStream(config.serviceAccountJSON))
+                credentialProjectId = fromStream.projectId
+                bigQuery.setCredentials(fromStream)
+            }
+            config.keyFile != null -> {
+                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(config.keyFile))
+                credentialProjectId = fromStream.projectId
+                bigQuery.setCredentials(fromStream)
+            }
+            else -> {
+                val localKeyFile = File(System.getProperty("user.home"), ".gcloud/keyfile.json")
+                if (!localKeyFile.exists()) {
+                    throw MetriqlException("$localKeyFile not found connecting the BigQuery.", HttpResponseStatus.BAD_REQUEST)
+                }
+                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(localKeyFile))
+                credentialProjectId = fromStream.projectId
+                bigQuery.setCredentials(fromStream)
+            }
+        }
+
+        this.bigQuery = bigQuery.build().service
     }
 
-    private val bigQuery = BigQueryOptions
-        .newBuilder()
-        .setProjectId(serviceProjectId)
-//        .setCredentials(OAuth2Credentials.newBuilder().setAccessToken("").build())
-        .setCredentials(ServiceAccountCredentials.fromStream(StringInputStream(config.serviceAccountJSON)))
-        .build()
-        .service
+    /** A public dataset can be the default project. However, we need to execute jobs on our own project */
+    private fun getProjectId(): String {
+        return config.project ?: credentialProjectId
+        ?: throw MetriqlException("Unable to find `project_id, please set the value in credentials", HttpResponseStatus.BAD_REQUEST)
+    }
 
     override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {
         if (target.value is Model.Target.TargetValue.Table) {
             return object : QueryTask(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {
-                    val tableId = TableId.of(target.value.database ?: config.project ?: serviceProjectId, target.value.schema ?: config.dataset, target.value.table)
+                    val tableId = TableId.of(target.value.database ?: getProjectId(), target.value.schema ?: config.dataset, target.value.table)
                     val bTable = bigQuery.getTable(tableId).reload(TableOption.fields(TableField.SCHEMA))
                     val tableSchema = bTable.getDefinition<TableDefinition>().schema!!
                     val tableResult = bTable.list(BigQuery.TableDataListOption.pageSize(100))
@@ -179,7 +213,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     }
 
     override fun listTableNames(database: String?, schema: String?): List<TableName> {
-        val datasetId = DatasetId.of(database ?: config.project ?: serviceProjectId, schema ?: config.dataset)
+        val datasetId = DatasetId.of(database ?: getProjectId(), schema ?: config.dataset)
         // we fetch dataset first since the project might be different than the default configuration
         val dataset = bigQuery.getDataset(datasetId) ?: return listOf()
 
@@ -195,7 +229,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         schema: String?,
         tables: Collection<String>?
     ): List<TableSchema> {
-        val datasetId = DatasetId.of(database ?: config.project ?: serviceProjectId, schema ?: config.dataset)
+        val datasetId = DatasetId.of(database ?: getProjectId(), schema ?: config.dataset)
 
         val bqTables = bigQuery
             .listTables(datasetId)
@@ -232,11 +266,11 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     }
 
     override fun listDatabaseNames(): List<DatabaseName> {
-        return listOf(config.project ?: serviceProjectId)
+        return listOf(getProjectId())
     }
 
     override fun listSchemaNames(database: String?): List<SchemaName> {
-        return bigQuery.listDatasets(database ?: config.project ?: serviceProjectId)
+        return bigQuery.listDatasets(database ?: getProjectId())
             .iterateAll()
             .map { it.datasetId.dataset }
     }
@@ -252,7 +286,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         return BigQueryQueryTask(
             bigQuery,
             query,
-            defaultDatabase ?: config.project ?: serviceProjectId,
+            defaultDatabase ?: getProjectId(),
             defaultSchema ?: config.dataset,
             warehouseAuth,
             config.maximumBytesBilled,
@@ -267,7 +301,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
             mapOf(
                 "method" to "service-account-json",
                 "keyfile_json" to JsonHelper.read(config.serviceAccountJSON, ObjectNode::class.java),
-                "database" to (config.project ?: serviceProjectId),
+                "database" to getProjectId(),
                 "schema" to (config.dataset)
             )
         )
@@ -287,7 +321,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         return when (target.value) {
             is Model.Target.TargetValue.Sql -> renderSQL.invoke(target.value.sql)
             is Model.Target.TargetValue.Table -> {
-                "${bridge.quoteIdentifier(target.value.database ?: config.project ?: serviceProjectId)}." +
+                "${bridge.quoteIdentifier(target.value.database ?: getProjectId())}." +
                     "${bridge.quoteIdentifier(target.value.schema ?: config.dataset)}." +
                     "${bridge.quoteIdentifier(target.value.table)} AS ${bridge.quoteIdentifier(aliasName)}"
             }
