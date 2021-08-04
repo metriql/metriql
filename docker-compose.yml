@@ -9,6 +9,7 @@ services:
     environment:
       - METRIQL_RUN_HOST=0.0.0.0
       - DBT_PROJECT_DIR=/root/app
+      - GCLOUD_DIR=${HOME}/.gcloud
     ports:
       - "5656:5656"
     command:
