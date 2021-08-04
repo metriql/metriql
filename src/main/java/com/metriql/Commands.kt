@@ -64,6 +64,10 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             "This argument should be a YAML string, eg. '{my_variable: my_value}'"
     )
 
+    override fun aliases(): Map<String, List<String>> = mapOf(
+        "run" to listOf("serve")
+    )
+
     override fun run() {
     }
 
@@ -242,7 +246,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         }
     }
 
-    class Run : Commands(help = "Spins up an HTTP server serving your datasets") {
+    class Serve : Commands(help = "Spins up an HTTP server serving your datasets") {
         private val origin by option("--origin", help = "The origin HTTP server for CORS", envvar = "METRIQL_ORIGIN")
         private val enableJdbc by option("--jdbc", help = "Enable JDBC services via Trino Proxy", envvar = "METRIQL_ENABLE_JDBC").flag()
         private val threads by option("--threads", help = "Specify number of threads to use serving requests. The default is [number of processors * 2]", envvar = "THREADS").int()
