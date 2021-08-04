@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  metriql:
+    build: .
+#    image: buremba/metriql
+    volumes:
+      - "${DBT_PROJECT_DIR:-./}:/root/app"
+      - "${DBT_PROFILES_DIR:-~/.dbt}:/root/.dbt"
+    environment:
+      - METRIQL_RUN_HOST=0.0.0.0
+      - DBT_PROJECT_DIR=/root/app
+    ports:
+      - "5656:5656"
+    command:
+      - serve
+
