@@ -23,11 +23,16 @@ object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
         val timeoutSeconds: Long? = null,
         val location: String? = null,
         val priority: String? = null,
+        val retries: Int? = null,
         val keyFile: String? = null,
         val method: Method? = null,
+        val refresh_token: String? = null,
+        val client_id: String? = null,
+        val client_secret: String? = null,
+        val token_uri: String? = null,
     ) : Warehouse.Config {
         enum class Method {
-            `service_account`, `oauth-secrets`, `service-account-json`
+            `service_account`, `oauth-secrets`, `service-account-json`, oauth
         }
 
         override fun toString(): String = "$dataset - $project"
