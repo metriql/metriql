@@ -89,8 +89,8 @@ open class QueryHttpService(
         request: RakamHttpRequest,
         @Named("userContext") auth: ProjectAuth,
         @BodyParam query: Query,
-        @QueryParam("useCache") useCache: Boolean?,
-        @QueryParam("initialWaitInSeconds") initialWaitInSeconds: Long?
+        @QueryParam("useCache", required = false) useCache: Boolean?,
+        @QueryParam("initialWaitInSeconds", required = false) initialWaitInSeconds: Long?
     ): CompletableFuture<Task.TaskTicket<QueryResult>> {
         val context = reportService.createContext(auth, dataSourceFetcher.invoke(request))
         val task = reportService.queryTask(

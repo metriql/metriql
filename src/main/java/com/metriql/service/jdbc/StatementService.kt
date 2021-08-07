@@ -20,6 +20,7 @@ import io.trino.MetriqlMetadata.Companion.getTrinoType
 import io.trino.Query.formatType
 import io.trino.Query.toClientTypeSignature
 import io.trino.client.Column
+import io.trino.client.FailureInfo
 import io.trino.client.QueryError
 import io.trino.client.QueryResults
 import io.trino.client.StageStats
@@ -47,10 +48,10 @@ import javax.ws.rs.core.MultivaluedMap
 
 @Path("/v1/statement")
 class StatementService(
-    val taskQueueService: TaskQueueService,
-    val reportService: ReportService,
+    private val taskQueueService: TaskQueueService,
+    private val reportService: ReportService,
     private val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
-    val modelService: IModelService
+    private val modelService: IModelService
 ) : HttpService() {
     private val runner = LightweightQueryRunner(modelService)
     private val mapper = ObjectMapperProvider().get()
@@ -188,7 +189,7 @@ class StatementService(
             columns,
             task.result?.result as Iterable<List<Any?>>?,
             stats.build(),
-            task.result?.error?.let { QueryError(it.message + "\n" + task.result?.properties?.get(QUERY), it.sqlState, 10, null, null, null, null) },
+            task.result?.error?.let { QueryError(it.message + "\n" + task.result?.properties?.get(QUERY), it.sqlState, 10, null, null, null, FailureInfo("metriql", it.message, null, listOf(), listOf(), null)) },
             listOf(),
             task.result?.properties?.get(QUERY_TYPE) as String?,
             null

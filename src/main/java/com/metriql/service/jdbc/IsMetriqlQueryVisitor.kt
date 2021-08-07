@@ -27,9 +27,7 @@ class IsMetriqlQueryVisitor(private val defaultCatalog: String) : DefaultTravers
                     val schema = node.name.prefix.orElse(null)?.suffix
                     val isMetadata = schema == "information_schema" || extractModelNameFromPropertiesTable(node.name.suffix) != null
 
-                    if (!isMetadata) {
-                        context.set(true)
-                    }
+                    context.set(!isMetadata)
                 } else if (catalog == "system") {
                     context.set(false)
                 }

@@ -1,11 +1,13 @@
 package io.trino
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.google.common.collect.ImmutableList
 import com.metriql.db.FieldType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
+import com.metriql.util.JsonHelper
 import io.trino.connector.system.SystemTablesProvider
 import io.trino.spi.connector.ColumnMetadata
 import io.trino.spi.connector.ConnectorPageSource
@@ -92,15 +94,13 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
         override fun getDistribution() = SystemTable.Distribution.SINGLE_COORDINATOR
 
         private fun toColumnMetadata(it: Model.Measure, relation: String? = null): ColumnMetadata? {
-            if (it.value.agg != null) {
-                return null
-            }
-
             return ColumnMetadata.builder()
                 .setName(relation?.let { _ -> "$relation.${it.name}" } ?: it.name)
                 .setComment(Optional.ofNullable(it.description))
                 .setHidden(it.hidden ?: false)
+                .setExtraInfo(Optional.ofNullable("measure"))
                 .setNullable(true)
+                .setProperties(JsonHelper.convert(it, object : TypeReference<Map<String, Any>>() {}))
                 .setType(getTrinoType(it.fieldType))
                 .build()
         }
@@ -113,6 +113,8 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
                 .setComment(Optional.ofNullable(it.description))
                 .setHidden(it.hidden ?: false)
                 .setNullable(true)
+                .setExtraInfo(Optional.ofNullable("dimension"))
+                .setProperties(JsonHelper.convert(it, object : TypeReference<Map<String, Any>>() {}))
                 .setType(getTrinoType(it.fieldType))
                 .build()
         }
@@ -123,7 +125,7 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
                     dimension.postOperations.forEach { timeframe -> columns.add(toColumnMetadata(dimension, relation?.name, timeframe)) }
                 } else columns.add(toColumnMetadata(dimension, relation?.name))
             }
-            model.measures.filter { it.value.agg != null }.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
+            model.measures.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
         }
 
         override fun getTableMetadata(): ConnectorTableMetadata {
