@@ -14,7 +14,6 @@ import com.metriql.util.UppercaseEnum
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import java.time.ZoneId
 import java.util.HashMap
 
 sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
@@ -27,7 +26,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
     class DecisionContext(
         private val value: Any?,
         private val context: IQueryGeneratorContext,
-        private val zoneId: ZoneId?
+        private val renderAlias : Boolean
     ) : MetriqlJinjaContext() {
 
         override fun toString(): String {
@@ -38,38 +37,45 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
             return when (value) {
                 is Model -> context.getSQLReference(value.target, value.name, null)
                 is ModelDimension -> {
-                    try {
-                        context.datasource.warehouse.bridge.renderDimension(
-                            context,
-                            value.modelName,
-                            value.dimension.name,
-                            null,
-                            null,
-                            metricPositionType
-                        ).metricValue // Joins are not possible here
-                    } catch (e: MetriqlException) {
-                        throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
+                    if(renderAlias) {
+                        context.getDimensionAlias(value.dimension.name, null, null)
+                    } else {
+                        try {
+                            context.warehouseBridge.renderDimension(
+                                context,
+                                value.modelName,
+                                value.dimension.name,
+                                null,
+                                null,
+                                metricPositionType
+                            ).value // Joins are not possible here
+                        } catch (e: MetriqlException) {
+                            throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
+                        }
                     }
                 }
                 is ModelMeasure -> {
-                    try {
-                        context.datasource.warehouse.bridge.renderMeasure(
-                            context,
-                            value.modelName,
-                            value.measure.name,
-                            null,
-                            metricPositionType,
-                            WarehouseMetriqlBridge.AggregationContext.ADHOC,
-                            zoneId,
-                            value.extraFilters
-                        ).metricValue // Joins are not possible here
-                    } catch (e: MetriqlException) {
-                        throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
+                    if(renderAlias) {
+                        context.getMeasureAlias(value.measure.name, null)
+                    } else {
+                        try {
+                            context.warehouseBridge.renderMeasure(
+                                context,
+                                value.modelName,
+                                value.measure.name,
+                                null,
+                                metricPositionType,
+                                WarehouseMetriqlBridge.AggregationContext.ADHOC,
+                                value.extraFilters
+                            ).value // Joins are not possible here
+                        } catch (e: MetriqlException) {
+                            throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
+                        }
                     }
                 }
                 is ModelRelation -> {
                     try {
-                        context.datasource.warehouse.bridge.generateJoinStatement(value, context)
+                        context.warehouseBridge.generateJoinStatement(value, context)
                     } catch (e: MetriqlException) {
                         throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
                     }
@@ -92,25 +98,25 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                     if (value !is ModelDimension || value !is ModelMeasure) {
                         throw TemplateStateException("only dimensions and measures have model", -1)
                     }
-                    ModelContext(context, zoneId)
+                    ModelContext(context, renderAlias)
                 }
                 ContextType.DIMENSION -> {
                     when (value) {
-                        is Model -> DimensionContext(value.name, context, zoneId)
-                        is ModelRelation -> DimensionContext(value.targetModelName, context, zoneId)
+                        is Model -> DimensionContext(value.name, context, renderAlias)
+                        is ModelRelation -> DimensionContext(value.targetModelName, context, renderAlias)
                         else -> throw TemplateStateException("only models can have dimensions", -1)
                     }
                 }
                 ContextType.MEASURE -> {
                     when (value) {
-                        is Model -> MeasureContext(value.name, context, zoneId)
-                        is ModelRelation -> MeasureContext(value.targetModelName, context, zoneId)
+                        is Model -> MeasureContext(value.name, context, renderAlias)
+                        is ModelRelation -> MeasureContext(value.targetModelName, context, renderAlias)
                         else -> throw TemplateStateException("only models can have measures", -1)
                     }
                 }
                 ContextType.RELATION -> {
                     if (value is Model) {
-                        RelationContext(value.name, context, zoneId)
+                        RelationContext(value.name, context, renderAlias)
                     } else {
                         throw TemplateStateException("only models can have relations", -1)
                     }
@@ -127,7 +133,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
 
     class ModelContext(
         private val context: IQueryGeneratorContext,
-        private val zoneId: ZoneId?
+        val renderAlias : Boolean
     ) : MetriqlJinjaContext() {
         override fun get(key: String): Any? {
             val model: Model
@@ -138,7 +144,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
             } catch (e: MetriqlException) {
                 throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
             }
-            return DecisionContext(model, context, zoneId)
+            return DecisionContext(model, context, renderAlias)
         }
     }
 
@@ -146,7 +152,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
     class RelationContext(
         private val modelName: ModelName?,
         private val context: IQueryGeneratorContext,
-        private val zoneId: ZoneId?
+        private val renderAlias : Boolean
     ) : MetriqlJinjaContext() {
         override fun get(key: String): Any? {
             if (modelName == null) {
@@ -160,7 +166,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
             } catch (e: MetriqlException) {
                 throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
             }
-            return DecisionContext(modelRelation, context, zoneId)
+            return DecisionContext(modelRelation, context, renderAlias)
         }
     }
 
@@ -168,7 +174,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
     class DimensionContext(
         private val modelName: ModelName?,
         private val context: IQueryGeneratorContext,
-        private val zoneId: ZoneId?
+        private val renderAlias : Boolean
     ) : MetriqlJinjaContext() {
         override fun get(key: String): Any? {
             if (modelName == null) {
@@ -181,7 +187,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
             } catch (e: MetriqlException) {
                 throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
             }
-            return DecisionContext(modelDimension, context, zoneId)
+            return DecisionContext(modelDimension, context, renderAlias)
         }
     }
 
@@ -197,7 +203,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
     class MeasureContext(
         private val modelName: ModelName?,
         private val context: IQueryGeneratorContext,
-        private val zoneId: ZoneId?,
+        private val renderAlias : Boolean
     ) : MetriqlJinjaContext() {
         var pushdownFilters: List<ReportFilter>? = null
 
@@ -212,7 +218,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                 throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
             }
 
-            return DecisionContext(modelMeasure.copy(extraFilters = pushdownFilters), context, zoneId)
+            return DecisionContext(modelMeasure.copy(extraFilters = pushdownFilters), context, renderAlias)
         }
     }
 

@@ -64,8 +64,8 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             }
         }
 
-        val (_, rawQuery) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = false, forAccumulator = true)
-        val (materializeTable, _) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = true, forAccumulator = true)
+        val (_, rawQuery, _) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = false, forAccumulator = true)
+        val (materializeTable, _, _) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = true, forAccumulator = true)
         return Pair(materializeTable!!, rawQuery)
     }
 
@@ -91,7 +91,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         reportOptions: SegmentationReportOptions,
         reportFilters: List<ReportFilter>,
     ): IAdHocService.RenderedQuery {
-        val (_, query) = renderQuery(
+        val (_, query, dsl) = renderQuery(
             auth,
             context,
             reportOptions,
@@ -99,7 +99,10 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             useAggregate = true
         )
 
-        return IAdHocService.RenderedQuery(query)
+        return IAdHocService.RenderedQuery(query, postProcessors = listOf { queryResult ->
+            val metadata = queryResult.metadata?.mapIndexed { index, col -> col.copy(name = dsl.columnNames[index]) }
+            queryResult.copy(metadata = metadata)
+        })
     }
 
     fun renderQuery(
@@ -109,7 +112,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         reportFilters: List<ReportFilter>,
         useAggregate: Boolean = false,
         forAccumulator: Boolean = false,
-    ): Pair<Table?, String> {
+    ): Triple<Table?, String, Segmentation> {
         val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[ServiceType.SEGMENTATION]
         val serviceQueryGenerator = queryGenerator as? SegmentationQueryGenerator ?: throw IllegalArgumentException("Warehouse query generator must be SegmentationQueryGenerator")
 
@@ -127,7 +130,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         } else dsl
 
         val query = serviceQueryGenerator.generateSQL(auth, context, finalDsl, reportOptions)
-        return Pair(materializedTarget, query)
+        return Triple(materializedTarget, query, dsl)
     }
 
     private fun createDSL(
@@ -192,39 +195,38 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         // 1. Render measures, dimensions and filters.
         // Each of them will generate a projection value and a join relation if available.
         val renderedDimensions = dimensions
-            .map { reportDimension ->
+            .map { dimension ->
                 // Note that renderDimension takes the context as an argument.
                 // We still keep track of each dimension rendered.
                 warehouseBridge.renderDimension(
                     context,
-                    reportDimension.modelName ?: modelName,
-                    reportDimension.name,
-                    reportDimension.relationName,
-                    reportDimension.postOperation,
+                    dimension.modelName ?: modelName,
+                    dimension.name,
+                    dimension.relationName,
+                    dimension.postOperation,
                     WarehouseMetriqlBridge.MetricPositionType.PROJECTION
                 )
             }
 
         val renderedMeasures = measures
-            .map { reportMeasure ->
+            .map { measure ->
                 warehouseBridge.renderMeasure(
                     context,
-                    reportMeasure.modelName,
-                    reportMeasure.name,
-                    reportMeasure.relationName,
+                    measure.modelName,
+                    measure.name,
+                    measure.relationName,
                     WarehouseMetriqlBridge.MetricPositionType.PROJECTION,
                     queryType,
-                    auth.timezone
                 )
             }
 
         val modelAndQueryFilters = (filters + alwaysFilters)
         val allFilters = modelAndQueryFilters + reportFilters
 
-        val renderedFilters = modelAndQueryFilters.map { warehouseBridge.renderFilter(it, modelName, context, auth.timezone) } +
+        val renderedFilters = modelAndQueryFilters.map { warehouseBridge.renderFilter(it, modelName, context) } +
             reportFilters.mapNotNull {
                 try {
-                    warehouseBridge.renderFilter(it, modelName, context, auth.timezone)
+                    warehouseBridge.renderFilter(it, modelName, context)
                 } catch (e: MetriqlException) {
                     context.comments.add("Unable to apply report filter ${it.value}: ${e.message}")
                     // TODO: implement a fail safe mode?
@@ -236,7 +238,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
 
         /*
         * 2. Prepare parts.
-        * a) Projections. SELECT a, sum(b)...
+        * a) Projections (dimensions + measures). SELECT a, sum(b)...
         * b) Table Reference: FROM table as modelName
         * c) Joins: LEFT JOIN x ON (..)
         * d) Where Filters: WHERE (X OR Y) AND (Z OR C) AND ...
@@ -253,12 +255,18 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             .map { it.second }
         val inQueryDimensionNames = dimensions.map { it.name } + renderedDimensionAndColumnNames
 
+        val columnNames = dimensions.map { context.getModelDimension(it.name, it.modelName).dimension }.map { it.label ?: it.name } +
+            measures.map { context.getModelMeasure(it.name, it.modelName).measure }.map { it.label ?: it.name }
+
+        if (renderedDimensions.isEmpty() && renderedMeasures.isEmpty()) {
+            throw MetriqlException("At least one measure or dimension is required to build a segmentation query", HttpResponseStatus.BAD_REQUEST)
+        }
+
         val dsl = Segmentation(
-            projections = if (renderedDimensions.isEmpty() && renderedMeasures.isEmpty()) {
-                throw MetriqlException("At least one measure or dimension is required to build a segmentation query", HttpResponseStatus.BAD_REQUEST)
-            } else {
-                (renderedDimensions + renderedMeasures).map { it.metricValue }
-            },
+            columnNames = columnNames,
+            dimensions = renderedDimensions,
+            limit = reportOptions.limit,
+            measures = renderedMeasures,
             whereFilters = renderedFilters.mapNotNull { it.whereFilter },
 
             groupIdx = if (measures.isNotEmpty()) {
@@ -274,7 +282,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                         reportDimension.relationName,
                         reportDimension.postOperation,
                         WarehouseMetriqlBridge.MetricPositionType.PROJECTION
-                    ).metricValue
+                    ).value
                 }.toSet()
             } else null,
 
@@ -286,17 +294,24 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                 orders.map { orderItem ->
                     val metricIndex = when (orderItem.value) {
                         is ReportMetric.ReportDimension -> {
-                            val index = dimensions.indexOf(orderItem.value)
-                            if (index == -1) {
-                                // the order by is not visible in the query
-                                throw MetriqlException("The order by must be one of the dimensions", HttpResponseStatus.BAD_REQUEST)
-                            } else {
-                                // sql starts from 1 index
-                                index + 1
-                            }
+                            warehouseBridge.renderDimension(
+                                context,
+                                modelName,
+                                orderItem.value.name,
+                                orderItem.value.relationName,
+                                orderItem.value.postOperation,
+                                WarehouseMetriqlBridge.MetricPositionType.PROJECTION
+                            ).value
                         }
                         is ReportMetric.ReportMeasure -> {
-                            ((dimensions.size ?: 0) + measures.indexOf(orderItem.value)) + 1
+                            warehouseBridge.renderMeasure(
+                                context,
+                                orderItem.value.modelName,
+                                orderItem.value.name,
+                                orderItem.value.relationName,
+                                WarehouseMetriqlBridge.MetricPositionType.PROJECTION,
+                                queryType,
+                            ).value
                         }
                         else -> throw IllegalStateException("Only ReportDimension and ReportMeasure are accepted as segmentation order")
                     }

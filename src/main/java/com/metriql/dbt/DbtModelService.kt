@@ -12,13 +12,14 @@ import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.RecipeModelService
+import com.metriql.service.model.UpdatableModelService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.YamlHelper
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
+import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import org.rakam.server.http.HttpServer
 import javax.inject.Inject
@@ -26,6 +27,7 @@ import javax.inject.Inject
 class DbtModelService @Inject constructor(
     private val renderer: JinjaRendererService,
     private val modelService: IModelService?,
+    private val dependencyFetcher: DependencyFetcher
 ) {
     private val jinja = Jinjava()
 
@@ -47,7 +49,8 @@ class DbtModelService @Inject constructor(
         committer.deletePath(directory)
 
         val (_, _, modelConfigMapper) = dataSource.dbtSettings()
-        val modelService = RecipeModelService(modelService, { recipe }, recipeId, dataSource.warehouse.bridge)
+        val models = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, recipeId) } ?: listOf()
+        val modelService = UpdatableModelService(modelService, { models }, dataSource.warehouse.bridge)
 
         val context = QueryGeneratorContext(
             auth,
@@ -56,6 +59,7 @@ class DbtModelService @Inject constructor(
             renderer,
             reportExecutor = null,
             userAttributeFetcher = null,
+            dependencyFetcher = dependencyFetcher
         )
 
         val segmentationService = SegmentationService()
@@ -91,7 +95,7 @@ class DbtModelService @Inject constructor(
 
                     val query = """SELECT * FROM ($renderedQuery) AS $modelName
 {% if is_incremental() %}
-   WHERE ${renderedEventTimestampDimension.metricValue} > (select max($eventDimensionAlias) from {{ this }})
+   WHERE ${renderedEventTimestampDimension.value} > (select max($eventDimensionAlias) from {{ this }})
 {% endif %}
                     """.trimIndent()
 

@@ -51,7 +51,7 @@ abstract class TestSimpleFilter {
                     )
                 )
             ),
-            JinjaRendererService(), null, null
+            JinjaRendererService(), null, null, null
         )
     }
 
@@ -82,7 +82,7 @@ abstract class TestSimpleFilter {
     fun testAnyFiltersIsSet() {
         val test = SimpleFilterTests.AnyOperatorTest.IS_SET
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
@@ -93,7 +93,7 @@ abstract class TestSimpleFilter {
     fun testAnyFiltersIsNotSet() {
         val test = SimpleFilterTests.AnyOperatorTest.IS_NOT_SET
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -103,7 +103,7 @@ abstract class TestSimpleFilter {
     fun testStringFiltersEquals() {
         val test = SimpleFilterTests.StringOperatorTest.EQUALS
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -113,7 +113,7 @@ abstract class TestSimpleFilter {
     fun testStringFiltersNotEquals() {
         val test = SimpleFilterTests.StringOperatorTest.NOT_EQUALS
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
@@ -124,7 +124,7 @@ abstract class TestSimpleFilter {
     fun testStringFiltersContains() {
         val test = SimpleFilterTests.StringOperatorTest.CONTAINS
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
@@ -135,7 +135,7 @@ abstract class TestSimpleFilter {
     fun testStringFiltersEndsWith() {
         val test = SimpleFilterTests.StringOperatorTest.ENDS_WITH
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -145,7 +145,7 @@ abstract class TestSimpleFilter {
     fun testStringFiltersStartsWith() {
         val test = SimpleFilterTests.StringOperatorTest.STARTS_WITH
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
@@ -156,7 +156,7 @@ abstract class TestSimpleFilter {
     fun testStringFiltersIn() {
         val test = SimpleFilterTests.StringOperatorTest.IN
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
@@ -167,7 +167,7 @@ abstract class TestSimpleFilter {
     fun testStringFiltersEqualsMulti() {
         val test = SimpleFilterTests.StringOperatorTest.EQUALS_MULTI
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_string"
@@ -178,7 +178,7 @@ abstract class TestSimpleFilter {
     fun testBooleanFiltersIs() {
         val test = SimpleFilterTests.BooleanTest.IS
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT ${castToDouble("count(*)")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -188,7 +188,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersEqualsInt() {
         val test = SimpleFilterTests.NumberTest.EQUALS_INT
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT ${castToDouble("test_int")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -198,7 +198,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersEqualsDouble() {
         val test = SimpleFilterTests.NumberTest.EQUALS_DOUBLE
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT ${castToDouble("test_double")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -208,7 +208,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersGreaterThanInt() {
         val test = SimpleFilterTests.NumberTest.GREATER_THAN_INT
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT ${castToDouble("test_int")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_int"
         assertEquals(test.result, runQuery(query))
@@ -218,7 +218,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersGreaterThanDouble() {
         val test = SimpleFilterTests.NumberTest.GREATER_THAN_DOUBLE
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT ${castToDouble("test_double")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_double"
@@ -229,7 +229,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersLessThanInt() {
         val test = SimpleFilterTests.NumberTest.LESS_THAN_INT
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT ${castToDouble("test_int")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -239,7 +239,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersLessThanDouble() {
         val test = SimpleFilterTests.NumberTest.LESS_THAN_DOUBLE
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT ${castToDouble("test_double")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -249,7 +249,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersGreaterThanAndLessThanInt() {
         val test = SimpleFilterTests.NumberTest.GREATER_THAN_AND_LESS_THAN_INT
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT ${castToDouble("test_double")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_double"
@@ -260,7 +260,7 @@ abstract class TestSimpleFilter {
     fun testNumberFiltersGreaterThanAndLessThanDouble() {
         val test = SimpleFilterTests.NumberTest.GREATER_THAN_AND_LESS_THAN_DOUBLE
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT ${castToDouble("test_double")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter ORDER BY test_double"
@@ -271,7 +271,7 @@ abstract class TestSimpleFilter {
     fun testTimestampGreaterThan() {
         val test = SimpleFilterTests.TimestampOperatorTest.GREATER_THAN
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_timestamp FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
@@ -283,7 +283,7 @@ abstract class TestSimpleFilter {
     fun testTimestampLessThan() {
         val test = SimpleFilterTests.TimestampOperatorTest.LESS_THAN
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_timestamp FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
@@ -294,7 +294,7 @@ abstract class TestSimpleFilter {
     fun testTimestampGreaterThanAndLessThan() {
         val test = SimpleFilterTests.TimestampOperatorTest.GREATER_THAN_AND_LESS_THAN
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query =
             "SELECT test_timestamp FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
@@ -305,7 +305,7 @@ abstract class TestSimpleFilter {
     fun testDateGreaterThan() {
         val test = SimpleFilterTests.DateOperatorTests.GREATER_THAN
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_date FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -315,7 +315,7 @@ abstract class TestSimpleFilter {
     fun testDateLessThan() {
         val test = SimpleFilterTests.DateOperatorTests.LESS_THAN
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_date FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -325,7 +325,7 @@ abstract class TestSimpleFilter {
     fun testDateGreaterThanAndLessThan() {
         val test = SimpleFilterTests.DateOperatorTests.GREATER_THAN_AND_LESS_THAN
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_date FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -335,7 +335,7 @@ abstract class TestSimpleFilter {
     fun testComplexFilters1() {
         val test = SimpleFilterTests.ComplexTest.COMPLEX_1
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))
@@ -345,7 +345,7 @@ abstract class TestSimpleFilter {
     fun testComplexFilters2() {
         val test = SimpleFilterTests.ComplexTest.COMPLEX_2
         val generatedFilter = test.filter(table)
-            .map { warehouseBridge.renderFilter(it, table, context(), null) }
+            .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }
         val query = "SELECT test_string FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
         assertEquals(test.result, runQuery(query))

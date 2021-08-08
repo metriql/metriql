@@ -12,7 +12,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.gcardone.junidecode.Junidecode.unidecode
-import java.util.Locale
 
 class DiscoverService(private val dataSource: DataSource) {
 
@@ -65,10 +64,10 @@ class DiscoverService(private val dataSource: DataSource) {
         if (dimensionsWithoutFieldType.isEmpty()) return dimensions
 
         val query = dataSource.warehouse.bridge.generateDimensionMetaQuery(
+            context,
             modelName,
             modelTarget,
-            dimensionsWithoutFieldType,
-            context
+            dimensionsWithoutFieldType
         )
 
         val tableMeta = try {

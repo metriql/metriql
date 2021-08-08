@@ -2,6 +2,7 @@ package com.metriql.warehouse.spi.function
 
 import com.metriql.db.FieldType
 import com.metriql.util.UppercaseEnum
+import com.metriql.warehouse.spi.function.TimestampPostOperation.QUARTER
 
 interface IPostOperation {
     val category: String
@@ -29,6 +30,11 @@ enum class DatePostOperation(
         "Date period",
         FieldType.DATE,
         { it is DatePostOperation && it.ordinal > MONTH.ordinal }
+    ),
+    QUARTER(
+        "Date period",
+        FieldType.DATE,
+        { it is DatePostOperation && it.ordinal > QUARTER.ordinal }
     ),
     YEAR(
         "Date period",
@@ -85,6 +91,11 @@ enum class TimestampPostOperation(
         "Date period",
         FieldType.DATE,
         { it is TimestampPostOperation && it.ordinal > MONTH.ordinal }
+    ),
+    QUARTER(
+        "Date period",
+        FieldType.DATE,
+        { it is TimestampPostOperation && it.ordinal > QUARTER.ordinal }
     ),
     YEAR(
         "Date period",

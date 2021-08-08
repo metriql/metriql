@@ -11,6 +11,7 @@ class ClickhouseTimeframes : WarehouseTimeframes {
         TimestampPostOperation.DAY to "CAST(DATE_TRUNC('day', %s) AS DATE)",
         TimestampPostOperation.WEEK to "CAST(DATE_TRUNC('week', %s) AS DATE)",
         TimestampPostOperation.MONTH to "CAST(DATE_TRUNC('month', %s) AS DATE)",
+        TimestampPostOperation.QUARTER to "CAST(DATE_TRUNC('quarter', %s) AS DATE)",
         TimestampPostOperation.YEAR to "CAST(DATE_TRUNC('year', %s) AS DATE)",
         TimestampPostOperation.HOUR_OF_DAY to "formatDateTime(%s, '%H:%M')",
         TimestampPostOperation.DAY_OF_MONTH to "toDayOfMonth(%s)",
@@ -24,11 +25,12 @@ class ClickhouseTimeframes : WarehouseTimeframes {
         DatePostOperation.DAY to "CAST(%s AS DATE)",
         DatePostOperation.WEEK to "CAST(DATE_TRUNC('week', %s) AS DATE)",
         DatePostOperation.MONTH to "CAST(DATE_TRUNC('month', %s) AS DATE)",
+        DatePostOperation.QUARTER to "CAST(DATE_TRUNC('quarter', %s) AS DATE)",
         DatePostOperation.YEAR to "CAST(DATE_TRUNC('year', %s) AS DATE)",
         DatePostOperation.DAY_OF_MONTH to "EXTRACT(day FROM %s)",
         DatePostOperation.WEEK_OF_YEAR to "EXTRACT(week FROM %s)",
         DatePostOperation.MONTH_OF_YEAR to "dateName('month', %s)",
-        DatePostOperation.QUARTER_OF_YEAR to "'Q' ||dateName('quarter', %s)",
+        DatePostOperation.QUARTER_OF_YEAR to "CONCAT('Q', toString(toQuarter(%s)))",
         DatePostOperation.DAY_OF_WEEK to "toDayOfWeek(%s)"
     )
 

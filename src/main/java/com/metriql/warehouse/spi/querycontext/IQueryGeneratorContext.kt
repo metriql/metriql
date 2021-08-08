@@ -1,8 +1,8 @@
 package com.metriql.warehouse.spi.querycontext
 
-import com.metriql.report.ReportExecutor
 import com.metriql.report.ReportType
 import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
@@ -30,6 +30,7 @@ abstract class IQueryGeneratorContext {
     abstract val datasource: DataSource
     abstract val reportExecutor: ReportExecutor?
     abstract val userAttributeFetcher: UserAttributeFetcher?
+    abstract val dependencyFetcher: DependencyFetcher?
     abstract val modelService: IModelService
     abstract val renderer: JinjaRendererService
     abstract val columns: Set<Pair<ModelName, String>>
@@ -40,6 +41,7 @@ abstract class IQueryGeneratorContext {
     abstract val comments: MutableList<String>
     val warehouseBridge: WarehouseMetriqlBridge get() = datasource.warehouse.bridge
 
+    abstract fun getDependencies(modelName: ModelName): Recipe.Dependencies
     abstract fun getMappingDimensions(modelName: ModelName): Model.MappingDimensions
     abstract fun getModelDimension(dimensionName: DimensionName, modelName: ModelName): ModelDimension
     abstract fun getModelMeasure(measureName: MeasureName, modelName: ModelName): ModelMeasure
@@ -64,13 +66,15 @@ abstract class IQueryGeneratorContext {
         dateRange: DateRange? = null
     ): String
 
-    // Target model name only for join relations
     abstract fun renderSQL(
         sqlRenderable: SQLRenderable,
         modelName: ModelName?,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,
+        // Target model name only for join relations
         targetModelName: ModelName? = null,
+        // Instead of actual values, render alias
+        renderAlias : Boolean = false,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
     ): String
 

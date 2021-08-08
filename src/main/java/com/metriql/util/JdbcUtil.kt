@@ -9,6 +9,7 @@ import org.postgresql.util.PGobject
 import java.io.IOException
 import java.sql.ResultSet
 import java.sql.SQLException
+import java.sql.SQLFeatureNotSupportedException
 import java.sql.Types
 import java.time.LocalTime
 import java.time.ZoneId
@@ -140,13 +141,15 @@ object JdbcUtil {
                             FieldType.UNKNOWN
                         }
 
-                        val arrayRs = array.resultSet
-                        val list = mutableListOf<Any?>()
-                        while (arrayRs.next()) {
-                            list.add(getJavaObject(type, arrayRs, 2, zone, typeMapper))
+                        try {
+                            val arrayRs = array.resultSet
+                            val list = mutableListOf<Any?>()
+                            while (arrayRs.next()) {
+                                list.add(getJavaObject(type, arrayRs, 2, zone, typeMapper))
+                            }
+                        } catch (e: SQLFeatureNotSupportedException) {
+                            array.array
                         }
-
-                        list
                     }
                 }
                 type.isMap -> {

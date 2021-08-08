@@ -1,9 +1,9 @@
 package com.metriql.warehouse.spi.querycontext
 
 import com.google.common.base.CaseFormat
-import com.metriql.report.ReportExecutor
 import com.metriql.report.ReportType
 import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
@@ -27,11 +27,17 @@ import com.metriql.util.TextUtil
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
+import com.metriql.warehouse.spi.services.RecipeQuery
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 import java.util.LinkedHashMap
 import java.util.concurrent.ConcurrentHashMap
 
 val TOTAL_ROWS_MEASURE = Model.Measure("\$total_rows", null, null, null, COLUMN, Column(COUNT, null))
+typealias ReportExecutor = (ProjectAuth, ReportType, RecipeQuery) -> String
+
+interface DependencyFetcher {
+    fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies
+}
 
 class QueryGeneratorContext(
     override val auth: ProjectAuth,
@@ -40,6 +46,7 @@ class QueryGeneratorContext(
     override val renderer: JinjaRendererService,
     override val reportExecutor: ReportExecutor?,
     override val userAttributeFetcher: UserAttributeFetcher?,
+    override val dependencyFetcher: DependencyFetcher?,
     override val comments: MutableList<String> = mutableListOf(),
     val variables: Map<String, Any>? = null,
 ) : IQueryGeneratorContext() {
@@ -50,6 +57,14 @@ class QueryGeneratorContext(
     override val relations = ConcurrentHashMap<Pair<ModelName, RelationName>, ModelRelation>()
 
     val models = ConcurrentHashMap<String, Model>()
+
+    override fun getDependencies(modelName: ModelName): Recipe.Dependencies {
+        if (dependencyFetcher == null) {
+            throw UnsupportedOperationException()
+        }
+
+        return dependencyFetcher.fetch(this, modelName)
+    }
 
     override fun addModel(model: Model) {
         models[model.name] = model
@@ -180,6 +195,7 @@ class QueryGeneratorContext(
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,
         targetModelName: ModelName?,
+        renderAlias: Boolean,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)?,
     ): String {
         return renderer.render(
@@ -190,6 +206,7 @@ class QueryGeneratorContext(
             this,
             inQueryDimensionNames,
             dateRange,
+            renderAlias = renderAlias,
             hook = hook
         )
     }

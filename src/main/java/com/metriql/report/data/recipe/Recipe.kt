@@ -26,6 +26,7 @@ import com.metriql.service.model.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
+import com.metriql.util.UppercaseEnum
 import com.metriql.util.serializableName
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -49,7 +50,7 @@ data class Recipe(
 ) {
     @JsonIgnoreProperties
     fun getDependenciesWithFallback(): Dependencies {
-        return Dependencies()
+        return dependencies ?: Dependencies()
     }
 
     @JsonIgnoreProperties(value = ["dbtDependency"])
@@ -215,7 +216,8 @@ data class Recipe(
                         dimension.value.sql,
                         dimension.reportOptions,
                         null,
-                        dimension.primary
+                        dimension.primary,
+                        dimension.value.window
                     )
                     is Model.Dimension.DimensionValue.Column -> Metric.RecipeDimension(
                         dimension.label,
@@ -228,7 +230,8 @@ data class Recipe(
                         null,
                         dimension.reportOptions,
                         null,
-                        dimension.primary
+                        dimension.primary,
+                        null
                     )
                 }
             }
@@ -247,7 +250,7 @@ data class Recipe(
                             null,
                             null,
                             null,
-                            if (relation.hidden === true) true else null
+                            if (relation.hidden === true) true else null,
                         )
                         is Model.Relation.RelationValue.ColumnValue -> RecipeRelation(
                             relation.label,
@@ -283,7 +286,6 @@ data class Recipe(
                 }.toMap()
 
                 val recipeMeasures = model.measures.map { measure ->
-                    // We only support simplefilter's in recipe.
                     val filters = if (measure.filters != null) {
                         measure.filters
                             .map { filter ->
@@ -307,7 +309,7 @@ data class Recipe(
                                         filter.value.filters.map {
                                             val metricValue = filter.value.metricValue ?: it.metricValue ?: throw java.lang.IllegalArgumentException()
                                             when (metricValue) {
-                                                is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters cant filter measures")
+                                                is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters can't filter measures")
                                                 is ReportMetric.ReportDimension -> {
                                                     filter.value.filters
                                                         .map {
@@ -364,7 +366,8 @@ data class Recipe(
                                 null,
                                 measure.value.aggregation,
                                 measure.fieldType,
-                                if (measure.hidden === true) true else null
+                                if (measure.hidden === true) true else null,
+                                measure.value.window
                             )
                         }
                         is Model.Measure.MeasureValue.Column -> {
@@ -379,7 +382,8 @@ data class Recipe(
                                 null,
                                 measure.value.aggregation,
                                 measure.fieldType,
-                                if (measure.hidden === true) true else null
+                                if (measure.hidden === true) true else null,
+                                null
                             )
                         }
                         is Model.Measure.MeasureValue.Dimension -> {
@@ -394,7 +398,8 @@ data class Recipe(
                                 measure.value.dimension,
                                 measure.value.aggregation,
                                 measure.fieldType,
-                                if (measure.hidden === true) true else null
+                                if (measure.hidden === true) true else null,
+                                null
                             )
                         }
                     }
@@ -477,6 +482,7 @@ data class Recipe(
                 val reportOptions: ObjectNode? = null,
                 val hidden: Boolean? = null,
                 val primary: Boolean? = null,
+                val window: Boolean? = null,
                 val name: String? = null,
             ) : Metric() {
 
@@ -495,7 +501,7 @@ data class Recipe(
 
                 fun toDimension(dimensionName: String, bridge: WarehouseMetriqlBridge): Model.Dimension {
                     val (valType, value) = if (sql != null) {
-                        Pair(Model.Dimension.Type.SQL, Model.Dimension.DimensionValue.Sql(sql))
+                        Pair(Model.Dimension.Type.SQL, Model.Dimension.DimensionValue.Sql(sql, window))
                     } else {
                         Pair(Model.Dimension.Type.COLUMN, Model.Dimension.DimensionValue.Column(column!!))
                     }
@@ -542,6 +548,7 @@ data class Recipe(
                 val aggregation: Model.Measure.AggregationType? = null,
                 val type: FieldType? = FieldType.DOUBLE,
                 val hidden: Boolean? = null,
+                val window: Boolean? = null,
                 val name: String? = null,
             ) : Metric() {
 
@@ -562,7 +569,7 @@ data class Recipe(
                 fun toMeasure(measureName: String, modelName: String): Model.Measure {
                     val (valType, value) = when {
                         sql != null -> {
-                            Pair(Model.Measure.Type.SQL, Model.Measure.MeasureValue.Sql(sql, aggregation))
+                            Pair(Model.Measure.Type.SQL, Model.Measure.MeasureValue.Sql(sql, aggregation, window))
                         }
                         dimension != null -> {
                             val agg = aggregation ?: throw MetriqlException("Aggregation is required for $modelName.$measureName", BAD_REQUEST)
@@ -690,7 +697,8 @@ data class Recipe(
             val sourceColumn: String? = null,
             val targetColumn: String? = null,
             val hidden: Boolean? = null,
-            val to: String? = null
+            val to: String? = null,
+            val name : String? = null
         ) {
             fun getModel(packageName: String, relationName: String): ModelName {
                 val toModel = to?.let { DbtJinjaRenderer.renderer.renderReference("{{$it}}", packageName) }
@@ -749,17 +757,21 @@ data class Recipe(
 
             val measureModel = if (relation != null) {
                 context.getModel(currentModel.relations.find { it.name == relation }?.modelName!!)
-            } else {
-                currentModel
-            }
+            } else currentModel
+            val measure = measureModel.measures.find { it.name == name }
+                ?: throw MetriqlException("Measure $this not found", BAD_REQUEST)
 
-            return measureModel.measures.find { it.name == name }?.fieldType ?: FieldType.DOUBLE
+            return measure?.fieldType ?: FieldType.DOUBLE
         }
 
         fun isMappingDimension() = name.startsWith(":")
 
         fun toMeasure(modelName: ModelName): ReportMetric.ReportMeasure {
             return ReportMetric.ReportMeasure(modelName, name, relation)
+        }
+
+        fun toDimension(modelName: ModelName): ReportMetric.ReportDimension {
+            return ReportMetric.ReportDimension(name, modelName, relation, null)
         }
 
         companion object {
@@ -794,12 +806,13 @@ data class Recipe(
         @JsonIgnore
         fun getType(modelFetcher: (String) -> Model, modelName: ModelName): FieldType {
             val model = modelFetcher.invoke(modelName)
-            return if (name.relation != null) {
+            val dimension = if (name.relation != null) {
                 val targetModelName = model.relations.find { relation -> relation.name == name.relation }?.modelName
-                modelFetcher.invoke(targetModelName!!).dimensions.find { dimension -> dimension.name == name.name }?.fieldType
+                modelFetcher.invoke(targetModelName!!).dimensions.find { dimension -> dimension.name == name.name }
             } else {
-                model.dimensions.find { dimension -> dimension.name == name.name }?.fieldType
-            } ?: FieldType.UNKNOWN
+                model.dimensions.find { dimension -> dimension.name == name.name }
+            } ?: throw MetriqlException("Dimension ${this.toJsonValue()} not found", BAD_REQUEST)
+            return dimension.fieldType ?: FieldType.UNKNOWN
         }
 
         @JsonIgnore
@@ -827,6 +840,7 @@ data class Recipe(
         }
     }
 
+    @UppercaseEnum
     enum class OrderType {
         ASC, DESC
     }

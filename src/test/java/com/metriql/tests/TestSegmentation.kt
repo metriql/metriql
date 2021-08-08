@@ -114,6 +114,7 @@ abstract class TestSegmentation {
             rendererService,
             reportExecutor = null,
             userAttributeFetcher = null,
+            dependencyFetcher = null
         )
     }
 

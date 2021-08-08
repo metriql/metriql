@@ -9,6 +9,7 @@ import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.report.SqlQueryTaskGenerator
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.funnel.FunnelService
 import com.metriql.report.retention.RetentionService
 import com.metriql.report.segmentation.SegmentationService
@@ -26,7 +27,8 @@ import com.metriql.service.jdbc.QueryService
 import com.metriql.service.jdbc.StatementService
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IModelService
-import com.metriql.service.model.RecipeModelService
+import com.metriql.service.model.ModelName
+import com.metriql.service.model.UpdatableModelService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
 import com.metriql.service.task.TaskQueueService
@@ -34,6 +36,8 @@ import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.logging.LogService
 import com.metriql.warehouse.spi.DataSource
+import com.metriql.warehouse.spi.querycontext.DependencyFetcher
+import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.epoll.Epoll
@@ -49,7 +53,7 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
-    private fun getServices(modelService: RecipeModelService, dataSource: DataSource, enableJdbc: Boolean): Pair<Set<HttpService>, () -> Unit> {
+    private fun getServices(modelService: UpdatableModelService, dataSource: DataSource, enableJdbc: Boolean): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
         val postRun = mutableListOf<() -> Unit>()
 
@@ -71,7 +75,7 @@ object HttpServer {
         return services to { postRun.forEach { it.invoke() } }
     }
 
-    private fun getQueryService(modelService: RecipeModelService, dataSource: DataSource): QueryHttpService {
+    private fun getQueryService(modelService: UpdatableModelService, dataSource: DataSource): QueryHttpService {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
@@ -79,7 +83,11 @@ object HttpServer {
         val cacheService = InMemoryCacheService(cacheConfig)
         val services = getReportServices(modelService)
 
-        val reportService = ReportService(modelService, JinjaRendererService(), SqlQueryTaskGenerator(cacheService), services, this::getAttributes)
+        val reportService = ReportService(modelService, JinjaRendererService(), SqlQueryTaskGenerator(cacheService), services, this::getAttributes, object : DependencyFetcher {
+            override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
+                return Recipe.Dependencies()
+            }
+        })
         return QueryHttpService(modelService, { dataSource }, reportService, taskQueueService, services)
     }
 
@@ -125,7 +133,7 @@ object HttpServer {
         numberOfThreads: Int,
         isDebug: Boolean,
         origin: String?,
-        modelService: RecipeModelService,
+        modelService: UpdatableModelService,
         dataSource: DataSource,
         enableJdbc: Boolean,
         timezone: ZoneId?

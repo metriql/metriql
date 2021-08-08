@@ -354,7 +354,7 @@ class TestQueryRewriter {
                 )
             )
             return SegmentationQueryReWriter(
-                QueryGeneratorContext(auth, datasource, modelService, renderer, reportExecutor = null, userAttributeFetcher = null),
+                QueryGeneratorContext(auth, datasource, modelService, renderer, reportExecutor = null, userAttributeFetcher = null, dependencyFetcher = null),
             )
         }
 }

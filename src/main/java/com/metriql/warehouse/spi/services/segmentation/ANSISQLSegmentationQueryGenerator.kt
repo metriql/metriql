@@ -10,8 +10,9 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
 
     open fun getMap(context: IQueryGeneratorContext, queryDSL: Segmentation): Map<String, Any?> {
         return mapOf(
-            "projections" to queryDSL.projections,
+            "projections" to queryDSL.dimensions + queryDSL.measures,
             "tableReference" to queryDSL.tableReference,
+            "limit" to queryDSL.limit,
             "joins" to queryDSL.joins,
             "whereFilters" to queryDSL.whereFilters,
             "groups" to queryDSL.groupIdx,
@@ -23,12 +24,13 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
             * otherwise start with WITH keyword
             * {% if has_view_models %}, {% else %}WITH {% endif %} first_action AS (
             * */
-            "has_view_models" to context.viewModels.isNotEmpty()
+            "has_view_models" to context.viewModels.isNotEmpty(),
+            "has_window" to (queryDSL.dimensions.any { it.window } || queryDSL.measures.any { it.window })
         )
     }
 
     override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Segmentation, options: SegmentationReportOptions): String {
-        return jinja.render(standard, getMap(context, queryDSL))
+        return jinja.render(standard, getMap(context, queryDSL)).trimIndent()
     }
 
     companion object {

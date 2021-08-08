@@ -21,6 +21,15 @@ Changelog for metriql metriql.
 [0da41a0a1f31cff](https://github.com/metriql/metriql/commit/0da41a0a1f31cff) Burak Emre Kabakcı *2021-06-20 20:40:11*
 
 
+### GitHub [#19](https://github.com/metriql/metriql/pull/19) Implement BigQuery Oauth credentials  
+
+**Merge pull request #19 from metriql/implement-oauth-bigquery**
+
+ * Implement BigQuery Oauth credentials 
+
+[3621cb4058ff7b9](https://github.com/metriql/metriql/commit/3621cb4058ff7b9) Burak Emre Kabakcı *2021-08-04 00:50:18*
+
+
 ### Jira java-11   
 
 **Remove alpine from dockerfile**
@@ -31,6 +40,141 @@ Changelog for metriql metriql.
 
 
 ### No issue
+
+**Fix Trino Connection**
+
+
+[c7d1750d1db11da](https://github.com/metriql/metriql/commit/c7d1750d1db11da) buremba *2021-08-07 04:49:52*
+
+**set gcloud directory in docker-compose**
+
+
+[3db139bd8eaba86](https://github.com/metriql/metriql/commit/3db139bd8eaba86) buremba *2021-08-04 03:17:26*
+
+**Create docker compose file**
+
+
+[618723c669bd40e](https://github.com/metriql/metriql/commit/618723c669bd40e) buremba *2021-08-04 01:29:09*
+
+**Change command name to Serve**
+
+
+[e867b3c7315e2f7](https://github.com/metriql/metriql/commit/e867b3c7315e2f7) buremba *2021-08-04 01:28:20*
+
+**Rename `run` command to `serve`**
+
+
+[aba63b307b5eb25](https://github.com/metriql/metriql/commit/aba63b307b5eb25) buremba *2021-08-04 01:28:05*
+
+**Add configs**
+
+
+[ae7b881472abd20](https://github.com/metriql/metriql/commit/ae7b881472abd20) buremba *2021-08-04 00:49:30*
+
+**Update OrFilters.kt**
+
+
+[ad56be6466f761d](https://github.com/metriql/metriql/commit/ad56be6466f761d) buremba *2021-08-03 23:56:22*
+
+**Add not_in filter**
+
+
+[1bc1024edd009bf](https://github.com/metriql/metriql/commit/1bc1024edd009bf) buremba *2021-08-03 23:07:52*
+
+**Fix recursive template bug in query**
+
+
+[b128d5be70b83e0](https://github.com/metriql/metriql/commit/b128d5be70b83e0) buremba *2021-08-03 00:33:47*
+
+**Support dbt adapter names**
+
+
+[2d6e3011591222d](https://github.com/metriql/metriql/commit/2d6e3011591222d) buremba *2021-08-02 08:13:14*
+
+**Add ticker info endpoint**
+
+
+[289bdafc97d0063](https://github.com/metriql/metriql/commit/289bdafc97d0063) buremba *2021-08-01 20:59:16*
+
+**Fix measure context bug**
+
+
+[38c93255ae93c3c](https://github.com/metriql/metriql/commit/38c93255ae93c3c) buremba *2021-08-01 20:59:07*
+
+**Fix bug in relation discovery mechanism**
+
+
+[4f7ca9930b492b9](https://github.com/metriql/metriql/commit/4f7ca9930b492b9) buremba *2021-08-01 20:58:58*
+
+**Update HttpUtil.kt**
+
+
+[7a392fc5f4fabe0](https://github.com/metriql/metriql/commit/7a392fc5f4fabe0) buremba *2021-07-31 04:37:11*
+
+**Add appropriate error messages in UI**
+
+
+[3752b9643984674](https://github.com/metriql/metriql/commit/3752b9643984674) buremba *2021-07-31 03:44:58*
+
+**fix ui template**
+
+
+[a91e3ac0ba50479](https://github.com/metriql/metriql/commit/a91e3ac0ba50479) buremba *2021-07-31 01:49:59*
+
+**Update Commands.kt**
+
+
+[87fed128b18d0da](https://github.com/metriql/metriql/commit/87fed128b18d0da) buremba *2021-07-30 22:28:57*
+
+**Update Commands.kt**
+
+
+[ff79d4b434558ed](https://github.com/metriql/metriql/commit/ff79d4b434558ed) buremba *2021-07-30 22:10:17*
+
+**Update ClickhouseDataSource.kt**
+
+
+[6860e3e4e8cb357](https://github.com/metriql/metriql/commit/6860e3e4e8cb357) buremba *2021-07-30 05:41:14*
+
+**Support Jinja in profiles.yml**
+
+
+[dccc7de8b02fa98](https://github.com/metriql/metriql/commit/dccc7de8b02fa98) buremba *2021-07-30 04:50:29*
+
+**Update release.yml**
+
+
+[a331fad86c6b665](https://github.com/metriql/metriql/commit/a331fad86c6b665) buremba *2021-07-30 04:02:53*
+
+**Update release.yml**
+
+
+[e9bd704c8b7bdc3](https://github.com/metriql/metriql/commit/e9bd704c8b7bdc3) buremba *2021-07-30 04:01:50*
+
+**Update release.yml**
+
+
+[3dd4ec6df7102a8](https://github.com/metriql/metriql/commit/3dd4ec6df7102a8) Burak Emre Kabakcı *2021-07-30 04:01:27*
+
+**Update release.yml**
+
+
+[580cf62b0ffb339](https://github.com/metriql/metriql/commit/580cf62b0ffb339) buremba *2021-07-30 03:59:05*
+
+**Automatically discover columns if the value is not set**
+
+
+[d984313c1d9b971](https://github.com/metriql/metriql/commit/d984313c1d9b971) buremba *2021-07-30 02:21:55*
+
+**Fix Clickhouse connection leak**
+
+
+[0b9b6cf2f4a2f77](https://github.com/metriql/metriql/commit/0b9b6cf2f4a2f77) buremba *2021-07-28 23:28:39*
+
+**Implement Clickhouse**
+
+
+[28461cb96181e3c](https://github.com/metriql/metriql/commit/28461cb96181e3c) buremba *2021-07-28 04:31:57*
 
 **Use actual metriql urls in dashboard**
 

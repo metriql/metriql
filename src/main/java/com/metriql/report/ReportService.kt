@@ -9,11 +9,11 @@ import com.metriql.service.auth.UserAttributeFetcher
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IModelService
 import com.metriql.service.task.Task
-import com.metriql.warehouse.WarehouseQueryTask
+import com.metriql.warehouse.WarehouseQueryTask.Companion.DEFAULT_LIMIT
 import com.metriql.warehouse.spi.DataSource
+import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
-import com.metriql.warehouse.spi.services.RecipeQuery
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 
 open class ReportService(
@@ -21,7 +21,8 @@ open class ReportService(
     protected val rendererService: JinjaRendererService,
     protected val queryTaskGenerator: SqlQueryTaskGenerator,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>,
-    protected val userAttributeFetcher: UserAttributeFetcher,
+    private val userAttributeFetcher: UserAttributeFetcher,
+    private val dependencyFetcher: DependencyFetcher,
 ) {
     fun getServiceForReportType(reportType: ReportType) = services.getValue(reportType) as IAdHocService<in ServiceReportOptions>
 
@@ -31,17 +32,16 @@ open class ReportService(
             dataSource,
             modelService,
             rendererService,
-            reportExecutor = object : ReportExecutor {
-                override fun getQuery(auth: ProjectAuth, type: ReportType, options: RecipeQuery): String {
+            reportExecutor =  { auth, type, options ->
                     val context = createContext(auth, dataSource)
-                    return getServiceForReportType(type).renderQuery(
+                    getServiceForReportType(type).renderQuery(
                         auth,
                         context,
                         options.toReportOptions(context),
                         listOf(),
                     ).query
-                }
-            },
+                },
+            dependencyFetcher = dependencyFetcher,
             userAttributeFetcher = { userAttributeFetcher.invoke(it) }
         )
     }
@@ -57,27 +57,27 @@ open class ReportService(
         variables: Map<String, Any>? = null,
         context: IQueryGeneratorContext = createContext(auth, dataSource)
     ): QueryTask {
-        val (query, postProcessors, sqlQueryOptions) = try {
-            getServiceForReportType(reportType).renderQuery(
+        try {
+            val (query, postProcessors, sqlQueryOptions) =  getServiceForReportType(reportType).renderQuery(
                 auth,
                 context,
                 options,
                 reportFilters,
             )
-        } catch (e: Exception) {
+
+            val queryOptions = sqlQueryOptions ?: SqlReportOptions.QueryOptions(options.getQueryLimit() ?: DEFAULT_LIMIT, null, null, useCache)
+            return queryTaskGenerator.createTask(
+                auth,
+                context,
+                dataSource,
+                query,
+                queryOptions,
+                isBackgroundTask,
+                info = MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.AdhocReport(reportType, options),
+                postProcessors = postProcessors
+            )
+        } catch (e: Throwable) {
             return Task.completedTask(auth, QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED, null))
         }
-
-        val queryOptions = sqlQueryOptions ?: SqlReportOptions.QueryOptions(options.getQueryLimit() ?: WarehouseQueryTask.DEFAULT_LIMIT, null, null, useCache)
-        return queryTaskGenerator.createTask(
-            auth,
-            context,
-            dataSource,
-            query,
-            queryOptions,
-            isBackgroundTask,
-            info = MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext.AdhocReport(reportType, options),
-            postProcessors = postProcessors
-        )
     }
 }

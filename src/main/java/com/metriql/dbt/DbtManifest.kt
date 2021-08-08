@@ -63,6 +63,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                     val model: String,
                     val field: String,
                     val column_name: String,
+                    val name : String?,
                     @JsonAlias("rakam")
                     val metriql: Recipe.RecipeModel.RecipeRelation?,
                 ) : DbtModelColumnTest() {
@@ -79,7 +80,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
 
                     @JsonIgnore
                     fun getReferenceLabel(packageName: String): String {
-                        return DbtJinjaRenderer.renderer.getReferenceLabel("{{$to}}", packageName)
+                        return name ?: DbtJinjaRenderer.renderer.getReferenceLabel("{{$to}}", packageName)
                     }
 
                     fun toRelation(packageName: String): Recipe.RecipeModel.RecipeRelation? {
@@ -116,7 +117,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                         if (kwargs.getSourceModelName(packageName) == model.name) {
                             val toRelation = kwargs.toRelation(packageName)
                             if (toRelation != null) {
-                                val reference = kwargs.getReferenceLabel(packageName)
+                                val reference = toRelation.name ?: kwargs.getReferenceLabel(packageName)
                                 model.copy(relations = (model.relations ?: mapOf()) + mapOf(reference to toRelation))
                             } else {
                                 model
@@ -282,7 +283,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             return columnMeasures to columnDimensions
         }
 
-        fun getModelName(type: String, projectName: String, name: String): String {
+        fun getModelName(type: String, name: String, projectName: String): String {
             return "${type}_${projectName}_$name"
         }
 

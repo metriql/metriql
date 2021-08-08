@@ -224,7 +224,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             return if (reference != null) {
                 rewriteValueForReference(reference, node.value)
             } else {
-                super.visitIdentifier(node, context)
+                throw MetriqlException("Not found $node", HttpResponseStatus.BAD_REQUEST)
             }
         }
 

@@ -38,7 +38,8 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
                     Pair(type, filter.dimension.toDimension(modelName, type))
                 }
                 filter.measure != null -> {
-                    Pair(filter.measure.getType(context, modelName), filter.measure.toMeasure(modelName))
+                    val type = filter.measure.getType(context, modelName)
+                    Pair(type, filter.measure.toMeasure(modelName))
                 }
                 filter.mapping != null -> {
                     val type = JsonHelper.convert(filter.mapping, Model.MappingDimensions.CommonMappings::class.java)

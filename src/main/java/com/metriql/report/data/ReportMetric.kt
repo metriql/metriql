@@ -55,7 +55,7 @@ sealed class ReportMetric {
         val name: DimensionName,
         // for dashboard filters compatibility
         @JsonAlias("model")
-        val modelName: ModelName?,
+        val modelName: ModelName,
         val relationName: RelationName?,
         val postOperation: PostOperation?,
         val pivot: Boolean? = null

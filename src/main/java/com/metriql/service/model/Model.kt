@@ -201,7 +201,7 @@ data class Model(
         @JSONBSerializable
         sealed class DimensionValue {
             data class Column(val column: String) : DimensionValue()
-            data class Sql(val sql: String) : DimensionValue()
+            data class Sql(val sql: String, val window: Boolean? = null) : DimensionValue()
         }
     }
 
@@ -244,7 +244,7 @@ data class Model(
         sealed class MeasureValue(@JsonIgnore val agg: AggregationType?) {
             data class Column(val aggregation: AggregationType, val column: String?) : MeasureValue(aggregation)
             data class Dimension(val aggregation: AggregationType, val dimension: String?) : MeasureValue(aggregation)
-            data class Sql(val sql: String, val aggregation: AggregationType?) : MeasureValue(aggregation)
+            data class Sql(val sql: String, val aggregation: AggregationType?, val window: Boolean? = null) : MeasureValue(aggregation)
         }
 
         @UppercaseEnum

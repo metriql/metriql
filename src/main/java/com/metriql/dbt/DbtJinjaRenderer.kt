@@ -141,12 +141,8 @@ class DbtJinjaRenderer {
 
             return when {
                 context[IS_LABEL] == true -> name
-                context[IS_MATCH] == true -> {
-                    DbtManifest.getModelNameRegex("source", sourceName, packageName)
-                }
-                else -> {
-                    DbtManifest.getModelName("source", packageName!!, sourceName)
-                }
+                context[IS_MATCH] == true -> DbtManifest.getModelNameRegex("source", sourceName, packageName)
+                else -> DbtManifest.getModelName("source", sourceName, packageName!!)
             }
         }
 
@@ -192,7 +188,7 @@ class DbtJinjaRenderer {
                     DbtManifest.getModelNameRegex("model", model, packageName)
                 }
                 else -> {
-                    DbtManifest.getModelName("model", packageName!!, model)
+                    DbtManifest.getModelName("model", model, packageName!!)
                 }
             }
         }

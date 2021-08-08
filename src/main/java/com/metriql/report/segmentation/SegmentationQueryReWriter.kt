@@ -19,7 +19,6 @@ import com.metriql.warehouse.spi.DbtSettings.Companion.generateSchemaForModel
 import com.metriql.warehouse.spi.function.IPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
-import java.lang.IllegalArgumentException
 
 typealias ErrorMessage = String
 
@@ -223,8 +222,6 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             )
         }
 
-        val recipeDependencies = context.modelService.getRecipeDependencies(context.auth.projectId, sourceModel.recipeId!!)
-
         val relations = sourceModel.relations.filter { relation ->
             when (relation.value) {
                 is Model.Relation.RelationValue.DimensionValue -> {
@@ -234,8 +231,9 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             }
         }
 
-        val schema = recipeDependencies.dbtDependency().aggregateSchema()
-        val target = Table(context.datasource.config.warehouseDatabase(), generateSchemaForModel(context.datasource.config.warehouseSchema(), schema), modelName)
+        val dependency = context.getDependencies(sourceModel.name)
+        val schema = generateSchemaForModel(context.datasource.config.warehouseSchema(), dependency.dbtDependency().aggregatesSchema)
+        val target = Table(context.datasource.config.warehouseDatabase(), schema, modelName)
         return Model(
             modelName,
             false,

@@ -2,24 +2,17 @@ package com.metriql.service.jinja
 
 import com.hubspot.jinjava.Jinjava
 import com.hubspot.jinjava.RecursiveJinjava
-import com.hubspot.jinjava.interpret.JinjavaInterpreter
 import com.hubspot.jinjava.lib.fn.ELFunctionDefinition
-import com.hubspot.jinjava.lib.tag.Tag
-import com.hubspot.jinjava.tree.TagNode
-import com.hubspot.jinjava.util.LengthLimitingStringBuilder
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
-import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import javax.inject.Inject
 
-/**
- * SqlRenderable
- * */
+
 class JinjaRendererService @Inject constructor() {
     val jinja: Jinjava = RecursiveJinjava()
 
@@ -29,7 +22,7 @@ class JinjaRendererService @Inject constructor() {
             jinja.globalContext.registerFunction(ELFunctionDefinition("", it.name, it))
         }
 
-        jinja.globalContext.registerTag(RealtimeTag())
+//        jinja.globalContext.registerTag(RealtimeTag())
     }
 
     fun render(
@@ -42,6 +35,7 @@ class JinjaRendererService @Inject constructor() {
         dateRange: DateRange? = null,
         targetModelName: ModelName? = null,
         variables: Map<String, Any> = mapOf(),
+        renderAlias: Boolean = false,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
     ): String {
         /*
@@ -66,10 +60,10 @@ class JinjaRendererService @Inject constructor() {
             "TABLE" to if (modelName != null) dataSource.warehouse.bridge.quoteIdentifier(modelName) else null,
             "TARGET" to if (targetModelName != null) dataSource.warehouse.bridge.quoteIdentifier(targetModelName) else null,
             "aq" to context.warehouseBridge.quote,
-            "model" to MetriqlJinjaContext.ModelContext(context, auth.timezone),
-            "relation" to MetriqlJinjaContext.RelationContext(modelName, context, auth.timezone),
-            "dimension" to MetriqlJinjaContext.DimensionContext(modelName, context, auth.timezone),
-            "measure" to MetriqlJinjaContext.MeasureContext(modelName, context, auth.timezone),
+            "model" to MetriqlJinjaContext.ModelContext(context, renderAlias),
+            "relation" to MetriqlJinjaContext.RelationContext(modelName, context, renderAlias),
+            "dimension" to MetriqlJinjaContext.DimensionContext(modelName, context, renderAlias),
+            "measure" to MetriqlJinjaContext.MeasureContext(modelName, context, renderAlias),
             "user" to MetriqlJinjaContext.UserAttributeContext(context),
             "variables" to variables,
             "_auth" to auth,
@@ -92,21 +86,21 @@ class JinjaRendererService @Inject constructor() {
         }
     }
 
-    class RealtimeTag : Tag {
-        var active = false
-
-        override fun getName(): String {
-            return "realtime"
-        }
-
-        override fun interpret(node: TagNode, interpreter: JinjavaInterpreter): String {
-            return if (interpreter.context["in_query"] != null) {
-                val sb = LengthLimitingStringBuilder(interpreter.config.maxOutputSize)
-                node.children.forEach { sb.append(it.render(interpreter)) }
-                sb.toString()
-            } else {
-                ""
-            }
-        }
-    }
+//    class RealtimeTag : Tag {
+//        var active = false
+//
+//        override fun getName(): String {
+//            return "realtime"
+//        }
+//
+//        override fun interpret(node: TagNode, interpreter: JinjavaInterpreter): String {
+//            return if (interpreter.context["in_query"] != null) {
+//                val sb = LengthLimitingStringBuilder(interpreter.config.maxOutputSize)
+//                node.children.forEach { sb.append(it.render(interpreter)) }
+//                sb.toString()
+//            } else {
+//                ""
+//            }
+//        }
+//    }
 }

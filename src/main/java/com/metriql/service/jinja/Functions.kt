@@ -13,7 +13,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 
 object Functions {
     @JvmStatic
-    fun report(vararg arguments: Any?): String? {
+    fun sql(vararg arguments: Any?): String? {
         val ctx = JinjavaInterpreter.getCurrent().context
         val context = ctx["_context"] as IQueryGeneratorContext
         val auth = ctx["_auth"] as ProjectAuth
@@ -29,12 +29,12 @@ object Functions {
         val pair = JsonHelper.getMapper().convertValue(mapOf("type" to type, "options" to options), ReportPair::class.java)
 
         val executor = context.reportExecutor ?: throw MetriqlException("Report executor is not available in this context", HttpResponseStatus.BAD_REQUEST)
-        return executor.getQuery(auth, pair.type, pair.options)
+        return executor.invoke(auth, pair.type, pair.options)
     }
 
     data class ReportPair(
         val type: ReportType,
-        @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class, name = "recipe")
+        @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class, isNamed=true, name = "recipe")
         val options: RecipeQuery
     )
 }

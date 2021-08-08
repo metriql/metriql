@@ -20,14 +20,19 @@ import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
-import com.metriql.service.model.RecipeModelService
+import com.metriql.service.model.ModelName
+import com.metriql.service.model.UpdatableModelService
 import com.metriql.util.JsonHelper
+import com.metriql.util.RecipeUtil.prepareModelsForInstallation
 import com.metriql.util.TextUtil
 import com.metriql.util.UnirestHelper
 import com.metriql.util.YamlHelper
 import com.metriql.warehouse.WarehouseConfig
 import com.metriql.warehouse.WarehouseLocator
 import com.metriql.warehouse.spi.DataSource
+import com.metriql.warehouse.spi.querycontext.DependencyFetcher
+import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
+import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -176,6 +181,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                     throw manifestEx
                 }
             }
+
             Recipe("local://metriql", "master", null, Recipe.Config(packageName), packageName, models = models)
         }
     }
@@ -198,14 +204,19 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 exitProcess(1)
             }
 
-            val service = DbtModelService(JinjaRendererService(), null)
             val auth = ProjectAuth.singleProject()
             val dataSource = this.getDataSource()
 
             val successfulCounts = AtomicInteger()
 
-            val recipe = parseRecipe(dataSource, manifestFile.toURI().toString())
-                .copy(dependencies = Recipe.Dependencies(DbtDependency(aggregatesDirectory = outputDir)))
+            val dependencies = Recipe.Dependencies(DbtDependency(aggregatesDirectory = outputDir))
+            val recipe = parseRecipe(dataSource, manifestFile.toURI().toString()).copy(dependencies = dependencies)
+            val service = DbtModelService(JinjaRendererService(), null, object : DependencyFetcher {
+                override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
+                    return dependencies
+                }
+            })
+
             val errors = service.addDbtFiles(
                 auth,
                 object : FileHandler {
@@ -285,15 +296,16 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val dataSource = this.getDataSource()
 
-            val modelService =
-                RecipeModelService(
-                    null,
-                    {
-                        val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
-                        this.parseRecipe(dataSource, manifest)
-                    },
-                    -1, dataSource.warehouse.bridge
-                )
+            val modelsFetcher = {
+                val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
+                val recipe = this.parseRecipe(dataSource, manifest)
+//                        val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, null, JinjaRendererService(), null, null, null)
+                recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1) } ?: listOf()
+//                        prepareModelsForInstallation(dataSource, context, models)
+            }
+
+            val modelService = UpdatableModelService(null, modelsFetcher, dataSource.warehouse.bridge)
+
             HttpServer.start(
                 HostAndPort.fromParts(host, port), apiSecret, usernamePass, threads, debug, origin,
                 modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }

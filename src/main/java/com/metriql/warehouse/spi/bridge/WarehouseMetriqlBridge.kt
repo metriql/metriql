@@ -21,7 +21,6 @@ import com.metriql.warehouse.spi.services.ServiceQueryGenerator
 import com.metriql.warehouse.spi.services.ServiceType
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.trino.jdbc.TrinoDriver
-import java.time.ZoneId
 import kotlin.IllegalArgumentException
 import kotlin.jvm.Throws
 
@@ -49,7 +48,7 @@ interface WarehouseMetriqlBridge {
 
     fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: AggregationContext): String
 
-    data class RenderedMetric(val metricValue: String, val join: String?)
+    data class RenderedField(val value: String, val join: String?, val window : Boolean, val alias : String)
 
     /**
      * In cases like rendering jinja context can't generate join expressions. Thus they're optional
@@ -68,9 +67,8 @@ interface WarehouseMetriqlBridge {
         relationName: RelationName?,
         metricPositionType: MetricPositionType,
         queryType: AggregationContext,
-        zoneId: ZoneId?,
         extraFilters: List<ReportFilter>? = null
-    ): RenderedMetric
+    ): RenderedField
 
     /**
      * In cases like rendering jinja context can't generate join expressions. Thus they're optional
@@ -88,7 +86,7 @@ interface WarehouseMetriqlBridge {
         relationName: RelationName?,
         postOperation: ReportMetric.PostOperation?,
         metricPositionType: MetricPositionType
-    ): RenderedMetric
+    ): RenderedField
 
     data class RenderedFilter(val joins: List<String>, val whereFilter: String?, val havingFilter: String?)
 
@@ -108,15 +106,14 @@ interface WarehouseMetriqlBridge {
         filter: ReportFilter,
         contextModelName: ModelName,
         context: IQueryGeneratorContext,
-        zoneId: ZoneId?
     ): RenderedFilter
 
     // Generates a select query for the given dimensionNames
     fun generateDimensionMetaQuery(
+        context: IQueryGeneratorContext,
         modelName: ModelName,
         modelTarget: Model.Target,
-        dimensions: List<Model.Dimension>,
-        context: IQueryGeneratorContext
+        dimensions: List<Model.Dimension>
     ): String
 
     /* Join-Type Join-Model ON (Join-Expression || sourceModelTarget.sourceColumn = targetModelTarget.targetColumn)

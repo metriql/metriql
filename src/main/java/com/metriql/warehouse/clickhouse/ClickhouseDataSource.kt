@@ -1,12 +1,16 @@
 package com.metriql.warehouse.clickhouse
 
+import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.util.JdbcUtil.fromGenericJDBCTypeFieldType
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.WarehouseAuth
+import ru.yandex.clickhouse.domain.ClickHouseDataType
 import java.sql.Statement
+import java.sql.Types
 import java.util.Properties
 
 class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseConfig) : JDBCWarehouse(
@@ -61,6 +65,26 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
             defaultDatabase ?: config.database,
             limit
         )
+    }
+
+    override fun getFieldType(sqlType: Int, dbType: String): FieldType? {
+        return when (sqlType) {
+            Types.ARRAY -> {
+                val arrayType = ClickHouseDataType.resolveDefaultArrayDataType(dbType)
+                when(fromGenericJDBCTypeFieldType(arrayType.jdbcType.vendorTypeNumber)) {
+                    FieldType.STRING -> FieldType.ARRAY_STRING
+                    FieldType.INTEGER -> FieldType.ARRAY_INTEGER
+                    FieldType.DOUBLE -> FieldType.ARRAY_DOUBLE
+                    FieldType.LONG -> FieldType.ARRAY_LONG
+                    FieldType.BOOLEAN -> FieldType.ARRAY_BOOLEAN
+                    FieldType.DATE -> FieldType.ARRAY_DATE
+                    FieldType.TIME -> FieldType.ARRAY_TIME
+                    FieldType.TIMESTAMP -> FieldType.ARRAY_TIMESTAMP
+                    else -> null
+                }
+            }
+            else -> FieldType.UNKNOWN
+        }
     }
 
     override fun setupConnection(auth: WarehouseAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {

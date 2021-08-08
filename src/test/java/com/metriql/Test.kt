@@ -72,6 +72,7 @@ class Test {
             JinjaRendererService(),
             null,
             null,
+            null
         )
         val output = MetriqlSqlFormatter.formatSql(stmt, null!!, context)
         println(output)

@@ -93,7 +93,7 @@ object DbtYamlParser {
                             )
                         } else null
                     }.forEach {
-                        models.add(it.copy(name = getModelName("view", packageName, it.name!!)))
+                        models.add(it.copy(name = getModelName("view", it.name!!, packageName)))
                     }
                 } catch (e: Exception) {
                     val (jsonPath, message) = JsonUtil.convertToUserFriendlyError(e)
