@@ -49,12 +49,11 @@ class QueryGeneratorContext(
     override val dependencyFetcher: DependencyFetcher?,
     override val comments: MutableList<String> = mutableListOf(),
     val variables: Map<String, Any>? = null,
-) : IQueryGeneratorContext() {
+) : IQueryGeneratorContext {
     override val viewModels = LinkedHashMap<ModelName, String>()
-    override val columns = mutableSetOf<Pair<ModelName, String>>()
-    override val dimensions = ConcurrentHashMap<Pair<ModelName, DimensionName>, ModelDimension>()
-    override val measures = ConcurrentHashMap<Pair<ModelName, MeasureName>, ModelMeasure>()
-    override val relations = ConcurrentHashMap<Pair<ModelName, RelationName>, ModelRelation>()
+    override val referencedDimensions = ConcurrentHashMap<Pair<ModelName, DimensionName>, ModelDimension>()
+    override val referencedMeasures = ConcurrentHashMap<Pair<ModelName, MeasureName>, ModelMeasure>()
+    override val referencedRelations = ConcurrentHashMap<Pair<ModelName, RelationName>, ModelRelation>()
 
     val models = ConcurrentHashMap<String, Model>()
 
@@ -117,12 +116,12 @@ class QueryGeneratorContext(
             } else {
                 dimensionName
             }
-            )
+        )
 
         val modelDimension = model.dimensions.find { it.name == dimensionNameNormalized }?.let { ModelDimension(model.name, model.target, it) }
             ?: throw MetriqlException("The dimension `$dimensionName` in model `$modelName` not found", NOT_FOUND)
 
-        dimensions[Pair(modelName, dimensionName)] = modelDimension
+        referencedDimensions[Pair(modelName, dimensionName)] = modelDimension
 
         return modelDimension
     }
@@ -133,7 +132,7 @@ class QueryGeneratorContext(
             ?: if (measureName == TOTAL_ROWS_MEASURE.name) TOTAL_ROWS_MEASURE else null
                 ?: throw MetriqlException("The measure `$measureName` not found in model `${model.name}`", NOT_FOUND)
         val modelMeasure = ModelMeasure(model.name, model.target, measure)
-        measures[Pair(modelName, measureName)] = modelMeasure
+        referencedMeasures[Pair(modelName, measureName)] = modelMeasure
         return modelMeasure
     }
 
@@ -148,7 +147,7 @@ class QueryGeneratorContext(
         )
         val targetModel = getModel(relation.modelName)
         val modelRelation = ModelRelation(sourceModel.target, sourceModel.name, targetModel.target, targetModel.name, relation)
-        relations[Pair(sourceModelName, relationName)] = modelRelation
+        referencedRelations[Pair(sourceModelName, relationName)] = modelRelation
         return modelRelation
     }
 
@@ -159,11 +158,6 @@ class QueryGeneratorContext(
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,
     ): String {
-        // SQL typed models may use in_query, so we need to treat columns as dimensions and add them to jinja context
-        if (modelTarget.type == Model.Target.Type.SQL && columnName != null) {
-            columns.add(Pair(aliasName, columnName))
-        }
-
         val reference = if (columnName != null) {
             datasource.sqlReferenceForTarget(modelTarget, aliasName, columnName)
         } else {
@@ -206,8 +200,10 @@ class QueryGeneratorContext(
             this,
             inQueryDimensionNames,
             dateRange,
-            renderAlias = renderAlias,
-            hook = hook
+            targetModelName = targetModelName,
+            renderAlias = renderAlias
         )
     }
+
+
 }

@@ -461,40 +461,24 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     }
 
     private fun getMeasureStr(context: IQueryGeneratorContext, model: Model, measure: Model.Measure, tableAlias: String, prefix: String?): List<String> {
-        // TODO: make it a flag?
-        val aggregations = if (measure.value.agg == APPROXIMATE_UNIQUE) {
-            listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE)
-        } else listOfNotNull(measure.value.agg)
-
-        return when (val value = measure.value) {
-            is Model.Measure.MeasureValue.Column -> {
-                val columnValues = value.column?.let {
-                    val suffix = "${prefix ?: ""}${value.column}"
-                    listOf(suffix, "$tableAlias.$suffix")
-                } ?: listOf("")
-
-                // we support Presto warehouse as the Sql dialect so we can only support Presto aggregations
-                columnValues.flatMap {
-                    aggregations.map { aggregation ->
-                        PrestoWarehouse.bridge.performAggregation(it, aggregation, ADHOC)
-                    }
-                }
+        val aggregations = when {
+            measure.value.agg == APPROXIMATE_UNIQUE -> {
+                listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE, null)
             }
-            is Model.Measure.MeasureValue.Sql -> {
-                val sql = context.renderSQL(value.sql, model.name)
-                if (aggregations.isEmpty()) {
-                    // no aggregation is set for the sql so it's computed
-                    listOf(sql)
+            measure.value.agg != null -> listOf(measure.value.agg, null)
+            else -> listOf(null)
+        }
+
+
+        val suffix = "${prefix ?: ""}${measure.name}"
+        val columnValues =listOf(suffix, "$tableAlias.$suffix")
+
+        return columnValues.flatMap {
+            aggregations.map { aggregation ->
+                if(aggregation != null) {
+                    PrestoWarehouse.bridge.performAggregation(it, aggregation, ADHOC)
                 } else {
-                    aggregations.map { aggregation -> PrestoWarehouse.bridge.performAggregation(sql, aggregation, ADHOC) }
-                }
-            }
-            is Model.Measure.MeasureValue.Dimension -> {
-                val dim = model.dimensions.find { d -> d.name == value.dimension } ?: throw java.lang.IllegalStateException()
-                getDimensionStr(dim, tableAlias, prefix).flatMap {
-                    aggregations.map { aggregation ->
-                        PrestoWarehouse.bridge.performAggregation(it.first, aggregation, ADHOC)
-                    }
+                    it
                 }
             }
         }

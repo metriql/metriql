@@ -37,7 +37,7 @@ class JinjaRendererService @Inject constructor() {
         variables: Map<String, Any> = mapOf(),
         renderAlias: Boolean = false,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
-    ): String {
+        ): String {
         /*
         * select {{model.firebase_event_in_app_purchase.dimension.user__region_code}}, count(*)
         * from {{model.firebase_event_in_app_purchase}}
@@ -45,13 +45,11 @@ class JinjaRendererService @Inject constructor() {
         * group by 1
         *
         * The query above renders user__region_code dimension on firebase_event_in_app_purchase model. However, that dimension is in SQL context with in_query checking
-        * We have to include the columns and dimension names with the same modelname to in_query context so that `firebase_event_in_app_purchase` SQL model
+        * We have to include the dimension names with the same modelname to in_query context so that `firebase_event_in_app_purchase` SQL model
         * will get rendered including that dimension
         * */
         val additionalDimensionsAndColumns = if (modelName != null) {
-            val columns = context.columns.filter { it.first == modelName }.map { it.second }
-            val dimensions = context.dimensions.filter { it.key.first == modelName }.map { it.key.second }
-            columns + dimensions
+            context.referencedDimensions.filter { it.key.first == modelName }.map { it.key.second }
         } else {
             listOf()
         }
@@ -62,8 +60,8 @@ class JinjaRendererService @Inject constructor() {
             "aq" to context.warehouseBridge.quote,
             "model" to MetriqlJinjaContext.ModelContext(context, renderAlias),
             "relation" to MetriqlJinjaContext.RelationContext(modelName, context, renderAlias),
-            "dimension" to MetriqlJinjaContext.DimensionContext(modelName, context, renderAlias),
-            "measure" to MetriqlJinjaContext.MeasureContext(modelName, context, renderAlias),
+            "dimension" to (modelName?.let { MetriqlJinjaContext.DimensionContext(it, null, context, renderAlias) }),
+            "measure" to (modelName?.let { MetriqlJinjaContext.MeasureContext(it, null, context, renderAlias) }),
             "user" to MetriqlJinjaContext.UserAttributeContext(context),
             "variables" to variables,
             "_auth" to auth,

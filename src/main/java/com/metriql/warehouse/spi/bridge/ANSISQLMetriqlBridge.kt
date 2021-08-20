@@ -38,6 +38,7 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.RenderedFilter
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.FilterOperator
 import com.metriql.warehouse.spi.function.RFunction
+import com.metriql.warehouse.spi.querycontext.DelegatedQueryContext
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.time.LocalDate
@@ -87,7 +88,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                         is ReportMetric.ReportDimension -> {
                             // hacky way to find out relation if the dimension doesn't belong to context model
                             val relationName = if (contextModelName != metricValue.modelName) {
-                                context.relations
+                                context.referencedRelations
                                     .filter { it.value.sourceModelName == contextModelName && it.value.targetModelName == metricValue.modelName }
                                     .map { it.value }
                                     .firstOrNull()?.relation?.name
@@ -241,6 +242,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         }
 
         val measure = modelMeasure.measure
+        val isWindow = measure.value is Model.Measure.MeasureValue.Sql && measure.value.window == true
+
         val filters = (modelMeasure.measure.filters ?: listOf()) + (extraFilters ?: listOf())
         val isFilterInPushdown = measure.type == Model.Measure.Type.SQL && measure.value.agg == null
 
@@ -259,14 +262,16 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 when (queryType) {
                     ADHOC, INTERMEDIATE_ACCUMULATE -> {
                         // If there is no aggregation, we need to pushdown the filters to underlying measures
+                        val hook: ((Map<String, Any?>) -> Map<String, Any?>)? = if (isFilterInPushdown) {
+                            {
+                                (it["measure"] as MetriqlJinjaContext.MeasureContext).pushdownFilters = filters
+                                it
+                            }
+                        } else null
+
                         context.renderSQL(
                             measure.value.sql, modelMeasure.modelName,
-                            hook = if (isFilterInPushdown) {
-                                {
-                                    (it["measure"] as MetriqlJinjaContext.MeasureContext).pushdownFilters = filters
-                                    it
-                                }
-                            } else null,
+                            hook = hook,
                             renderAlias = measure.value.window != null
                         )
                     }
@@ -331,7 +336,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         }
 
         val renderedValue = if (measure.value.agg != null) {
-            val nonSymmetricAggregates = context.relations.filter { it.value.relation.relationType == ONE_TO_MANY || it.value.relation.relationType == MANY_TO_MANY }
+            val nonSymmetricAggregates = context.referencedRelations.filter { it.value.relation.relationType == ONE_TO_MANY || it.value.relation.relationType == MANY_TO_MANY }
             val (aggregation, nonSymmetricAggregatedValue) = if (nonSymmetricAggregates.isNotEmpty()) {
                 val primaryKeyDimension = context.getModel(contextModelName)?.dimensions.find { it.primary == true }?.name
                     ?: throw MetriqlException("Primary key dimension is required for non-symmetric aggregates in `$contextModelName`", HttpResponseStatus.BAD_REQUEST)
@@ -378,8 +383,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             MetricPositionType.PROJECTION -> "$renderedValue AS $alias"
         }
 
-        val window = measure.value is Model.Measure.MeasureValue.Sql && measure.value.window == true
-        return WarehouseMetriqlBridge.RenderedField(measureValueForPositionType, joinRelations, window, alias)
+        return WarehouseMetriqlBridge.RenderedField(measureValueForPositionType, joinRelations, isWindow, alias)
     }
 
     open fun nonSymmetricAggregateSum(sql: String, primaryKey: String): String? {
@@ -436,9 +440,6 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         context: IQueryGeneratorContext,
     ): Pair<ModelDimension, ModelRelation?> {
         return if (relationName != null) {
-            if (contextModelName == null) {
-                throw IllegalStateException("Context model name is required when dimension has a relation to join")
-            }
             val modelRelation = context.getRelation(contextModelName, relationName)
             // Get the dimensions model-name from joins target model
             val modelDimension = context.getModelDimension(dimensionName, modelRelation.targetModelName)
@@ -459,32 +460,9 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     ): WarehouseMetriqlBridge.RenderedField {
         val (modelDimension, modelRelation) = generateModelDimension(contextModelName, dimensionName, relationName, context)
 
-        /* if (metricPositionType == MetricPositionType.PROJECTION && modelDimension.dimension.postOperations?.isNotEmpty() == true && postOperation == null) {
-            throw MetriqlException("A Post-operation is required for dimension '${dimension.name}'", HttpResponseStatus.BAD_REQUEST)
-        } */
-
-        val postProcessedDimension = getPostProcessedDimension(context, modelDimension, postOperation, metricPositionType)
-        val joinRelations = if (modelRelation != null) {
-            generateJoinStatement(modelRelation, context)
-        } else null
-
-        val alias = context.getDimensionAlias(dimensionName, relationName, postOperation)
-        val dimensionValue = when (metricPositionType) {
-            MetricPositionType.FILTER -> postProcessedDimension
-            MetricPositionType.PROJECTION -> "$postProcessedDimension AS ${quoteIdentifier(alias)}"
-        }
-        val value = modelDimension.dimension.value
-        val window = value is Model.Dimension.DimensionValue.Sql && value.window == true
-        return WarehouseMetriqlBridge.RenderedField(dimensionValue, joinRelations, window, alias)
-    }
-
-    private fun getPostProcessedDimension(
-        context: IQueryGeneratorContext,
-        modelDimension: ModelDimension,
-        postOperation: ReportMetric.PostOperation?,
-        metricPositionType: MetricPositionType,
-    ): String {
         val dimension = modelDimension.dimension
+        val isWindow = dimension.value is Model.Dimension.DimensionValue.Sql && dimension.value.window == true
+
         val rawValue = when (dimension.value) {
             is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelDimension.target, modelDimension.modelName, dimension.value.column)
             is Model.Dimension.DimensionValue.Sql -> context.renderSQL(dimension.value.sql, modelDimension.modelName, renderAlias = dimension.value.window != null)
@@ -492,7 +470,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
         val value = metricRenderHook.dimensionBeforePostOperation(context, metricPositionType, dimension, postOperation, rawValue)
 
-        return if (postOperation != null) { // && modelDimension.dimension.fieldType != null
+        val postProcessedDimension =  if (postOperation != null) { // && modelDimension.dimension.fieldType != null
             val template = when (postOperation.type) {
                 ReportMetric.PostOperation.Type.TIMESTAMP -> timeframes.timestampPostOperations[postOperation.value]
                 ReportMetric.PostOperation.Type.DATE -> timeframes.datePostOperations[postOperation.value]
@@ -502,6 +480,16 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         } else {
             value
         }
+
+        val joinRelations = if (modelRelation != null) generateJoinStatement(modelRelation, context) else null
+
+        val alias = context.getDimensionAlias(dimensionName, relationName, postOperation)
+        val dimensionValue = when (metricPositionType) {
+            MetricPositionType.FILTER -> postProcessedDimension
+            MetricPositionType.PROJECTION -> "$postProcessedDimension AS ${quoteIdentifier(alias)}"
+        }
+
+        return WarehouseMetriqlBridge.RenderedField(dimensionValue, joinRelations, isWindow, alias)
     }
 
     override fun generateJoinStatement(

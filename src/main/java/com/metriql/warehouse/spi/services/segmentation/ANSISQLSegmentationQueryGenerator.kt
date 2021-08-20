@@ -12,12 +12,12 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
         return mapOf(
             "projections" to queryDSL.dimensions + queryDSL.measures,
             "tableReference" to queryDSL.tableReference,
-            "limit" to queryDSL.limit,
             "joins" to queryDSL.joins,
+            "limit" to (queryDSL.limit?.let { "LIMIT $it" } ?: ""),
             "whereFilters" to queryDSL.whereFilters,
             "groups" to queryDSL.groupIdx,
             "havingFilters" to queryDSL.havingFilters,
-            "orderBys" to queryDSL.orderBy,
+            "orderBy" to queryDSL.orderByIdx,
             /*
             * If query includes view models (WITH view as ().., ne should discard the WITH prefix while rendering the query),
             * since view models are appended to query as WITH view as (), we have to only add ","
@@ -30,7 +30,7 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
     }
 
     override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Segmentation, options: SegmentationReportOptions): String {
-        return jinja.render(standard, getMap(context, queryDSL)).trimIndent()
+        return jinja.render(standard.trimIndent(), getMap(context, queryDSL)).trimIndent()
     }
 
     companion object {

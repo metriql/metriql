@@ -21,7 +21,7 @@ class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWar
 
     override val dataSourceProperties by lazy {
         val properties = Properties()
-        properties["driverClassName"] = "com.mysql.jdbc.Driver"
+        properties["driverClassName"] = "com.mysql.cj.jdbc.Driver"
         properties["jdbcUrl"] = "jdbc:mysql://${config.host}:${config.port}/${config.database}"
 
         properties["dataSource.user"] = config.user

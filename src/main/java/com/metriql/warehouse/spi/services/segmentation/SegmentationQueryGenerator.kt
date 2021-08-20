@@ -20,5 +20,6 @@ data class Segmentation(
     val groups: Set<String>?,
     val groupIdx: Set<Int>?,
     val havingFilters: Set<String>?,
+    val orderByIdx: Set<String>?,
     val orderBy: Set<String>?
 ) : ServiceQueryDSL
