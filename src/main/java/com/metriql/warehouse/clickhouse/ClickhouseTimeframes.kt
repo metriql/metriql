@@ -16,7 +16,7 @@ class ClickhouseTimeframes : WarehouseTimeframes {
         TimestampPostOperation.HOUR_OF_DAY to "formatDateTime(%s, '%H:%M')",
         TimestampPostOperation.DAY_OF_MONTH to "toDayOfMonth(%s)",
         TimestampPostOperation.WEEK_OF_YEAR to "toWeek(%s, 3)",
-        TimestampPostOperation.MONTH_OF_YEAR to "dateName('month', %s)",
+        TimestampPostOperation.MONTH_OF_YEAR to "toMonth(%s)",
         TimestampPostOperation.QUARTER_OF_YEAR to "CONCAT('Q', toString(toQuarter(%s)))",
         TimestampPostOperation.DAY_OF_WEEK to "toDayOfWeek(%s)"
     )
@@ -29,7 +29,7 @@ class ClickhouseTimeframes : WarehouseTimeframes {
         DatePostOperation.YEAR to "CAST(DATE_TRUNC('year', %s) AS DATE)",
         DatePostOperation.DAY_OF_MONTH to "EXTRACT(day FROM %s)",
         DatePostOperation.WEEK_OF_YEAR to "EXTRACT(week FROM %s)",
-        DatePostOperation.MONTH_OF_YEAR to "dateName('month', %s)",
+        DatePostOperation.MONTH_OF_YEAR to "toMonth(%s)",
         DatePostOperation.QUARTER_OF_YEAR to "CONCAT('Q', toString(toQuarter(%s)))",
         DatePostOperation.DAY_OF_WEEK to "toDayOfWeek(%s)"
     )

@@ -83,7 +83,7 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
                     else -> null
                 }
             }
-            else -> FieldType.UNKNOWN
+            else -> null
         }
     }
 
