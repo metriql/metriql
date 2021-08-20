@@ -16,8 +16,7 @@ object RecipeUtil {
             if(collidingFieldNames.isEmpty()) {
                 null
             } else {
-                null
-//                "`${model.name}` Field names must be unique, duplicate fields found: ${collidingFieldNames.map { "`$it`" }}}"
+                "`${model.name}`: Field names must be unique, duplicate fields found: ${collidingFieldNames.map { "`$it`" }}}"
             }
         }
 
