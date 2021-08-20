@@ -22,7 +22,11 @@ object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
         ServiceType.SEGMENTATION to object : ANSISQLSegmentationQueryGenerator() {
             override fun getMap(context: IQueryGeneratorContext, queryDSL: Segmentation): Map<String, Any?> {
                 // MsSQL doesn't support GROUP BY 1,2,3
-                return super.getMap(context, queryDSL) + mapOf("groups" to queryDSL.groups)
+                return super.getMap(context, queryDSL) + mapOf("groups" to queryDSL.groups) + if(queryDSL.limit != null) {
+                    mapOf("limit" to null)
+                } else {
+                    mapOf()
+                }
             }
         },
         ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator()
