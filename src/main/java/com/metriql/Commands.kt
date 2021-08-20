@@ -19,6 +19,7 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
+import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
 import com.metriql.service.model.UpdatableModelService
@@ -299,9 +300,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val modelsFetcher = {
                 val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
                 val recipe = this.parseRecipe(dataSource, manifest)
-//                        val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, null, JinjaRendererService(), null, null, null)
-                recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1) } ?: listOf()
-//                        prepareModelsForInstallation(dataSource, context, models)
+                val metriqlModels = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1) } ?: listOf()
+                val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, DummyModelService(metriqlModels), JinjaRendererService(), null, null, null)
+                prepareModelsForInstallation(dataSource, context, metriqlModels)
             }
 
             val modelService = UpdatableModelService(null, modelsFetcher, dataSource.warehouse.bridge)
@@ -324,4 +325,15 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
     }
 
     internal val logger = Logger.getLogger(this::class.java.name)
+
+    open class DummyModelService(private var models: List<Model> = listOf()) : IModelService {
+
+        override fun list(auth: ProjectAuth) = models
+
+        override fun getModel(auth: ProjectAuth, modelName: ModelName) = models.find { modelName.toRegex().matches(it.name) }
+
+        override fun update() {
+            throw IllegalStateException()
+        }
+    }
 }

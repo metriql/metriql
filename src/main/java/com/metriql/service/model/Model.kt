@@ -31,7 +31,7 @@ typealias MeasureName = String
 typealias ModelName = String
 typealias RelationName = String
 
-data class ModelDimension(val modelName: String, val target: Model.Target, val  dimension: Model.Dimension)
+data class ModelDimension(val modelName: String, val target: Model.Target, val dimension: Model.Dimension)
 data class ModelMeasure(val modelName: String, val target: Model.Target, val measure: Model.Measure, val extraFilters: List<ReportFilter>? = null)
 data class ModelRelation(
     val sourceModelTarget: Model.Target,

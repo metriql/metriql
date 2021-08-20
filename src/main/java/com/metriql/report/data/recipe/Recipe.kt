@@ -203,7 +203,7 @@ data class Recipe(
         }
 
         companion object {
-            fun fromDimension(dimension : Model.Dimension): Metric.RecipeDimension {
+            fun fromDimension(dimension: Model.Dimension): Metric.RecipeDimension {
                 return when (dimension.value) {
                     is Model.Dimension.DimensionValue.Sql -> Metric.RecipeDimension(
                         dimension.label,
@@ -447,7 +447,7 @@ data class Recipe(
                 }
             }
 
-            val (dbtMeasures, dbtDimensions) = extractFields(columns?.map { it.name to it }?.toMap() ?: mapOf())
+            val (dbtMeasures, dbtDimensions) = extractFields(modelName, columns?.map { it.name to it }?.toMap() ?: mapOf())
 
             return Model(
                 modelName,
@@ -698,7 +698,7 @@ data class Recipe(
             val targetColumn: String? = null,
             val hidden: Boolean? = null,
             val to: String? = null,
-            val name : String? = null
+            val name: String? = null
         ) {
             fun getModel(packageName: String, relationName: String): ModelName {
                 val toModel = to?.let { DbtJinjaRenderer.renderer.renderReference("{{$it}}", packageName) }
@@ -806,12 +806,20 @@ data class Recipe(
         @JsonIgnore
         fun getType(modelFetcher: (String) -> Model, modelName: ModelName): FieldType {
             val model = modelFetcher.invoke(modelName)
-            val dimension = if (name.relation != null) {
+
+            val targetModel = if (name.relation != null) {
                 val targetModelName = model.relations.find { relation -> relation.name == name.relation }?.modelName
-                modelFetcher.invoke(targetModelName!!).dimensions.find { dimension -> dimension.name == name.name }
+                modelFetcher.invoke(targetModelName!!)
+            } else model
+
+            val dimensionName = if (name.isMappingDimension()) {
+                targetModel.mappings[name.name.substring(1)]
             } else {
-                model.dimensions.find { dimension -> dimension.name == name.name }
-            } ?: throw MetriqlException("Dimension ${this.toJsonValue()} not found", BAD_REQUEST)
+                name.name
+            }
+
+            val dimension =
+                targetModel.dimensions.find { dimension -> dimension.name == dimensionName } ?: throw MetriqlException("Dimension ${this.toJsonValue()} not found", BAD_REQUEST)
             return dimension.fieldType ?: FieldType.UNKNOWN
         }
 

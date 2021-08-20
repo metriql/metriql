@@ -51,7 +51,7 @@ class StatementService(
     private val taskQueueService: TaskQueueService,
     private val reportService: ReportService,
     private val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
-    private val modelService: IModelService
+    modelService: IModelService
 ) : HttpService() {
     private val runner = LightweightQueryRunner(modelService)
     private val mapper = ObjectMapperProvider().get()
@@ -127,7 +127,8 @@ class StatementService(
 
             taskQueueService.execute(task, 3).thenAccept {
                 val queryResult = try {
-                    mapper.writeValueAsBytes(convertQueryResult(request, it.taskTicket()))
+                    val trinoQueryResult = convertQueryResult(request, it.taskTicket())
+                    mapper.writeValueAsBytes(trinoQueryResult)
                 } catch (e: Exception) {
                     byteArrayOf()
                 }
@@ -143,7 +144,7 @@ class StatementService(
         val columns = task?.result?.metadata?.map {
             val trinoType = getTrinoType(it.type)
             val formatted = formatType(TypeSignatureTranslator.toSqlType(trinoType))
-            Column(it.name.lowercase(), formatted, toClientTypeSignature(trinoType.typeSignature))
+            Column(it.name, formatted, toClientTypeSignature(trinoType.typeSignature))
         }
 
         val uri = request.headers().get(HOST)
@@ -183,8 +184,8 @@ class StatementService(
 
         val results = QueryResults(
             id,
-            URI("http://$uri/query"),
-            null,
+            URI("http://$uri/v1/statement/queued/?id=$id"),
+            if (task.isDone()) null else URI("http://$uri/v1/statement/queued/?id=$id"),
             if (task.isDone()) null else URI("http://$uri/v1/statement/queued/?id=$id"),
             columns,
             task.result?.result as Iterable<List<Any?>>?,

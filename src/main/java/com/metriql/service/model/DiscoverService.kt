@@ -12,6 +12,8 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.gcardone.junidecode.Junidecode.unidecode
+import java.util.logging.Level
+import java.util.logging.Logger
 
 class DiscoverService(private val dataSource: DataSource) {
 
@@ -70,14 +72,16 @@ class DiscoverService(private val dataSource: DataSource) {
             dimensionsWithoutFieldType
         )
 
+        logger.info("Discovering dimensions of model `$modelName`")
         val tableMeta = try {
             dataSource.getTable(query)
         } catch (e: Exception) {
+            logger.log(Level.WARNING, "Unable to discover dimension types", e)
             throw MetriqlException("Failed to run query for exploring the dimension types: ${e.message} \n $query", HttpResponseStatus.BAD_REQUEST)
         }
 
         return dimensions.map { dimension ->
-            val columnMeta = tableMeta.columns.find { it.name == dimension.name }
+            val columnMeta = tableMeta.columns.find { it.name.equals(dimension.name, ignoreCase = true) }
             dimension.copy(fieldType = dimension.fieldType ?: columnMeta?.type)
         }
     }
@@ -193,5 +197,7 @@ class DiscoverService(private val dataSource: DataSource) {
 
             return mappings
         }
+
+        private val logger = Logger.getLogger(this::class.java.name)
     }
 }

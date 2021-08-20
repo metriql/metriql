@@ -89,6 +89,7 @@ object DbtYamlParser {
                                 dimensions = (parent.dimensions ?: mapOf()) + (model.dimensions ?: mapOf()),
                                 relations = (parent.relations ?: mapOf()) + (model.relations ?: mapOf()),
                                 mappings = model.mappings ?: parent.mappings,
+                                category = model.category ?: parent.category,
                                 target = model.target ?: parent.target
                             )
                         } else null

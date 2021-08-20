@@ -12,12 +12,14 @@ import com.metriql.report.data.recipe.Recipe.RecipeModel.Companion.fromDimension
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DiscoverService.Companion.createDimensionsFromColumns
 import com.metriql.service.model.Model
+import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.TextUtil
 import com.metriql.util.TextUtil.toUserFriendly
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.DataSource
+import io.netty.handler.codec.http.HttpResponseStatus
 import kotlin.reflect.KClass
 
 typealias MetricFields = Pair<Map<String, Recipe.RecipeModel.Metric.RecipeMeasure>, Map<String, Recipe.RecipeModel.Metric.RecipeDimension>>
@@ -168,7 +170,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 val recipeDimensions = createDimensionsFromColumns(table.columns).map { it.name to fromDimension(it) }.toMap()
                 mapOf<String, Recipe.RecipeModel.Metric.RecipeMeasure>() to recipeDimensions
             } else {
-                extractFields(columns)
+                extractFields(modelName, columns)
             }
 
             val dependencies = dbtManifest.child_map[unique_id] ?: listOf()
@@ -215,7 +217,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
 
             val modelName = meta.metriql?.name ?: TextUtil.toSlug(unique_id, true)
 
-            val (columnMeasures, columnDimensions) = extractFields(columns)
+            val (columnMeasures, columnDimensions) = extractFields(modelName, columns)
 
             val dependencies = dbtManifest.child_map[unique_id] ?: listOf()
             val model = meta.metriql.copy(
@@ -262,14 +264,14 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             return sql.replace(expressionRegex, "{{$1}}").replace(tagRegex, "{%$1%}")
         }
 
-        fun extractFields(columns: Map<String, DbtColumn>): MetricFields {
+        fun extractFields(modelName : String, columns: Map<String, DbtColumn>): MetricFields {
             val columnMeasures = columns.mapNotNull {
-                val measureName = it.value.meta?.measure?.name ?: TextUtil.toSlug(it.key, true)
                 val measure = it.value.meta.measure?.copy(column = it.key, description = it.value.description)
 
                 if (measure == null) {
                     null
                 } else {
+                    val measureName = it.value.meta?.measure?.name ?: throw MetriqlException("Measure name is not set for column `$modelName`.`${it.value.name}`", HttpResponseStatus.BAD_REQUEST)
                     measureName to measure
                 }
             }.toMap()

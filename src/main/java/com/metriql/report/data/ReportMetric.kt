@@ -103,14 +103,6 @@ sealed class ReportMetric {
             override fun getValueClass() = clazz.java
         }
 
-        fun toFieldType(): com.metriql.db.FieldType {
-            return when (type) {
-                Type.TIME -> com.metriql.db.FieldType.TIME
-                Type.TIMESTAMP -> com.metriql.db.FieldType.TIMESTAMP
-                Type.DATE -> com.metriql.db.FieldType.DATE
-            }
-        }
-
         companion object {
             fun fromFieldType(type: com.metriql.db.FieldType, name: String): PostOperation {
                 val value = when (type) {
