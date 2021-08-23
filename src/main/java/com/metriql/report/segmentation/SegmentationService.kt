@@ -269,7 +269,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             measures = renderedMeasures,
             whereFilters = renderedFilters.mapNotNull { it.whereFilter },
 
-            groupIdx = if (renderedMeasures.any { !it.window }) {
+            groupIdx = if (renderedMeasures.any { !it.window } || renderedFilters.any { it.havingFilter != null }) {
                 (1..renderedDimensions.filter { !it.window }.size).toSet()
             } else null,
 
