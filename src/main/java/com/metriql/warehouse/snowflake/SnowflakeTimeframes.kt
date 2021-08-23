@@ -11,6 +11,7 @@ class SnowflakeTimeframes : WarehouseTimeframes {
         TimestampPostOperation.DAY to "to_date(date_trunc('day', %s))",
         TimestampPostOperation.WEEK to "to_date(date_trunc('week', %s))",
         TimestampPostOperation.MONTH to "to_date(cast(date_trunc('month', %s) as date))",
+        TimestampPostOperation.QUARTER to "to_date(cast(date_trunc('month', %s) as date))",
         TimestampPostOperation.YEAR to "to_date(cast(date_trunc('year', %s) as date))",
         TimestampPostOperation.HOUR_OF_DAY to "to_time(lpad(cast(extract(hour FROM %s) as text), 2, '0')||':00')",
         TimestampPostOperation.DAY_OF_MONTH to "EXTRACT(day FROM %s)",
