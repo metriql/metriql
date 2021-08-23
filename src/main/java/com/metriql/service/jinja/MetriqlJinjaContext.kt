@@ -41,14 +41,14 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                         context.getDimensionAlias(value.dimension.name, null, null)
                     } else {
                         try {
-                            context.warehouseBridge.renderDimension(
+                            "(" + context.warehouseBridge.renderDimension(
                                 context,
                                 value.modelName,
                                 value.dimension.name,
                                 null,
                                 null,
                                 metricPositionType
-                            ).value // Joins are not possible here
+                            ).value + ")" // Joins are not possible here
                         } catch (e: MetriqlException) {
                             throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
                         }
@@ -59,7 +59,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                         context.getMeasureAlias(value.measure.name, null)
                     } else {
                         try {
-                            context.warehouseBridge.renderMeasure(
+                            "(" + context.warehouseBridge.renderMeasure(
                                 context,
                                 value.modelName,
                                 value.measure.name,
@@ -67,7 +67,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                                 metricPositionType,
                                 WarehouseMetriqlBridge.AggregationContext.ADHOC,
                                 value.extraFilters
-                            ).value // Joins are not possible here
+                            ).value + ")" // Joins are not possible here
                         } catch (e: MetriqlException) {
                             throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
                         }
