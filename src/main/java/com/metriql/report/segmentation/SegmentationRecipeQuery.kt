@@ -16,7 +16,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 data class SegmentationRecipeQuery(
     @JsonAlias("model")
     val dataset: ModelName,
-    val measures: List<Recipe.MetricReference>,
+    val measures: List<Recipe.MetricReference>?,
     val dimensions: List<Recipe.DimensionReference>?,
     val filters: List<OrFilters>?,
     val reportOptions: SegmentationReportOptions.ReportOptions? = null,
@@ -29,7 +29,7 @@ data class SegmentationRecipeQuery(
         return SegmentationReportOptions(
             modelName,
             dimensions?.map { it.toDimension(modelName, it.getType(context::getModel, modelName)) },
-            measures.map { it.toMeasure(modelName) },
+            measures?.map { it.toMeasure(modelName) } ?: listOf(),
             filters?.map { it.toReportFilter(context, modelName) },
             reportOptions,
             limit = limit,
@@ -54,7 +54,7 @@ data class SegmentationRecipeQuery(
     }
 
     override fun toMaterialize(): SegmentationMaterialize {
-        return SegmentationMaterialize(measures, dimensions, filters)
+        return SegmentationMaterialize(measures ?: listOf(), dimensions, filters)
     }
 
     data class SegmentationMaterialize(

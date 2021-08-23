@@ -178,7 +178,8 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
     }
 
     private fun getFilterForDimension(materializeQuery: SegmentationMaterialize, metricValue: ReportMetric.ReportDimension, filters: List<Filter>): ReportFilter {
-        if (materializeQuery.dimensions?.contains(metricValue.toReference()) == true) {
+        val reference = metricValue.toReference()
+        if (materializeQuery.dimensions?.any { it.name == reference.name } == true) {
             return ReportFilter(
                 METRIC_FILTER,
                 ReportFilter.FilterValue.MetricFilter(
@@ -186,7 +187,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
                 )
             )
         } else {
-            throw IllegalArgumentException("Materialize doesn't include query dimension ${encode(metricValue.toReference())}")
+            throw IllegalArgumentException("Materialize doesn't include query dimension ${encode(reference)}")
         }
     }
 
@@ -210,7 +211,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             )
         } ?: listOf()
 
-        val measures = reportOptions.measures.map { it ->
+        val measures = reportOptions.measures?.map { it ->
             val measure = sourceModel.measures.find { m -> m.name == it.name } ?: throw MetriqlException("Measure ${it.name} in ${sourceModel.name} not found", NOT_FOUND)
             Model.Measure(
                 it.name,
@@ -232,7 +233,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
         }
 
         val dependency = context.getDependencies(sourceModel.name)
-        val schema = generateSchemaForModel(context.datasource.config.warehouseSchema(), dependency.dbtDependency().aggregatesSchema)
+        val schema = generateSchemaForModel(context.datasource.config.warehouseSchema(), dependency.dbtDependency().aggregateSchema())
         val target = Table(context.datasource.config.warehouseDatabase(), schema, modelName)
         return Model(
             modelName,
@@ -244,7 +245,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             Model.MappingDimensions.build(EVENT_TIMESTAMP to sourceModel.mappings.get(EVENT_TIMESTAMP)),
             relations,
             dimensions,
-            measures
+            measures ?: listOf()
         )
     }
 
