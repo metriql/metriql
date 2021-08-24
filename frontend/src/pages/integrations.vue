@@ -17,7 +17,8 @@
         <router-link :to="integration.ready != false ? `?integrate=${integration.label}` : '#'">
             <img v-if="integration.logo != null" :src="integration.logo" class="integration-logo"/>
             <span v-else class="integration-logo">{{ integration.label }}</span>
-            <div v-if="integration.ready == false" class="soon-available">soon available</div>
+            <div v-if="integration.ready == false" class="integration-tag yellow">soon available</div>
+            <div v-if="integration.beta" class="integration-tag gray">beta</div>
         </router-link>
       </div>
       <div class="integration-box">
@@ -81,15 +82,23 @@ export default {
 </script>
 
 <style lang="scss">
-.soon-available {
+.integration-tag {
   z-index: 100;
   position: absolute;
   font-size: 11px;
   font-weight:bold;
-  color: #575701;
-  background: #f3f306;
   padding: 4px;
-  opacity: .4
+  opacity: .4;
+
+  &.yellow {
+    color: #575701;
+    background: #f3f306;
+  }
+
+  &.gray {
+    color: #ffffff;
+    background: #acacac;
+  }
 }
 .integration-content-box {
   background-color: var(--rkm-subnav-background-color);

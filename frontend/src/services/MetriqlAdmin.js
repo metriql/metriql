@@ -1,4 +1,5 @@
 import {request} from '/src/services/request'
+import { AuthService } from './auth'
 
 export class MetriqlAdmin {
   static updateManifest() {
@@ -6,7 +7,7 @@ export class MetriqlAdmin {
   }
 
   static getMetadata(customAuth) {
-    return request.get('/api/v0/metadata', {headers: {"Authorization": customAuth}}).then(response => response.data)
+    return request.get('/api/v0/metadata', {headers: {"Authorization": customAuth || AuthService.getAuth()}}).then(response => response.data)
   }
 
   static getTasks(data) {

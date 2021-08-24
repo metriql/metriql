@@ -77,6 +77,7 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
                         if (fileName != null) {
                             request.addResponseHeader(HttpHeaders.Names.CONTENT_TYPE, "application/octet-stream")
                             request.addResponseHeader("Content-Disposition", "attachment;filename=$fileName")
+                            request.addResponseHeader(HttpHeaders.Names.ACCESS_CONTROL_EXPOSE_HEADERS, "Content-Disposition,X-Suggested-Filename")
                         }
                         request.response(result).end()
                     } else {

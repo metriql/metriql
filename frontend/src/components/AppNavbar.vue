@@ -9,6 +9,9 @@
       <li role="none" class="rkm-c-navbar__item" :class="{ 'is-active': ('Integrations' === $route.name) }">
         <router-link role="menuitem" :to="baseUrl" class="rkm-c-navbar__link">Integrations</router-link>
       </li>
+<!--      <li role="none" class="rkm-c-navbar__item" :class="{ 'is-active': ('Playground' === $route.name) }">-->
+<!--          <router-link role="menuitem" :to="`${baseUrl}playground`" class="rkm-c-navbar__link">Playground</router-link>-->
+<!--      </li>-->
       <li role="none" class="rkm-c-navbar__item" :class="{ 'is-active': ('Monitoring' === $route.name) }">
         <el-badge :value="activeTaskCount" :hidden="!(activeTaskCount > 0)" type="info">
           <router-link role="menuitem" :to="`${baseUrl}monitoring`" class="rkm-c-navbar__link">Live Queries</router-link>
@@ -21,6 +24,7 @@
           <span class="connection-error">Unable to connect metriql</span>
         </template>
       </el-popover>
+      <span v-else-if="activeTaskCount == null" class="connection-error" style="color:#fff">Connecting to metriql..</span>
       <el-button type="primary" class="sync-button" @click="sync" :loading="syncing">
         <i class="el-icon-refresh" />
         Sync</el-button>

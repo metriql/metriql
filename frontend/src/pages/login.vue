@@ -32,11 +32,10 @@ export default {
           const headerValue = AuthService.getBasicAuthHeader(form.value.username, form.value.password)
           MetriqlAdmin.getMetadata(headerValue).then(response => {
             AuthService.setAuth(headerValue)
-            router.push('/')
-          }).catch(error => {
-            debugger
+            router.push('/ui')
+          }).catch(e => {
             ElMessage({
-              message: 'Invalid username & password',
+              message: e.response.status == 401 ? 'Invalid username & password' : e.response.text,
               showClose: true,
               type: 'error'
             })

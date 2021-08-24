@@ -49,10 +49,10 @@ request.interceptors.response.use(response => response, function (error) {
     if (auth != null) {
       ElMessageBox.confirm('Unable to authenticate you, refresh the page.', 'Auth issue', messageBox).then(() => {
         AuthService.logout()
-        router.push('/login')
+        router.push('/ui/login')
       })
     } else {
-      router.push({path: '/login'})
+      router.push({path: '/ui/login'})
     }
   } else if (status >= 400 && status <= 504) {
     let message
@@ -88,3 +88,28 @@ request.interceptors.response.use(response => response, function (error) {
   // Do something with response error
   return Promise.reject(error)
 })
+
+export function download(url) {
+  request({
+    url,
+    method: 'GET',
+    responseType: 'blob'
+  }).then((response) => {
+    const blob = new Blob([response.data], {type: response.data.type});
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = 'unknown';
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (fileNameMatch && fileNameMatch.length === 2)
+        fileName = fileNameMatch[1];
+    }
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  });
+}

@@ -4,7 +4,7 @@
       <dataset-selector v-model="dataset" />
     </li>
     <li style="margin-top:5px">
-      <el-link :href="`${$BASE.URL}/api/v0/integration/tableau?dataset=${dataset}`" :disabled="dataset == null" target="_blank">Download TDS file</el-link>
+      <el-button @click="download" plain :disabled="dataset == null">Download TDS file</el-button>
     </li>
     <li>
       Open TDS file with Tableau.
@@ -18,19 +18,29 @@
   </ol>
 </template>
 <script>
-import { ref } from 'vue'
 import { AuthService, AuthType } from '/src/services/auth'
 import DatasetSelector from '/src/components/DatasetSelector.vue'
+import { download } from '../../services/request'
 
 export default {
   components: {DatasetSelector},
   props: {
     value: Object
   },
-  setup (props) {
-    const isPasswordless = AuthService.getAuth() == AuthType.NONE
-    const dataset = ref(null)
-    return {dataset, isPasswordless}
+  data: function() {
+    return {
+      dataset: null
+    }
+  },
+  methods: {
+    download() {
+      download(`/api/v0/integration/tableau?dataset=${this.dataset}`);
+    }
+  },
+  computed: {
+    isPasswordless: function() {
+      return AuthService.getAuth() == AuthType.NONE
+    }
   }
 }
 </script>

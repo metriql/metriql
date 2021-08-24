@@ -24,7 +24,6 @@ export default [{
   logo: dataStudioLogo,
   docs: defineAsyncComponent({loader: () => import('/src/assets/docs/datastudio.vue'), loadingComponent: ElSkeleton}),
   category: 'BI Tools',
-  beta: true
 },  {
   label: 'Looker',
   logo: lookerLogo,
