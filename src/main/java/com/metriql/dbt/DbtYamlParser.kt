@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.hubspot.jinjava.interpret.TemplateError
 import com.metriql.dbt.DbtManifest.Companion.getModelName
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.data.recipe.RecipeDashboard
 import com.metriql.util.JsonHelper
 import com.metriql.util.JsonPath
 import com.metriql.util.JsonUtil
@@ -37,6 +38,14 @@ object DbtYamlParser {
         }
     }
 
+    fun parseDashboard(text: String): RecipeDashboard {
+        return try {
+            YamlHelper.mapper.readValue(text, RecipeDashboard::class.java)
+        } catch (e: Exception) {
+            throw ParseException(JsonUtil.convertToUserFriendlyError(e))
+        }
+    }
+
     fun compileJinjaFiles(
         dataSource: DataSource,
         dbtModels: List<Recipe.RecipeModel>,
@@ -47,7 +56,7 @@ object DbtYamlParser {
         sourcePaths: List<String>
     ): MutableList<Recipe.RecipeModel> {
         val dataFiles = files.filter { file ->
-            sourcePaths.any { file.key.startsWith("$it/") }
+            sourcePaths.any { file.key.startsWith("$it/") } && templated_yml_suffixes.any { file.key.endsWith(it) }
         }
 
         val renderer = DbtJinjaRenderer()
@@ -55,7 +64,7 @@ object DbtYamlParser {
         val models = mutableListOf<Recipe.RecipeModel>()
         val errors = mutableListOf<MetriqlException>()
 
-        dataFiles.filter { file -> templated_yml_suffixes.any { file.key.endsWith(it) } }.forEach { (path, content) ->
+        dataFiles.forEach { (path, content) ->
             val compiledYml = renderer.render(dataSource, content, mainPath, packageName, path, vars, files)
             val fatalErrors = compiledYml.errors.filter { it.severity == TemplateError.ErrorType.FATAL }
             fatalErrors
