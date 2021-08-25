@@ -2,7 +2,7 @@ FROM node:16-alpine3.11 AS frontend
 
 COPY ./frontend ./app/
 
-RUN cd /app && npm install && export NODE_ENV=production && npm run build --force
+RUN cd /app && npm install --force && export NODE_ENV=production && npm run build
 
 FROM adoptopenjdk:11 AS backend
 
