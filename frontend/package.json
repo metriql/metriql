@@ -15,7 +15,7 @@
     "monaco-yaml": "^2.5.1",
     "vite-plugin-md": "^0.6.7",
     "vue": "^3.0.5",
-    "vue-echarts": "^6.0.0-rc.6",
+    "vue-echarts": "^6.0.0",
     "vue-router": "^4.0.8"
   },
   "devDependencies": {
