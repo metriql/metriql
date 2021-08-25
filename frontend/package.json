@@ -9,11 +9,13 @@
     "axios": "^0.21.1",
     "bulma": "^0.9.3",
     "date-fns": "^2.22.1",
+    "echarts": "^5.1.2",
     "element-plus": "1.0.2-beta.54",
     "monaco-editor": "^0.25.0",
     "monaco-yaml": "^2.5.1",
     "vite-plugin-md": "^0.6.7",
     "vue": "^3.0.5",
+    "vue-echarts": "^6.0.0-rc.6",
     "vue-router": "^4.0.8"
   },
   "devDependencies": {
