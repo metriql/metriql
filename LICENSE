@@ -11,8 +11,10 @@ Licensed Work:             metriql version 0.3
 
 Additional Use Grant:      Usage of the software is free when your application
                            uses the Software for non-production purposes, and 
-                           the Sofware is connected to a total of less than 2 dbt projects. 
-                           If you purchase the lincese from the licensor, 
+                           the Sofware is connected to a single project. 
+                           A project is defined as a set a metriql datasets which can be 
+                           a dbt project or a set of metriql YML files.
+                           If you purchase the license from the licensor, 
                            you may use the software for production purposes and 
                            to connect it to multiple dbt projects at once.
 
