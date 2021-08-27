@@ -11,12 +11,14 @@ Licensed Work:             metriql version 0.3
 
 Additional Use Grant:      Usage of the software is free when your application
                            uses the Software for non-production purposes, and 
-                           the Sofware is connected to a single project. 
-                           A project is defined as a set a metriql datasets which can be 
-                           a dbt project or a set of metriql YML files.
+                           a single metriql deployment is connected to a single project. 
+                           A project is defined as a set a metriql datasets that 
+                           which can be created from dbt projects using dbt Metadata API 
+                           (manifest.json target) or a set of metriql YML files.
                            If you purchase the license from the licensor, 
                            you may use the software for production purposes and 
-                           to connect it to multiple dbt projects at once.
+                           to connect it to multiple dbt projects in a single 
+                           metriql deployment.
 
 
 Change Date:               August 20, 2025
