@@ -18,7 +18,10 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.ws.rs.GET
+import javax.ws.rs.POST
 import javax.ws.rs.Path
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.javaGetter
 
 @Path("$CURRENT_PATH/integration")
 class IntegrationHttpService(val modelService: IModelService) : HttpService() {
@@ -39,7 +42,7 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
         val stdin = JsonHelper.encodeAsBytes(models)
 
         val apiUrl = request.headers().get("origin") ?: request.headers().get("host")?.let { "http://$it" }
-            ?: throw MetriqlException("Unable to identify metriql url", BAD_REQUEST)
+        ?: throw MetriqlException("Unable to identify metriql url", BAD_REQUEST)
         val commands = listOf("metriql-tableau", "--metriql-url", apiUrl, "--dataset", dataset, "create-tds")
         runCommand(request, commands, stdin, "$dataset.tds")
     }
@@ -52,15 +55,39 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
         runCommand(request, listOf("metriql-lookml", "--connection", connection), stdin, "$connection.zip")
     }
 
-    private fun runCommand(request: RakamHttpRequest, commands: List<String>, stdin: ByteArray, fileName: String?) {
+    @Path("/superset")
+    @POST
+    fun superset(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, action: SupersetAction, parameters: SupersetParameters) {
+        runCommand(
+            request, listOf("metriql-superset") + listOf(action.name) + buildArguments(parameters), if (action.needsStdin) {
+                val models = modelService.list(auth)
+                JsonHelper.encodeAsBytes(models)
+            } else null
+        )
+    }
+
+    enum class SupersetAction(val needsStdin: Boolean) {
+        `list-databases`(false), `sync-database`(true)
+    }
+
+    data class SupersetParameters(val database_id: Int?, val database_name: String?, val superset_url: String, val superset_username: String, val superset_password: String)
+
+    private fun buildArguments(dataObject: Any): List<String> {
+        return dataObject::class.declaredMemberProperties
+            .flatMap { prop -> prop.javaGetter?.invoke(dataObject)?.let { listOf("--${prop.name.replace('_', '-')}", it.toString()) } ?: listOf() }
+    }
+
+    private fun runCommand(request: RakamHttpRequest, commands: List<String>, stdin: ByteArray? = null, fileName: String? = null) {
         executor.execute {
             try {
                 val process = ProcessBuilder().command(commands).start()
 
-                val outputStream = process.outputStream
-                outputStream.write(stdin)
-                outputStream.write(System.lineSeparator().toByteArray())
-                outputStream.flush()
+                if (stdin != null) {
+                    val outputStream = process.outputStream
+                    outputStream.write(stdin)
+                    outputStream.write(System.lineSeparator().toByteArray())
+                    outputStream.flush()
+                }
 
                 val exitVal = try {
                     process.waitFor(20, TimeUnit.SECONDS)

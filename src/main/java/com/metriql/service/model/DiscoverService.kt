@@ -72,7 +72,7 @@ class DiscoverService(private val dataSource: DataSource) {
             dimensionsWithoutFieldType
         )
 
-        logger.info("Discovering dimensions of model `$modelName`")
+        logger.info("Discovering ${dimensionsWithoutFieldType.size} dimensions of model `$modelName`")
         val tableMeta = try {
             dataSource.getTable(query)
         } catch (e: Exception) {

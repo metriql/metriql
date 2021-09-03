@@ -15,6 +15,7 @@ import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions
+import java.util.UUID
 
 open class ReportService(
     protected val modelService: IModelService,
@@ -77,7 +78,7 @@ open class ReportService(
                 postProcessors = postProcessors
             )
         } catch (e: Throwable) {
-            return Task.completedTask(auth, QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED, null))
+            return Task.completedTask(auth, UUID.randomUUID(), QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED, null))
         }
     }
 }

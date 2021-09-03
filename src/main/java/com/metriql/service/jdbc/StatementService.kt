@@ -26,6 +26,8 @@ import io.trino.client.QueryResults
 import io.trino.client.StageStats
 import io.trino.client.StatementStats
 import io.trino.server.HttpRequestSessionContext
+import io.trino.spi.ErrorType
+import io.trino.spi.StandardErrorCode
 import io.trino.sql.analyzer.TypeSignatureTranslator
 import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.tree.Query
@@ -39,6 +41,8 @@ import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
+import java.util.logging.Level
+import java.util.logging.Logger
 import javax.inject.Named
 import javax.ws.rs.DELETE
 import javax.ws.rs.GET
@@ -64,6 +68,7 @@ class StatementService(
     companion object {
         val defaultParsingOptions = ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL)
         val nativeRegex = "[ ]*\\-\\-[ ]*\\@mode\\:([a-zA-Z]+) ".toRegex()
+        private val logger = Logger.getLogger(this::class.java.name)
     }
 
     private fun isMetadataQuery(sql: String, defaultCatalog: String): Boolean {
@@ -74,7 +79,7 @@ class StatementService(
             // since it's a trino query, let the executor handle the exception
             return true
         }
-        return if (stmt !is Query) {
+        return if (stmt !is Query || sql.equals("select version()")) {
             true
         } else {
             IsMetriqlQueryVisitor(defaultCatalog).process(stmt, isMetadata)
@@ -125,20 +130,19 @@ class StatementService(
                 )
             }
 
-            taskQueueService.execute(task, 3).thenAccept {
-                val queryResult = try {
-                    val trinoQueryResult = convertQueryResult(request, it.taskTicket())
-                    mapper.writeValueAsBytes(trinoQueryResult)
-                } catch (e: Exception) {
-                    byteArrayOf()
+            taskQueueService.execute(task, -1).thenAccept {
+                try {
+                    val trinoQueryResult = mapper.writeValueAsBytes(convertQueryResult(request, it.taskTicket(), true))
+                    request.addResponseHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json")
+                    request.response(trinoQueryResult, HttpResponseStatus.OK).end()
+                } catch (e: Throwable) {
+                    logger.log(Level.WARNING, "Unknown exception thrown running query", e)
                 }
-                request.addResponseHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json")
-                request.response(queryResult, HttpResponseStatus.OK).end()
             }
         }
     }
 
-    private fun convertQueryResult(request: RakamHttpRequest, task: Task.TaskTicket<QueryResult>): QueryResults {
+    private fun convertQueryResult(request: RakamHttpRequest, task: Task.TaskTicket<QueryResult>, firstCall: Boolean = false): QueryResults {
 
         val id = task.id.toString()
         val columns = task?.result?.metadata?.map {
@@ -154,14 +158,17 @@ class StatementService(
             }
         }
 
+        val elapsedTime = Instant.now().toEpochMilli() - task.startedAt.toEpochMilli()
+        val taskStatus = if (firstCall) Task.Status.QUEUED else task.status
         val stats = StatementStats.builder()
-            .setState(task.status.name)
-            .setNodes(1)
-            .setElapsedTimeMillis(Instant.now().toEpochMilli() - task.startedAt.toEpochMilli())
-            .setQueued(task.status == Task.Status.QUEUED)
+            .setState(taskStatus.name)
+            .setNodes(if (taskStatus == Task.Status.QUEUED) 0 else 1)
+            .setElapsedTimeMillis(elapsedTime)
+            .setQueuedTimeMillis(elapsedTime)
+            .setQueued(taskStatus == Task.Status.QUEUED)
             .setTotalSplits(1)
 
-        if (task.status != Task.Status.QUEUED) {
+        if (task.status != Task.Status.QUEUED && !firstCall) {
             val stageStats = StageStats.builder()
                 .setStageId("0")
                 .setState(task.status.name)
@@ -182,15 +189,27 @@ class StatementService(
             stats.setRootStage(stageStats.build())
         }
 
+        val queryUri = URI("http://$uri/v1/statement/queued/?id=$id")
+
         val results = QueryResults(
             id,
-            URI("http://$uri/v1/statement/queued/?id=$id"),
-            if (task.isDone()) null else URI("http://$uri/v1/statement/queued/?id=$id"),
-            if (task.isDone()) null else URI("http://$uri/v1/statement/queued/?id=$id"),
-            columns,
-            task.result?.result as Iterable<List<Any?>>?,
+            if (task.id == null) null else queryUri,
+            if (task.id == null || task.status != Task.Status.RUNNING) null else queryUri,
+            if (!firstCall && (task.isDone() || task.id == null)) null else queryUri,
+            if (firstCall) null else columns,
+            if (firstCall) null else task.result?.result,
             stats.build(),
-            task.result?.error?.let { QueryError(it.message + "\n" + task.result?.properties?.get(QUERY), it.sqlState, 10, null, null, null, FailureInfo("metriql", it.message, null, listOf(), listOf(), null)) },
+            task.result?.error?.let {
+                QueryError(
+                    it.message + "\n" + task.result?.properties?.get(QUERY),
+                    it.sqlState,
+                    10,
+                    StandardErrorCode.GENERIC_USER_ERROR.name,
+                    ErrorType.USER_ERROR.name,
+                    null,
+                    FailureInfo("metriql", it.message, null, listOf(), listOf(), null)
+                )
+            },
             listOf(),
             task.result?.properties?.get(QUERY_TYPE) as String?,
             null
@@ -209,7 +228,8 @@ class StatementService(
         }
         val task = taskQueueService.status(idUUID)
         request.addResponseHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json")
-        request.response(mapper.writeValueAsBytes(convertQueryResult(request, task as Task.TaskTicket<QueryResult>))).end()
+        val response = mapper.writeValueAsBytes(convertQueryResult(request, task as Task.TaskTicket<QueryResult>))
+        request.response(response).end()
     }
 
     @DELETE

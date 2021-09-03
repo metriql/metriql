@@ -15,6 +15,7 @@ import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import java.time.Duration
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -92,7 +93,9 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
                 result.setQueryProperties(query, limit)
                 result.setProperty("cacheTime", cacheResult.createdAt)
                 val stats = QueryStats(QueryStats.State.FINISHED, queryInfo, nodes = 1, percentage = 100.0)
-                return Task.completedTask(auth, result, stats)
+                val taskId = UUID.nameUUIDFromBytes(JsonHelper.encodeAsBytes(cacheIdentifier))
+                val completedTask = Task.completedTask(auth, taskId, result, stats)
+                return completedTask
             }
         }
 

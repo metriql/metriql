@@ -1,7 +1,7 @@
 <template>
   <ol>
     <li>
-      metriql is compatible with Trino, you can download the trino CLI and use metriql URL <a href="https://trino.io/docs/current/installation/cli.html">from here</a>.
+      metriql is compatible with Trino, you can download the trino CLI and use metriql URL <a href="https://trino.io/download.html">from here</a>.
     </li>
     <li>
       Execute the following command if you're running metriql using the default port: <br>
