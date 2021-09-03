@@ -6,52 +6,9 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.model.Model
 import com.metriql.util.MetriqlException
 import com.metriql.util.TextUtil.toSlug
-import com.metriql.util.merge
-import com.metriql.util.toSnakeCase
 import io.netty.handler.codec.http.HttpResponseStatus
 
 object DbtModelConverter {
-    fun toModel(model: Recipe.RecipeModel, columnList: List<DbtSchemaYaml.DbtModel.DbtModelColumn>, meta: ModelMeta?): Recipe.RecipeModel? {
-        val metaModel = meta?.metriql?.copy(name = model.name)
-
-        val relations = columnList.flatMap { col ->
-            col.tests?.mapNotNull {
-                if (it is DbtSchemaYaml.DbtModel.DbtModelColumn.DbtModelColumnTest.Relationships)
-                    parseRef(it.to) to it.toRelation(col.name)
-                else null
-            } ?: listOf()
-        }.toMap()
-
-        val columnMeasures = columnList.mapNotNull { column ->
-            column.meta?.measure?.let { measure ->
-                val defaultMeasureName = (measure.aggregation?.let { it.toSnakeCase + "_" } ?: "") + toSlug(column.name, true)
-                (measure.name ?: defaultMeasureName) to measure.copy(label = measure.label ?: column.name)
-            }
-        }.toMap()
-        val columnDimensions = columnList.mapNotNull { col -> getDimension(col, metaModel)?.let { it.name!! to it } }.toMap()
-
-        val definedDimensions = (metaModel?.dimensions ?: mapOf()).mapValues { dimension ->
-            if (dimension.value.column != null) {
-                val column = columnDimensions.entries.find { it.value.column == dimension.value.column }
-                if (column != null) {
-                    dimension.value.merge(column.value)
-                } else {
-                    dimension.value
-                }
-            } else {
-                dimension.value
-            }
-        }
-
-        val dimensions = columnDimensions + definedDimensions
-
-        val finalModel = metaModel?.let { model.merge(it) } ?: model
-        return finalModel.copy(
-            measures = (finalModel.measures ?: mapOf()) + columnMeasures,
-            relations = (metaModel?.relations ?: mapOf()) + relations,
-            dimensions = dimensions
-        )
-    }
 
     fun parseRef(rawRef: String): String {
         val ref = rawRef.replace(" ", "").toLowerCase()

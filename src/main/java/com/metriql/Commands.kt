@@ -11,6 +11,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.google.common.net.HostAndPort
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifestParser
+import com.metriql.dbt.DbtModelConverter
 import com.metriql.dbt.DbtModelService
 import com.metriql.dbt.DbtProfiles
 import com.metriql.dbt.FileHandler
@@ -24,6 +25,7 @@ import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
 import com.metriql.service.model.UpdatableModelService
 import com.metriql.util.JsonHelper
+import com.metriql.util.MetriqlException
 import com.metriql.util.RecipeUtil.prepareModelsForInstallation
 import com.metriql.util.TextUtil
 import com.metriql.util.UnirestHelper
@@ -34,6 +36,7 @@ import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
+import io.netty.handler.codec.http.HttpResponseStatus
 import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -95,7 +98,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             profilesFile.readText(StandardCharsets.UTF_8)
         }
 
-        val varMap = if(vars != null) {
+        val varMap = if (vars != null) {
             YamlHelper.mapper.readValue(vars, object : TypeReference<Map<String, Any?>>() {})
         } else mapOf()
 
@@ -300,7 +303,21 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val modelsFetcher = {
                 val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
                 val recipe = this.parseRecipe(dataSource, manifest)
-                val metriqlModels = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1) } ?: listOf()
+                val metriqlModels = recipe.models?.map {
+                    val model = if (it.extends != null) {
+                        val ref = DbtModelConverter.parseRef(it.extends)
+                        val parentModel = recipe.models.find { model -> model.name == ref } ?: throw MetriqlException(
+                            "${it.name}: extends ${it.extends} not found.",
+                            HttpResponseStatus.BAD_REQUEST
+                        )
+                        it.copy(
+                            dimensions = (it.dimensions ?: mapOf()) + (parentModel.dimensions ?: mapOf()),
+                            measures = (it.measures ?: mapOf()) + (parentModel.measures ?: mapOf()),
+                            relations = (it.relations ?: mapOf()) + (parentModel.relations ?: mapOf())
+                        )
+                    } else it
+                    model.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
+                } ?: listOf()
                 val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, DummyModelService(metriqlModels), JinjaRendererService(), null, null, null)
                 prepareModelsForInstallation(dataSource, context, metriqlModels)
             }
