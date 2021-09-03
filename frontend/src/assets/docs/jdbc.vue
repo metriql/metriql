@@ -24,7 +24,7 @@ export default {
   computed: {
     url: function() {
       const isPasswordless = AuthService.getAuth() == AuthType.NONE
-      return `jdbc:trino://${this.$BASE_URL}?username=USERNAME` + (isPasswordless ? '&password=PASSWORD' : '')
+      return `jdbc:trino://${this.$BASE.HOST}?username=USERNAME` + (isPasswordless ? '&password=PASSWORD' : '')
     }
   }
 }

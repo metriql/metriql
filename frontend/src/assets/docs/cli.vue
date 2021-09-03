@@ -1,7 +1,7 @@
 <template>
   <ol>
     <li>
-      metriql is compatible with Trino, you can download the trino CLI and use metriql URL [from here](https://trino.io/docs/current/installation/cli.html).
+      metriql is compatible with Trino, you can download the trino CLI and use metriql URL <a href="https://trino.io/docs/current/installation/cli.html">from here</a>.
     </li>
     <li>
       Execute the following command if you're running metriql using the default port: <br>
@@ -23,7 +23,7 @@ export default {
   computed: {
     command: function() {
       const isPasswordless = AuthService.getAuth() == AuthType.NONE
-      return `trino-cli --host ${this.$BASE_URL} --port 5656` + (isPasswordless ? '--password' : '')
+      return `trino-cli --host ${this.$BASE.HOSTNAME} --port ${this.$BASE.PORT}` + (isPasswordless ? '--password' : '')
     }
   }
 }

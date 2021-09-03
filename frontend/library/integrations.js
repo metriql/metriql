@@ -7,9 +7,19 @@ import lookerLogo from '/src/assets/images/integrations/looker.png'
 import supersetLogo from '/src/assets/images/integrations/superset.png'
 import metabaseLogo from '/src/assets/images/integrations/metabase.png'
 import pythonLogo from '/src/assets/images/integrations/python.png'
+import redashLogo from '/src/assets/images/integrations/redash.png'
+import rakamLogo from '/src/assets/images/integrations/rakam.svg'
 import {request} from '/src/services/request'
 
 export default [{
+  label: 'Rakam',
+  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/rakam.md'), loadingComponent: ElSkeleton}),
+  logo: rakamLogo,
+  category: 'BI Tools',
+  action: function(dataset) {
+    return `api/v0/integration/rakam?dataset=${dataset}`
+  }
+},{
   label: 'Tableau',
   docs: defineAsyncComponent({loader: () => import('/src/assets/docs/tableau.vue'), loadingComponent: ElSkeleton}),
   logo: tableauLogo,
@@ -17,7 +27,6 @@ export default [{
   action: function(dataset) {
     return `api/v0/integration/tableau?dataset=${dataset}`
   },
-  source: 'https://github.com/metriql/metriql-tableau',
   beta: true
 }, {
   label: 'Google Data Studio',
@@ -43,8 +52,13 @@ export default [{
   label: 'Apache Superset',
   category: 'BI Tools',
   logo: supersetLogo,
-  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/superset.md'), loadingComponent: ElSkeleton}),
-  ready: false,
+  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/superset.vue'), loadingComponent: ElSkeleton}),
+}, {
+  label: 'Redash',
+  category: 'BI Tools',
+  logoStyle: 'max-width:50%',
+  logo: redashLogo,
+  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/redash.vue'), loadingComponent: ElSkeleton}),
 }, {
   label: 'Metabase',
   category: 'BI Tools',
@@ -55,7 +69,7 @@ export default [{
   label: 'Python',
   category: 'Development',
   logo: pythonLogo,
-  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/python.md'), loadingComponent: ElSkeleton}),
+  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/python.vue'), loadingComponent: ElSkeleton}),
 }, {
   label: 'REST API',
   category: 'Development',

@@ -15,7 +15,7 @@
       </div>
       <div v-for="(integration, index) in integrations" :key="index" class="integration-box" :class="{'not-ready': integration.ready == false}">
         <router-link :to="integration.ready != false ? `?integrate=${integration.label}` : '#'">
-            <img v-if="integration.logo != null" :src="integration.logo" class="integration-logo"/>
+            <img v-if="integration.logo != null" :src="integration.logo" :style="integration.logoStyle" class="integration-logo"/>
             <span v-else class="integration-logo">{{ integration.label }}</span>
             <div v-if="integration.ready == false" class="integration-tag yellow">soon available</div>
             <div v-if="integration.beta" class="integration-tag gray">beta</div>
@@ -140,7 +140,7 @@ export default {
     opacity:.6;
   }
 
-  &:nth-of-type(6n) {
+  &:nth-of-type(5n + 1) {
     margin-right:0
   }
 

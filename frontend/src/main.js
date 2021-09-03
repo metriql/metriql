@@ -197,7 +197,11 @@ clipboard.install(app)
 const HOST = import.meta.env.VITE_BACKEND_HOST || window.location.host
 const PROTOCOL = import.meta.env.VITE_BACKEND_PROTOCOL || window.location.protocol
 const IS_LOCAL = HOST.startsWith('127.0.0.1:') || HOST.startsWith('localhost:')
+let URL = PROTOCOL + '//' + HOST
 
-app.config.globalProperties.$BASE = {HOST, PROTOCOL, IS_LOCAL, URL: PROTOCOL + '//' + HOST}
+const parser = document.createElement('a');
+parser.href = URL;
+
+app.config.globalProperties.$BASE = {HOST, PROTOCOL, IS_LOCAL, URL, PORT: parser.port, HOSTNAME: parser.hostname}
 
 app.mount('#rkm-app')

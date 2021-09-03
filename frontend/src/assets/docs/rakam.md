@@ -1,0 +1,1 @@
+[Rakam](https://app.rakam.io) is a product analytics tool that works on top of your data warehouse. It natively supports Metriql as the data modeling language, you can connect your GIT repository that has the dbt project and sync your datasets without any need to run metriql separately.

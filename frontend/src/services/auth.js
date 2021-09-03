@@ -18,7 +18,6 @@ export class AuthService {
   }
 
   static setAuth(value) {
-    debugger
     localStorage.setItem('metriql-auth', value);
   }
 
@@ -27,7 +26,6 @@ export class AuthService {
   }
 
   static logout() {
-    debugger
     localStorage.removeItem('metriql-auth');
   }
 }
