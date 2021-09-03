@@ -38,7 +38,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.RenderedFilter
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.FilterOperator
 import com.metriql.warehouse.spi.function.RFunction
-import com.metriql.warehouse.spi.querycontext.DelegatedQueryContext
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.time.LocalDate
@@ -56,7 +55,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         RFunction.CEIL to "CEIL({{value[0]}}, )",
         RFunction.FLOOR to "FLOOR({{value[0]}})",
         RFunction.ROUND to "FLOOR({{value[0]}})",
-        RFunction.VERSION to "'${stripLiteral(trinoVersion)}'",
+        RFunction.VERSION to "'${stripLiteral(trinoVersion)}' as _col1",
     )
 
     override val supportedDBTTypes: Set<DBTType> = setOf()
@@ -93,8 +92,10 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                     .map { it.value }
                                     .firstOrNull()?.relation?.name
 
+                                // TODO: find out if the dimension is from the parent model before throwing exception
                                 // the filter is not applicable to this model
-                                throw MetriqlException("Dimension is not applicable for context model: $metricValue", HttpResponseStatus.BAD_REQUEST)
+//                                throw MetriqlException("Dimension is not applicable for context model: $metricValue", HttpResponseStatus.BAD_REQUEST)
+                                null
                             } else metricValue.relationName
 
                             val renderedMetric = renderDimension(

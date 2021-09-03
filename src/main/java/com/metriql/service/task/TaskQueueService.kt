@@ -116,6 +116,10 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
 
     fun <T, K> execute(runnable: Task<T, K>, initialWaitInSeconds: Long): CompletableFuture<Task<T, K>> {
         if (runnable.status == Task.Status.FINISHED) {
+            val id = runnable.getId()
+            if(id != null) {
+                taskTickets[id] = runnable
+            }
             return CompletableFuture.completedFuture(runnable)
         }
 
@@ -124,6 +128,9 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         val future = CompletableFuture<Task<T, K>>()
         runnable.onFinish { future.complete(runnable) }
 
+        if(initialWaitInSeconds < 0) {
+            future.complete(runnable)
+        } else
         if (initialWaitInSeconds > 0) {
             Scheduler.executor.schedule(
                 {

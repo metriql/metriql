@@ -175,11 +175,14 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
     companion object {
         private val logger = Logger.getLogger(this::class.java.name)
 
-        fun <Result, Stat> completedTask(auth: ProjectAuth, result: Result, stats: Stat): Task<Result, Stat> {
+        fun <Result, Stat> completedTask(auth: ProjectAuth, id : UUID?, result: Result, stats: Stat): Task<Result, Stat> {
             val value = object : Task<Result, Stat>(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {}
 
                 override fun getStats() = stats
+            }
+            if(id != null) {
+                value.setId(id)
             }
             value.setResult(result)
             return value
