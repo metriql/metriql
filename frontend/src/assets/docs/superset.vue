@@ -22,6 +22,23 @@
           :value="item.id">
         </el-option>
       </el-select>
+
+      <div>
+      You can use the following URL to create a new database for metriql:
+
+      <button>
+        trino://USERNAME:PASSWORD@{{$BASE.HOSTNAME}}:{{ $BASE.PORT }}/metriql?protocol={{$BASE.PROTOCOL.replace(':', '')}}
+      </button>
+      <div v-if="$BASE.PROTOCOL === 'https:'">
+        Since you enabled SSL, the `engine_params` should be as follows:
+        <pre>{"engine_params": {"connect_args": {"http_scheme": "https"}}}</pre>
+      </div>
+        <div v-if="databases.list.length === 0">
+          Once you create the database, you can `Fetch databases` again and select the database that you created for Metriql.
+        </div>
+      </div>
+
+
     </el-form-item>
     <el-form-item v-if="credentials.database_id">
       <el-button type="primary" @click="sync" :loading="databases.loading">Sync datasets</el-button>
