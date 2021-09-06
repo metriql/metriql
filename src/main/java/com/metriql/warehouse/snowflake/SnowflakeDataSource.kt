@@ -5,10 +5,12 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.util.JsonHelper
+import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.WarehouseAuth
+import io.netty.handler.codec.http.HttpResponseStatus
 import java.sql.Connection
 import java.time.ZoneId
 import java.time.format.TextStyle
@@ -39,7 +41,18 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
         properties["dataSource.account"] = config.account
         properties["dataSource.db"] = config.database
         properties["dataSource.user"] = config.user
-        properties["dataSource.password"] = config.password
+        when {
+            config.password != null -> {
+                properties["dataSource.password"] = config.password
+            }
+            config.private_key_path != null -> {
+                properties["dataSource.private_key_path"] = config.private_key_path
+                properties["dataSource.private_key_passphrase"] = config.private_key_passphrase
+            }
+            else -> {
+                throw MetriqlException("No authentication method is set for Snowflake datasource, either `password` or `private_key_path` must be set", HttpResponseStatus.BAD_REQUEST)
+            }
+        }
         properties["dataSource.schema"] = config.schema
         properties["dataSource.loginTimeout"] = "10"
         properties["dataSource.networkTimeout"] = "10"
