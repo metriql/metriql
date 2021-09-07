@@ -27,7 +27,7 @@ class LiveStatistics {
           hook(row, this.points)
         })
       }).catch(e => {
-        if(e.response.status === 401) {
+        if(e.response?.status === 401) {
           router.push('/ui/login')
         }
 

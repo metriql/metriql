@@ -128,11 +128,13 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
             listOfNotNull(
                 "account" to if (config.regionId != null) "${config.account}.${config.regionId}" else config.account,
                 "user" to config.user,
-                "password" to config.password,
                 "database" to config.database,
                 "schema" to config.schema,
-                if (config.warehouse != null) "warehouse" to config.warehouse else null
-            ).toMap()
+                config.warehouse?.let { "warehouse" to it } ?: null,
+                config.password?.let { "password" to it } ?: null,
+                config.private_key_passphrase?.let { "private_key_passphrase" to it } ?: null,
+                config.private_key_path?.let { "private_key_path" to it } ?: null,
+                ).toMap()
         )
     }
 }

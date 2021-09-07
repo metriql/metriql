@@ -14,6 +14,7 @@ import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
+import com.metriql.service.model.Model.Measure.AggregationType.COUNT
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
 import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
@@ -460,18 +461,18 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getMeasureStr(context: IQueryGeneratorContext, model: Model, measure: Model.Measure, tableAlias: String, prefix: String?): List<String> {
+    private fun getMeasureStr(measure: Model.Measure, tableAlias: String, prefix: String?): List<String> {
         val aggregations = when {
             measure.value.agg == APPROXIMATE_UNIQUE -> {
-                listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE, null)
+                listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE, COUNT, null)
             }
-            measure.value.agg != null -> listOf(measure.value.agg, null)
-            else -> listOf(null)
+            measure.value.agg != null -> listOf(measure.value.agg, COUNT, null)
+            else -> listOf(COUNT, null)
         }
 
 
-        val suffix = "${prefix ?: ""}${measure.name}"
-        val columnValues =listOf(suffix, "$tableAlias.$suffix")
+        val suffix = "${prefix?.let { "$it." } ?: ""}${measure.name}"
+        val columnValues = listOf(suffix, "$tableAlias.$suffix")
 
         return columnValues.flatMap {
             aggregations.map { aggregation ->
@@ -523,7 +524,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         sourceModel.measures.forEach { measure ->
             val prefix = relation?.name?.let { "$it." } ?: ""
             val reference = Pair(MetricType.MEASURE, prefix + measure.name)
-            getMeasureStr(context, sourceModel, measure, tableAlias, relation?.name).forEach { references[parseExpression(it)] = reference }
+            getMeasureStr(measure, tableAlias, relation?.name).forEach { references[parseExpression(it)] = reference }
         }
     }
 
