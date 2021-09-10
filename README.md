@@ -37,4 +37,6 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. All contributions are welcome!
+
+Take a look at our open positions at the [careers page](https://metriql.com/careers) if you'd like to join our team and help us build the next big thing in the modern data stack.
