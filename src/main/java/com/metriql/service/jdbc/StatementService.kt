@@ -197,7 +197,7 @@ class StatementService(
             if (task.id == null || task.status != Task.Status.RUNNING) null else queryUri,
             if (!firstCall && (task.isDone() || task.id == null)) null else queryUri,
             if (firstCall) null else columns,
-            if (firstCall) null else task.result?.result,
+            if (firstCall) null else (task.result?.result as Iterable<List<Object>>?),
             stats.build(),
             task.result?.error?.let {
                 QueryError(

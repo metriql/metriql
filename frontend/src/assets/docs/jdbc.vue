@@ -10,7 +10,7 @@
     <li>
       Use following JDBC URL: <br>
       <el-tooltip content="Click to copy" placement="top">
-      <button @click="$clipboard(url)">
+      <button @click="$clipboard(url) && $event.preventDefault()">
         {{url}}
       </button>
       </el-tooltip>

@@ -20,7 +20,7 @@ const val CURRENT_PATH = "/api/$CURRENT_VERSION"
 
 @Path("/")
 class BaseHttpService : HttpService() {
-    val directory: File = File("/app/frontend").absoluteFile
+    val directory: File = File(System.getenv("METRIQL_FRONTEND_DIR") ?: "/app/frontend").absoluteFile
 
     @Path("/")
     @GET

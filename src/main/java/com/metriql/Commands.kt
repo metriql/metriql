@@ -59,6 +59,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         envvar = "DBT_PROFILES_CONTENT"
     )
     val profile by option("--profile", help = "Which profile to load. Overrides setting in dbt_project.yml.", envvar = "PROFILE")
+    val models by option("--models", help = "Which models to expose as datasets", envvar = "METRIQL_MODELS")
 
     val projectDir by option(
         "--project-dir",
@@ -176,7 +177,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             null!!
         } else {
             val models = try {
-                DbtManifestParser.parse(dataSource, content)
+                DbtManifestParser.parse(dataSource, content, models)
             } catch (manifestEx: MismatchedInputException) {
                 // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
                 try {
@@ -190,12 +191,16 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         }
     }
 
-    class Generate : Commands(help = "Generates dbt models for aggregates") {
+    class Test : Commands(help = "Tests metriql datasets with metadata queries") {
+        override fun run() {
+
+        }
+    }
+
+    class Generate : Commands(help = "Generates materialized dbt models for aggregates") {
         private val outputDir by option("--output-dir", "-o", help = "Which directory to create aggregate models.", envvar = "METRIQL_OUTPUT_DIR").default("models/rakam")
 
         override fun run() {
-            System.setProperty("java.util.logging.SimpleFormatter.format", "%4\$s: %5\$s%n")
-
             val dbtProject = File(projectDir, "dbt_project.yml")
             if (!dbtProject.exists()) {
                 echo("dbt_project.yml doesn't exist in `${dbtProject.absolutePath}`, not a valid dbt project.", err = true)
@@ -263,7 +268,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
     class Serve : Commands(help = "Spins up an HTTP server serving your datasets") {
         private val origin by option("--origin", help = "The origin HTTP server for CORS", envvar = "METRIQL_ORIGIN")
-        private val enableJdbc by option("--jdbc", help = "Enable JDBC services via Trino Proxy", envvar = "METRIQL_ENABLE_JDBC").flag()
+        private val enableJdbc by option("--jdbc", help = "Enable JDBC services via Trino Proxy", envvar = "METRIQL_ENABLE_JDBC").flag(default = true)
         private val threads by option("--threads", help = "Specify number of threads to use serving requests. The default is [number of processors * 2]", envvar = "THREADS").int()
             .defaultLazy { Runtime.getRuntime().availableProcessors() * 2 }
         val port by option("--port", envvar = "METRIQL_RUN_PORT", help = "").int().default(5656)
@@ -304,19 +309,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
                 val recipe = this.parseRecipe(dataSource, manifest)
                 val metriqlModels = recipe.models?.map {
-                    val model = if (it.extends != null) {
-                        val ref = DbtModelConverter.parseRef(it.extends)
-                        val parentModel = recipe.models.find { model -> model.name == ref } ?: throw MetriqlException(
-                            "${it.name}: extends ${it.extends} not found.",
-                            HttpResponseStatus.BAD_REQUEST
-                        )
-                        it.copy(
-                            dimensions = (it.dimensions ?: mapOf()) + (parentModel.dimensions ?: mapOf()),
-                            measures = (it.measures ?: mapOf()) + (parentModel.measures ?: mapOf()),
-                            relations = (it.relations ?: mapOf()) + (parentModel.relations ?: mapOf())
-                        )
-                    } else it
-                    model.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
+                    resolveExtends(recipe.models, it).toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
                 } ?: listOf()
                 val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, DummyModelService(metriqlModels), JinjaRendererService(), null, null, null)
                 prepareModelsForInstallation(dataSource, context, metriqlModels)
@@ -328,6 +321,21 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 HostAndPort.fromParts(host, port), apiSecret, usernamePass, threads, debug, origin,
                 modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }
             )
+        }
+
+        private fun resolveExtends(allModels : List<Recipe.RecipeModel>, it : Recipe.RecipeModel): Recipe.RecipeModel {
+            return if (it.extends != null) {
+                val ref = DbtModelConverter.parseRef(it.extends)
+                val parentModel = allModels.find { model -> model.name == ref } ?: throw MetriqlException(
+                    "${it.name}: extends ${it.extends} not found.",
+                    HttpResponseStatus.BAD_REQUEST
+                )
+                it.copy(
+                    dimensions = (it.dimensions ?: mapOf()) + (parentModel.dimensions ?: mapOf()),
+                    measures = (it.measures ?: mapOf()) + (parentModel.measures ?: mapOf()),
+                    relations = (it.relations ?: mapOf()) + (parentModel.relations ?: mapOf())
+                )
+            } else it
         }
     }
 

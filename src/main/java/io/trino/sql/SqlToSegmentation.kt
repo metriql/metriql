@@ -19,6 +19,7 @@ import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
 import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
+import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.presto.PrestoMetriqlBridge.quoteIdentifier
 import com.metriql.warehouse.presto.PrestoWarehouse
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC
@@ -471,7 +472,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
 
 
-        val suffix = "${prefix?.let { "$it." } ?: ""}${measure.name}"
+        val suffix = ValidationUtil.quoteIdentifier("${prefix?.let { "$it." } ?: ""}${measure.name}")
         val columnValues = listOf(suffix, "$tableAlias.$suffix")
 
         return columnValues.flatMap {

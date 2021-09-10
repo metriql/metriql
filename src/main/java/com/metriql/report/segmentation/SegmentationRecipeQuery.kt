@@ -13,6 +13,7 @@ import com.metriql.warehouse.spi.services.MaterializeQuery
 import com.metriql.warehouse.spi.services.RecipeQuery
 import io.netty.handler.codec.http.HttpResponseStatus
 
+// SELECT `dimension`, `measure` FROM `dataset` GROUP BY `dimension` WHERE `filters` ORDER BY `orders` LIMIT `limit`
 data class SegmentationRecipeQuery(
     @JsonAlias("model")
     val dataset: ModelName,

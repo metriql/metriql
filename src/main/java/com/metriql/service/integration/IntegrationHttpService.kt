@@ -90,7 +90,7 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
                 }
 
                 val exitVal = try {
-                    process.waitFor(20, TimeUnit.SECONDS)
+                    process.waitFor(120, TimeUnit.SECONDS)
                 } catch (e: Exception) {
                     returnError(request, "Unable to execute: ${e.message}", INTERNAL_SERVER_ERROR)
                     return@execute
