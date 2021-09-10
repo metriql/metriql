@@ -1,9 +1,9 @@
-# metriql
+# Metriql
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
-metriql lets you define your business metrics and share them across different data tools. 
+Metriql is an open-source metrics store which allows companies to define their metrics as code and share them across their BI and data tools easily.
 It uses [dbt](https://getdbt.com) for the transformation layer and integrate with dbt via its [manifest.json artifact](https://docs.getdbt.com/reference/artifacts/manifest-json). 
 You can learn more about metriql from [here](https://metriql.com/introduction/intro).
 
@@ -17,6 +17,11 @@ This is the core repository of the [metriql](http://metriql.com) project. It inc
 * [BI tools](https://metriql.com/integrations/bi-tools)
 * [Embedded Applications](https://metriql.com/integrations/embedded)
 
+## Recent Posts
+
+* [OLAP in the modern data stack](https://metriql.com/blog/2021/09/07/olap-in-modern-data-stack)
+* [Metriql launch post](https://metriql.com/blog/introducing-metriql-open-source-metrics-store)
+* [Common metric types](https://metriql.com/blog/common-metric-types)
 
 ## Contributors ✨
 
@@ -37,4 +42,6 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. All contributions are welcome!
+
+Take a look at our open positions at the [careers page](https://metriql.com/careers) if you'd like to join our team and help us build the next big thing in the modern data stack.
