@@ -1,0 +1,24 @@
+{
+  "name": "Metriql",
+  "description": "Expose your Metriql datasets to data tools",
+  "keywords": [
+    "metrics",
+    "analytics",
+    "data"
+  ],
+  "website": "https://metriql.com.com/",
+  "repository": "https://github.com/metriql/metriql",
+  "logo": "https://metriql.com/img/logo.svg",
+  "env": {
+    "METRIQL_API_AUTH_USERNAME_PASSWORD": {
+      "description": "Your username:password pair for basic authentication. Leave it empty if you don't want to protect",
+      "required": false
+    },
+    "DBT_MANIFEST_JSON": {
+      "description": "The number of processes to run.",
+    },
+    "DBT_PROFILES_CONTENT": {
+      "description": "The content of dbt's profiles.yml file. You should minify yml to a single file to pass the value. (Here is an online tool: https://onlineyamltools.com/minify-yaml)"
+    }
+  }
+}
