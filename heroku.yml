@@ -2,4 +2,4 @@ build:
   docker:
     app: Dockerfile
 run:
-  app: sleep(100000)
+  app: java $JAVA_OPTS -cp "/app/lib/*" com.metriql.ServiceStarterKt serve
