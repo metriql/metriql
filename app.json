@@ -16,7 +16,7 @@
       "required": false
     },
     "DBT_MANIFEST_JSON": {
-      "description": "The number of processes to run.",
+      "description": "The number of processes to run."
     },
     "DBT_PROFILES_CONTENT": {
       "description": "The content of dbt's profiles.yml file. You should minify yml to a single file to pass the value. (Here is an online tool: https://onlineyamltools.com/minify-yaml)"
