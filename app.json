@@ -16,7 +16,7 @@
       "required": false
     },
     "DBT_MANIFEST_JSON": {
-      "description": "The URL of dbt's manifest.yml file. Valid URLs: (https://metriql.github.io/metriql-public-demo/manifest.json, dbt-cloud://ACCOUNT_ID/PROJECT_ID?api_key=API_KEY&environment=ENVIRONMENT_ID)"
+      "description": "The URL of dbt's manifest.yml file. Valid URLs: \n https://metriql.github.io/metriql-public-demo/manifest.json\ndbt-cloud://ACCOUNT_ID/PROJECT_ID?api_key=API_KEY&environment=ENVIRONMENT_ID)"
     },
     "DBT_PROFILES_CONTENT": {
       "description": "The content of dbt's profiles.yml file. You should minify yml to a single file to pass the value. (Here is an online tool: https://onlineyamltools.com/minify-yaml)"
