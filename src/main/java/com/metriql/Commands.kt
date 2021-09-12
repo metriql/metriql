@@ -271,8 +271,8 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         private val enableJdbc by option("--jdbc", help = "Enable JDBC services via Trino Proxy", envvar = "METRIQL_ENABLE_JDBC").flag(default = true)
         private val threads by option("--threads", help = "Specify number of threads to use serving requests. The default is [number of processors * 2]", envvar = "THREADS").int()
             .defaultLazy { Runtime.getRuntime().availableProcessors() * 2 }
-        val port by option("--port", envvar = "METRIQL_RUN_PORT", help = "").int().default(5656)
-        val host by option("--host", "-h", envvar = "METRIQL_RUN_HOST", help = "The binding host for the REST API").default("127.0.0.1")
+        val port by option("--port", envvar = "PORT", help = "").int().default(5656)
+        val host by option("--host", "-h", envvar = "HOST", help = "The binding host for the REST API").default("127.0.0.1")
         val timezone by option("--timezone", envvar = "METRIQL_TIMEZONE", help = "The timezone that will be used running queries on your data warehouse")
         private val apiSecretBase64 by option(
             "--api-auth-secret-base64", envvar = "METRIQL_API_AUTH_SECRET_BASE64",
