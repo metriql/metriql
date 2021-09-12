@@ -157,11 +157,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 || tags.contains(DbtModelService.tagName)
             ) return null
 
-            val modelName = meta.metriql?.name ?: TextUtil.toSlug(unique_id, true)
-
-            if (config.materialized == Config.EPHEMERAL) {
-                val sql = raw_sql
-            }
+            val modelName = meta.metriql?.name ?: TextUtil.toSlug("model_${package_name}_$name", true)
 
             val target = Model.Target.TargetValue.Table(database, schema, alias ?: name)
 
@@ -179,6 +175,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             val model = recipeModel.copy(
                 hidden = meta.metriql?.hidden ?: if (resource_type == SEED_RESOURCE_TYPE) (docs?.show?.let { !it } ?: true) else false,
                 name = modelName,
+                sql = if(config.materialized == Config.EPHEMERAL) raw_sql else null,
                 description = recipeModel.description ?: description,
                 label = recipeModel.label ?: toUserFriendly(name),
                 target = target,
@@ -215,7 +212,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
         fun toModel(dbtManifest: DbtManifest): Recipe.RecipeModel? {
             if (resource_type != "source" || meta.metriql == null) return null
 
-            val modelName = meta.metriql?.name ?: TextUtil.toSlug(unique_id, true)
+            val modelName = meta.metriql?.name ?: TextUtil.toSlug("source_${package_name}_$name", true)
 
             val (columnMeasures, columnDimensions) = extractFields(modelName, columns)
 
