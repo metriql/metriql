@@ -26,5 +26,5 @@ RUN mv metriql-* app
 COPY --from=frontend /app/dist /app/frontend
 
 # set the startup command to execute the jar
-#ENTRYPOINT ["java", "-cp", "/app/lib/*", "com.metriql.ServiceStarterKt"]
+ENTRYPOINT ["java", "-cp", "/app/lib/*", "com.metriql.ServiceStarterKt"]
 EXPOSE 5656
