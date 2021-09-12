@@ -39,7 +39,7 @@ object TestingEnvironmentPostgresql : TestingServer<EmbeddedPostgres, Connection
     }
 
     override fun getTableReference(tableName: String): String {
-        return "${quoteIdentifier(config.schema!!)}.${quoteIdentifier(tableName)}"
+        return "${quoteIdentifier(config.schema ?: "public")}.${quoteIdentifier(tableName)}"
     }
 
     override fun createConnection(): Connection {
@@ -49,8 +49,8 @@ object TestingEnvironmentPostgresql : TestingServer<EmbeddedPostgres, Connection
     @Synchronized
     override fun init() {
         createConnection().use { conn ->
-            `try?` { conn.createStatement().executeUpdate("DROP SCHEMA ${config.schema} cascade") }
-            conn.createStatement().executeUpdate("CREATE SCHEMA ${config.schema}")
+            `try?` { conn.createStatement().executeUpdate("DROP SCHEMA ${config.schema ?: "public"} cascade") }
+            conn.createStatement().executeUpdate("CREATE SCHEMA ${config.schema ?: "public"}")
         }
     }
 

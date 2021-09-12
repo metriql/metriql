@@ -2,6 +2,7 @@ package com.metriql.warehouse.postgresql
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.metriql.util.ValidationUtil
+import com.metriql.warehouse.postgresql.PostgresqlDataSource.Companion.DEFAULT_SCHEMA
 import com.metriql.warehouse.spi.Warehouse
 import java.sql.DriverManager
 
@@ -22,7 +23,7 @@ object PostgresqlWarehouse : Warehouse<PostgresqlWarehouse.PostgresqlConfig> {
         val port: Int,
         @JsonAlias("database")
         val dbname: String,
-        val schema: String,
+        val schema: String?,
         val user: String,
         val password: String?,
         val method: Method? = null,
@@ -34,7 +35,7 @@ object PostgresqlWarehouse : Warehouse<PostgresqlWarehouse.PostgresqlConfig> {
     ) : Warehouse.Config {
         enum class Method { iam }
 
-        override fun toString(): String = "$dbname - $schema)"
+        override fun toString(): String = "$dbname - ${schema ?: DEFAULT_SCHEMA})"
         override fun stripPassword() = this.copy(password = "")
         override fun isValid() = ValidationUtil.checkForPrivateIPAccess(host) == null
         override fun warehouseSchema() = schema

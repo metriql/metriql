@@ -79,6 +79,6 @@ class TestWarehousePostgresql : TestWarehouse() {
     @Test
     override fun `test listing schema names`() {
         val schemaNames = datasource.listSchemaNames(null)
-        assert(schemaNames.contains(datasource.config.schema))
+        assert(schemaNames.contains(datasource.config.schema ?: "public"))
     }
 }

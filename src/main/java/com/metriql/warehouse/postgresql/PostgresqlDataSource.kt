@@ -34,7 +34,7 @@ open class PostgresqlDataSource(override val config: PostgresqlWarehouse.Postgre
 
         properties["dataSource.user"] = config.user
         properties["dataSource.password"] = config.password ?: ""
-        properties["dataSource.currentSchema"] = config.schema
+        properties["dataSource.currentSchema"] = config.schema ?: DEFAULT_SCHEMA
         properties["dataSource.connectTimeout"] = 10
 //        properties["dataSource.socketTimeout"] = 30
         properties["dataSource.loginTimeout"] = 10
@@ -77,7 +77,7 @@ open class PostgresqlDataSource(override val config: PostgresqlWarehouse.Postgre
         return createSyncQueryTask(
             auth,
             query,
-            defaultSchema ?: config.schema,
+            defaultSchema ?: config.schema ?: DEFAULT_SCHEMA,
             defaultDatabase ?: config.dbname,
             limit,
             ignoredErrorCodes = listOf("42", "43", "28", "53", "54", "55", "57") // https://www.postgresql.org/docs/9.6/errcodes-appendix.html
@@ -98,8 +98,12 @@ open class PostgresqlDataSource(override val config: PostgresqlWarehouse.Postgre
                 "database" to config.dbname,
                 "user" to config.user,
                 "password" to (config.password ?: ""),
-                "schema" to (config.schema ?: "")
+                "schema" to (config.schema ?: DEFAULT_SCHEMA)
             )
         )
+    }
+
+    companion object {
+        val DEFAULT_SCHEMA = "public"
     }
 }

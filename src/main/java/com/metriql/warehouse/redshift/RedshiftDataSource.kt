@@ -33,7 +33,7 @@ class RedshiftDataSource(override val config: PostgresqlWarehouse.PostgresqlConf
                 "database" to config.dbname,
                 "user" to config.user,
                 "password" to (config.password ?: ""),
-                "schema" to (config.schema ?: "")
+                "schema" to (config.schema ?: DEFAULT_SCHEMA)
             )
         )
     }
