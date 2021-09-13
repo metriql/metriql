@@ -212,7 +212,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
         fun toModel(dbtManifest: DbtManifest): Recipe.RecipeModel? {
             if (resource_type != "source" || meta.metriql == null) return null
 
-            val modelName = meta.metriql?.name ?: TextUtil.toSlug("source_${package_name}_$name", true)
+            val modelName = meta.metriql?.name ?: TextUtil.toSlug("source_${package_name}_${source_name}_$name", true)
 
             val (columnMeasures, columnDimensions) = extractFields(modelName, columns)
 
