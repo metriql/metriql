@@ -539,7 +539,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 is Table -> {
                     val table = DbtJinjaRenderer.renderer.renderModelNameRegex(from.name.suffix)
                     val model = context.getModel(table)
-                    Pair(model, table)
+                    Pair(model, model.name)
                 }
                 else -> {
                     throw UnsupportedOperationException(String.format("Unsupported operation %s", from.javaClass.name))

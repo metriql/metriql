@@ -317,8 +317,10 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val modelService = UpdatableModelService(null, modelsFetcher, dataSource.warehouse.bridge)
 
+            val httpPort = System.getenv("METRIQL_RUN_PORT")?.let { Integer.parseInt(it) } ?: port
+            val httpHost = System.getenv("METRIQL_RUN_HOST") ?: host
             HttpServer.start(
-                HostAndPort.fromParts(System.getenv("METRIQL_RUN_HOST") ?: host, System.getenv("METRIQL_RUN_PORT") ?: port), apiSecret, usernamePass, threads, debug, origin,
+                HostAndPort.fromParts(httpHost, httpPort), apiSecret, usernamePass, threads, debug, origin,
                 modelService, dataSource, enableJdbc, timezone?.let { ZoneId.of(it) }
             )
         }
