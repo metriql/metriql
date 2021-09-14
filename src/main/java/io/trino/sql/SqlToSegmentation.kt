@@ -20,6 +20,7 @@ import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
+import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.presto.PrestoMetriqlBridge.quoteIdentifier
 import com.metriql.warehouse.presto.PrestoWarehouse
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC
@@ -83,11 +84,11 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val references = mutableMapOf<Node, Reference>()
         model.relations.forEach { relation ->
             val relationModel = context.getModel(relation.modelName)
-            buildReferences(references, relationModel, context, alias, relation = relation)
+            buildReferences(references, relationModel, alias, relation = relation)
         }
 
         // override values if they already exist
-        buildReferences(references, model, context, alias, relation = null)
+        buildReferences(references, model, alias, relation = null)
 
         val measures = mutableListOf<String>()
         val dimensions = mutableListOf<String>()
@@ -510,7 +511,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             rawDimension
         } else {
             rawDimension + dimension.postOperations.flatMap {
-                val identifier = "$identifier::$it"
+                val identifier = "$identifier::${toSnakeCase(it)}"
                 val quotedIdentifier = quoteIdentifier(identifier)
                 val reference = Pair(MetricType.DIMENSION, identifier)
 
@@ -525,7 +526,6 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     private fun buildReferences(
         references: MutableMap<Node, Reference>,
         sourceModel: Model,
-        context: IQueryGeneratorContext,
         tableAlias: String,
         relation: Model.Relation? = null
     ) {

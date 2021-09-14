@@ -28,9 +28,15 @@ import io.trino.client.StatementStats
 import io.trino.server.HttpRequestSessionContext
 import io.trino.spi.ErrorType
 import io.trino.spi.StandardErrorCode
+import io.trino.sql.ParameterUtils
 import io.trino.sql.analyzer.TypeSignatureTranslator
 import io.trino.sql.parser.ParsingOptions
+import io.trino.sql.planner.ParameterRewriter
+import io.trino.sql.tree.Execute
+import io.trino.sql.tree.Expression
+import io.trino.sql.tree.ExpressionTreeRewriter
 import io.trino.sql.tree.Query
+import io.trino.sql.tree.Statement
 import io.trino.testing.TestingGroupProvider
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
@@ -71,15 +77,25 @@ class StatementService(
         private val logger = Logger.getLogger(this::class.java.name)
     }
 
-    private fun isMetadataQuery(sql: String, defaultCatalog: String): Boolean {
+    private fun isMetadataQuery(sql: String, sessionContext: HttpRequestSessionContext, defaultCatalog: String): Boolean {
         val isMetadata = AtomicReference<Boolean?>()
-        val stmt = try {
+        val rawStmt = try {
             runner.runner.sqlParser.createStatement(sql, defaultParsingOptions)
         } catch (e: Exception) {
             // since it's a trino query, let the executor handle the exception
             return true
         }
-        return if (stmt !is Query || sql.equals("select version()")) {
+
+        val stmt = if(rawStmt is Execute) {
+            val ps = sessionContext.preparedStatements[rawStmt.name.value]
+            val test = ParameterUtils.parameterExtractor(rawStmt, rawStmt.parameters)
+            val realPs = runner.runner.sqlParser.createStatement(ps, defaultParsingOptions)
+//            val rewritten = ExpressionTreeRewriter.rewriteWith(ParameterRewriter(test), realPs)
+
+            rawStmt
+        } else rawStmt
+
+        return if (stmt !is Query || sql == "select version()") {
             true
         } else {
             IsMetriqlQueryVisitor(defaultCatalog).process(stmt, isMetadata)
@@ -119,7 +135,7 @@ class StatementService(
                 ReportType.MQL
             }
 
-            val task = if (reportType == ReportType.MQL && isMetadataQuery(sql, "metriql")) {
+            val task = if (reportType == ReportType.MQL && isMetadataQuery(sql, sessionContext, "metriql")) {
                 runner.createTask(auth, sessionContext, sql)
             } else {
                 reportService.queryTask(

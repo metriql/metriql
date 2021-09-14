@@ -17,6 +17,10 @@ fun <T> `try?`(run: () -> T): T? {
     }
 }
 
+fun toSnakeCase(value: String): String {
+    return CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, value)
+}
+
 fun toCamelCase(value: String): String {
     return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, value)
 }

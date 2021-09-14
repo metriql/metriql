@@ -8,6 +8,7 @@ import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
 import com.metriql.util.JsonHelper
+import com.metriql.util.toSnakeCase
 import io.trino.connector.system.SystemTablesProvider
 import io.trino.spi.connector.ColumnMetadata
 import io.trino.spi.connector.ConnectorPageSource
@@ -105,11 +106,11 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
                 .build()
         }
 
-        private fun toColumnMetadata(it: Model.Dimension, relation: String? = null, postOperation: String? = null): ColumnMetadata {
+        private fun toColumnMetadata(it: Model.Dimension, relation: String? = null, timeframe: String? = null): ColumnMetadata {
             val relationPrefix = relation?.let { "$it." } ?: ""
-            val postOperationSuffix = postOperation?.let { "::$it" } ?: ""
+            val timeframeSuffix = timeframe?.let { "::${toSnakeCase(it)}" } ?: ""
             return ColumnMetadata.builder()
-                .setName(relationPrefix + it.name + postOperationSuffix)
+                .setName(relationPrefix + it.name + timeframeSuffix)
                 .setComment(Optional.ofNullable(it.description))
                 .setHidden(it.hidden ?: false)
                 .setNullable(true)
