@@ -27,6 +27,7 @@ import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.TOTAL_ROWS_MEASURE
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.trino.MetriqlMetadata
 import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
 import io.trino.sql.parser.SqlParser
 import io.trino.sql.tree.AllColumns
@@ -61,6 +62,13 @@ typealias Reference = Pair<MetricType, String>
 class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
     val parser = SqlParser()
 
+    private fun getProjectionOfColumn(rewriter : MetriqlSegmentationQueryRewriter, expression : Expression, modelName: String, alias : Optional<Identifier>): Pair<String, String?> {
+        val alias = alias.orElse(null)?.let { identifier -> identifier.value }
+            ?: deferenceExpression(expression, modelName)?.let { exp -> getIdentifierValue(exp) }
+        val projection = rewriter.process(expression, null)
+        return Pair(projection, alias)
+    }
+
     fun convert(
         context: IQueryGeneratorContext,
         modelAlias: Pair<Model, String>,
@@ -92,14 +100,18 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 //            it.expressions.map { exp -> getReference(query.select.selectItems, exp) }
 //        }?.toList() ?: listOf()
 
-        val projectionColumns = selectItems.map {
+        val rewriter = MetriqlSegmentationQueryRewriter(context, model, references, dimensions, measures)
+
+        val projectionColumns = selectItems.flatMap {
             when (it) {
-                is AllColumns -> throw TODO()
+                is AllColumns -> {
+                    val metadata = MetriqlMetadata.ModelProxy(modelService.list(context.auth), model).tableMetadata
+                    metadata.columns.map { column ->
+                        getProjectionOfColumn(rewriter, Identifier(column.name), model.name, Optional.empty())
+                    }
+                }
                 is SingleColumn -> {
-                    val alias = it.alias.orElse(null)?.let { identifier -> identifier.value }
-                        ?: deferenceExpression(it.expression, model.name)?.let { exp -> getIdentifierValue(exp) }
-                    val projection = MetriqlSegmentationQueryRewriter(context, model, references, dimensions, measures).process(it.expression, null)
-                    Pair(projection, alias)
+                    listOf(getProjectionOfColumn(rewriter, it.expression, model.name, it.alias))
                 }
                 else -> throw IllegalStateException()
             }

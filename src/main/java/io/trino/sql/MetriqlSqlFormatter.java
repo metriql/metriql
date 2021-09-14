@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
-import static io.trino.sql.ExpressionFormatter.formatGroupBy;
 import static io.trino.sql.ExpressionFormatter.formatWindowSpecification;
 import static io.trino.sql.MetriqlExpressionFormatter.formatExpression;
 import static io.trino.sql.MetriqlExpressionFormatter.formatStringLiteral;
