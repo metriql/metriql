@@ -116,6 +116,9 @@ object JdbcUtil {
                     time?.toLocalTime()
                 }
             }
+            FieldType.UNKNOWN -> {
+                resultSet.getObject(columnIndex)
+            }
             FieldType.BINARY -> {
                 resultSet.getBinaryStream(columnIndex)?.let {
                     try {

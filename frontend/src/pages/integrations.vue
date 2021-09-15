@@ -33,7 +33,7 @@
     <div v-else class="integration-content-box" :class="{full: activeIntegration.full}">
       <el-page-header @back="$router.push($route.path)" :content="`Integrate ${activeIntegration.label} ${activeIntegrationSuffix}`" />
       <img v-if="activeIntegration.logo != null" :src="activeIntegration.logo" style="max-width: 200px;margin:30px"/>
-      <a v-if="activeIntegration.source" :href="activeIntegration.source" target="_blank" style="position:absolute;right:10px;top:20px"><i class="el-icon el-icon-link" />see source</a>
+      <a v-if="activeIntegration.publicDocs" :href="activeIntegration.publicDocs" target="_blank" style="position:absolute;right:10px;top:20px"><i class="el-icon el-icon-link" />see docs</a>
 
       <component :is="activeIntegration.docs" :value="activeIntegration" class="integration-content-markdown"/>
     </div>

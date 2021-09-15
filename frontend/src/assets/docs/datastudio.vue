@@ -9,7 +9,7 @@
       </el-tooltip>
       </template>
       <div v-else>
-        Your server is in your local environment (<b>{{$BASE.URL}}</b>) so you need to expose your local port to the internet so that Google servers can access it. <br>
+        Your server is in your local environment (<b>{{$BASE.URL}}</b>) so you need to expose your local port to the internet so that Google servers can access it.
         <a href="https://github.com/anderspitman/awesome-tunneling" target="blank">Here</a> is a few tunneling resources that let you expose your local port.
       </div>
     </li>

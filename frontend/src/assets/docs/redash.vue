@@ -25,7 +25,7 @@
       </tr>
       <tr>
         <td>Password</td>
-        <td><i>YOUR_METRIQL_PASSWORD</i></td>
+        <td><i v-if="!isPasswordless">YOUR_METRIQL_PASSWORD</i><i v-else>(empty)</i></td>
       </tr>
       <tr>
         <td>Schema</td>
@@ -40,3 +40,18 @@
     Redash doesn't have metrics so you can run SQL queries referencing your dimensions & measures in your datasets. Please see <a href="https://metriql.com/query/mql" target="_blank">MQL reporting type</a> for documentation.
   </div>
 </template>
+<script>
+import { AuthService } from '../../services/auth'
+
+export default {
+  data() {
+    return {
+    }
+  },
+  computed: {
+    isPasswordless: function() {
+      return AuthService.getAuth() == AuthType.NONE
+    }
+  }
+}
+</script>

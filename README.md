@@ -14,7 +14,7 @@ This is the core repository of the [metriql](http://metriql.com) project. It inc
 * [metriql CLI](https://metriql.com/metriql-cli/cli-overview)
 * [REST API](https://metriql.com/integrations/rest-api)
 * [JDBC Driver](https://metriql.com/integrations/jdbc-driver)
-* [BI tools](https://metriql.com/integrations/bi-tools)
+* [BI tools](https://metriql.com/integrations/bi-tools/index)
 * [Embedded Applications](https://metriql.com/integrations/embedded)
 
 ## Recent Posts
