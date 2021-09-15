@@ -5,13 +5,13 @@ import com.metriql.service.model.Model.MappingDimensions.CommonMappings.DEVICE_I
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.util.MetriqlException
+import com.metriql.util.TextUtil.toMetriqlConventionalName
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.TableSchema
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.gcardone.junidecode.Junidecode.unidecode
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -127,15 +127,6 @@ class DiscoverService(private val dataSource: DataSource) {
             } else {
                 dimension.postOperations
             }
-        }
-
-        private val modelReplaceRegex = "[^a-z_][^a-z0-9_]*".toRegex()
-        private fun toMetriqlConventionalName(name: String): String {
-            val preProcessed = unidecode(name)
-                .trim()
-                .replace(" ", "_")
-                .toLowerCase()
-            return preProcessed.replace(modelReplaceRegex, "_").take(120)
         }
 
         fun createDimensionsFromColumns(columns: List<TableSchema.Column>): List<Model.Dimension> {

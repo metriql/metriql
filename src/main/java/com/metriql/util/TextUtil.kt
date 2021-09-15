@@ -2,6 +2,7 @@ package com.metriql.util
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.google.common.base.CaseFormat
+import net.gcardone.junidecode.Junidecode
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.text.Normalizer
@@ -11,6 +12,8 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.primaryConstructor
 
 object TextUtil {
+    private val modelReplaceRegex = "[^a-z_]+[^a-z0-9_]*".toRegex()
+
     fun md5(input: String): String {
         val md = MessageDigest.getInstance("MD5")
         return BigInteger(1, md.digest(input.toByteArray())).toString(16).padStart(32, '0')
@@ -32,11 +35,23 @@ object TextUtil {
         )
     }
 
+    fun toMetriqlConventionalName(name: String): String {
+        val preProcessed = Junidecode.unidecode(name)
+            .trim()
+            .replace(" ", "_")
+            .lowercase(Locale.ENGLISH)
+        return preProcessed
+            .replace("[0-9]+$".toRegex(), "_")
+            .replace("^[0-9]+".toRegex(), "_")
+            .replace("[^a-z0-9_]+".toRegex(), "_")
+            .take(120)
+    }
+
     fun toSlug(input: String, useUnderscore: Boolean = false): String {
         val nowhitespace = WHITESPACE.matcher(input).replaceAll(if (useUnderscore) "_" else "-")
         val normalized: String = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD)
         val slug = (if (useUnderscore) NONLATIN_UNDERSCORE else NONLATIN_NORMAL).matcher(normalized).replaceAll(if (useUnderscore) "_" else "-")
-        return slug.toLowerCase(Locale.ENGLISH)
+        return slug.lowercase(Locale.ENGLISH)
     }
 
     private val NONLATIN_NORMAL: Pattern = Pattern.compile("[^\\w-]")

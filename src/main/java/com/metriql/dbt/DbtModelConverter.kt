@@ -26,14 +26,6 @@ object DbtModelConverter {
         }
     }
 
-    private fun getDimension(column: DbtSchemaYaml.DbtModel.DbtModelColumn, meta: Recipe.RecipeModel?): Recipe.RecipeModel.Metric.RecipeDimension? {
-        val defaultType = if (meta?.mappings?.get(Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP) == column.name) FieldType.TIMESTAMP else null
-        val dimension = column.meta?.dimension ?: return null
-
-        val type = if (dimension.type == null && defaultType != null) defaultType else dimension.type
-        return dimension.copy(column = column.name, type = type, name = dimension.name ?: toSlug(column.name, true))
-    }
-
     fun fromModels(models: List<Recipe.RecipeModel>): DbtSchemaYaml {
         val sources = models.filter { it.target != null }.groupBy { Pair(it.target?.database, it.target?.schema) }.map { databaseSchema ->
             DbtSchemaYaml.DbtSource(
