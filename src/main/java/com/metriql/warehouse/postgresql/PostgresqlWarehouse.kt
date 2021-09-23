@@ -25,6 +25,7 @@ object PostgresqlWarehouse : Warehouse<PostgresqlWarehouse.PostgresqlConfig> {
         val dbname: String,
         val schema: String?,
         val user: String,
+        @JsonAlias("pass")
         val password: String?,
         val method: Method? = null,
         val role: String? = null,

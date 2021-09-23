@@ -1,5 +1,6 @@
 package com.metriql.warehouse.mysql
 
+import com.fasterxml.jackson.annotation.JsonAlias
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.spi.Warehouse
 
@@ -16,6 +17,7 @@ object MySQLWarehouse : Warehouse<MySQLWarehouse.MysqlConfig> {
         val port: Int,
         val database: String,
         val user: String,
+        @JsonAlias("pass")
         val password: String,
         val usePool: Boolean,
         val connectionParameters: Map<String, String>?

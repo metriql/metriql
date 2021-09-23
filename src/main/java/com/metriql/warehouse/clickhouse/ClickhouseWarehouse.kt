@@ -25,6 +25,7 @@ object ClickhouseWarehouse : Warehouse<ClickhouseConfig> {
         val port: Int,
         val database: String,
         val user: String,
+        @JsonAlias("pass")
         val password: String,
         val usePool: Boolean,
         val connectionParameters: Map<String, String>?
