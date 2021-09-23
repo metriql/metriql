@@ -198,7 +198,7 @@ public final class MetriqlSqlFormatter {
             } else{
                 Pair<Model, String> modelAlias = SqlToSegmentation.Companion.getModel(context, from);
                 modelAlias = modelAlias.copy(modelAlias.getFirst(), alias != null ? alias : modelAlias.getSecond());
-                String proxyQuery = reWriter.convert(context, modelAlias, node.getSelect().getSelectItems(), node.getWhere(),
+                String proxyQuery = reWriter.convert(context, modelAlias, node.getSelect(), node.getWhere(),
                         node.getHaving(), node.getLimit(), node.getOrderBy());
                 append(indent, proxyQuery);
             }

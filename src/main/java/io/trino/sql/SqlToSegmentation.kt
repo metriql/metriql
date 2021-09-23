@@ -51,6 +51,7 @@ import io.trino.sql.tree.LongLiteral
 import io.trino.sql.tree.Node
 import io.trino.sql.tree.OrderBy
 import io.trino.sql.tree.Relation
+import io.trino.sql.tree.Select
 import io.trino.sql.tree.SelectItem
 import io.trino.sql.tree.SingleColumn
 import io.trino.sql.tree.SortItem
@@ -73,7 +74,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     fun convert(
         context: IQueryGeneratorContext,
         modelAlias: Pair<Model, String>,
-        selectItems: MutableList<out SelectItem>,
+        select: Select,
         where: Optional<Expression>,
         having: Optional<Expression>,
         limit: Optional<Node>,
@@ -103,10 +104,10 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
         val rewriter = MetriqlSegmentationQueryRewriter(context, model, references, dimensions, measures)
 
-        val projectionColumns = selectItems.flatMap {
+        val projectionColumns = select.selectItems.flatMap {
             when (it) {
                 is AllColumns -> {
-                    val metadata = MetriqlMetadata.ModelProxy(modelService.list(context.auth), model).tableMetadata
+                    val metadata = MetriqlMetadata.ModelProxy(modelService.list(context.auth), model, select.isDistinct).tableMetadata
                     metadata.columns.map { column ->
                         getProjectionOfColumn(rewriter, Identifier(column.name), model.name, Optional.empty())
                     }
@@ -127,7 +128,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             dimensions.map { Recipe.DimensionReference.fromName(it) },
             (whereFilters + havingFilters).mapNotNull { it.toReference() },
             limit = parseLimit(limit.orElse(null)),
-            orders = parseOrders(references, selectItems, orderBy)
+            orders = parseOrders(references, select.selectItems, orderBy)
         ).toReportOptions(context)
 
         val (renderedQuery, _, _) = segmentationService.renderQuery(context.auth, context, query)
