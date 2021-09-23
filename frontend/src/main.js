@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from "./router"
 import clipboard from "/src/plugins/clipboard"
 
-import 'element-plus/lib/theme-chalk/index.css'
+import 'element-plus/dist/index.css'
 import 'bulma/bulma.sass'
 import '/src/assets/style/main.scss'
 
@@ -75,7 +75,6 @@ import {
   ElSlider,
   ElStep,
   ElSteps,
-  ElSubmenu,
   ElSwitch,
   ElTabPane,
   ElTable,
@@ -162,7 +161,6 @@ const components = [
   ElSlider,
   ElStep,
   ElSteps,
-  ElSubmenu,
   ElSwitch,
   ElTabPane,
   ElTable,

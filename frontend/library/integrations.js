@@ -130,6 +130,5 @@ export default [{
   docs: defineAsyncComponent({loader: () => import('/src/assets/docs/jdbc.vue'), loadingComponent: ElSkeleton}),
   category: 'BI Tools'
 }].sort((a, b) => {
-  console.log(a.ready === false)
   return a.ready === false ? (a.label.localeCompare(b.label)) : (a.label.localeCompare(b.label))
 })
