@@ -16,10 +16,11 @@ object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
     data class BigQueryConfig(
         val dataset: String,
         val project: String? = null,
-        @JsonAlias("keyfile_json")
-        val serviceAccountJSON: String? = null,
+        @JsonAlias("serviceAccountJSON")
+        val keyfile_json: String? = null,
+        @JsonAlias("maximum_bytes_billed")
         val maximumBytesBilled: Long? = null,
-        @JsonProperty("timeout_seconds")
+        @JsonAlias("timeout_seconds")
         val timeoutSeconds: Long? = null,
         val location: String? = null,
         val priority: String? = null,
@@ -36,7 +37,7 @@ object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
         }
 
         override fun toString(): String = "$dataset - $project"
-        override fun stripPassword() = this.copy(serviceAccountJSON = "")
+        override fun stripPassword() = this.copy(keyfile_json = "", client_secret = null)
         override fun isValid() = true
         override fun warehouseSchema() = dataset
         override fun warehouseDatabase() = project

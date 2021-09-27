@@ -29,7 +29,7 @@ object TestingEnvironmentBigQuery : TestingServer<Unit, BigQuery>() {
     private val bigQuery = BigQueryOptions
         .newBuilder()
         .setProjectId(config.project)
-        .setCredentials(ServiceAccountCredentials.fromStream(StringInputStream(config.serviceAccountJSON)))
+        .setCredentials(ServiceAccountCredentials.fromStream(StringInputStream(config.keyfile_json)))
         .build()
         .service
 

@@ -1,7 +1,6 @@
 package com.metriql.warehouse.bigquery
 
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.auth.oauth2.OAuth2Credentials
+import com.fasterxml.jackson.core.type.TypeReference
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.auth.oauth2.UserCredentials
 import com.google.cloud.bigquery.BigQuery
@@ -62,8 +61,8 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                         .setRefreshToken(config.refresh_token).build()
                 )
             }
-            config.serviceAccountJSON != null -> {
-                val fromStream = ServiceAccountCredentials.fromStream(StringInputStream(config.serviceAccountJSON))
+            config.keyfile_json != null -> {
+                val fromStream = ServiceAccountCredentials.fromStream(StringInputStream(config.keyfile_json))
                 credentialProjectId = fromStream.projectId
                 bigQuery.setCredentials(fromStream)
             }
@@ -298,12 +297,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     override fun dbtSettings(): DbtSettings {
         return DbtSettings(
             "bigquery",
-            mapOf(
-                "method" to "service-account-json",
-                "keyfile_json" to JsonHelper.read(config.serviceAccountJSON, ObjectNode::class.java),
-                "database" to getProjectId(),
-                "schema" to (config.dataset)
-            )
+            JsonHelper.convert(config, object : TypeReference<Map<String, Any>>() {})
         )
     }
 
