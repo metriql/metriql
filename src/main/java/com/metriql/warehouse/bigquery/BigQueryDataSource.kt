@@ -49,7 +49,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     init {
         val bigQuery = BigQueryOptions.newBuilder()
 
-        if(config.project != null) {
+        if (config.project != null) {
             bigQuery.setProjectId(config.project)
         }
 
@@ -72,12 +72,15 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 bigQuery.setCredentials(fromStream)
             }
             else -> {
-                val localKeyFile = File(System.getProperty("user.home"), ".gcloud/keyfile.json")
+                val localKeyFile = System.getenv("GCLOUD_CONFIG_DIR")?.let { File(it, "application_default_credentials.json") } ?: File(
+                    System.getProperty("user.home"),
+                    ".config/gcloud/application_default_credentials.json"
+                )
+
                 if (!localKeyFile.exists()) {
                     throw MetriqlException("$localKeyFile not found connecting the BigQuery.", HttpResponseStatus.BAD_REQUEST)
                 }
-                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(localKeyFile))
-                credentialProjectId = fromStream.projectId
+                val fromStream = UserCredentials.fromStream(FileInputStream(localKeyFile))
                 bigQuery.setCredentials(fromStream)
             }
         }
