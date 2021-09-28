@@ -61,6 +61,9 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
         if (config.warehouse != null) {
             properties["dataSource.warehouse"] = config.warehouse
         }
+        if (config.role != null) {
+            properties["dataSource.role"] = config.role
+        }
         config.connectionParameters?.forEach { (k, v) ->
             properties["dataSource.$k"] = v
         }
