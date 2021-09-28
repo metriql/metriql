@@ -18,6 +18,7 @@ import com.metriql.service.model.Model.Measure.AggregationType.MINIMUM
 import com.metriql.service.model.Model.Measure.AggregationType.SUM
 import com.metriql.service.model.Model.Measure.AggregationType.SUM_DISTINCT
 import com.metriql.service.model.Model.Relation.RelationType.MANY_TO_MANY
+import com.metriql.service.model.Model.Relation.RelationType.MANY_TO_ONE
 import com.metriql.service.model.Model.Relation.RelationType.ONE_TO_MANY
 import com.metriql.service.model.ModelDimension
 import com.metriql.service.model.ModelName
@@ -337,7 +338,12 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         }
 
         val renderedValue = if (measure.value.agg != null) {
-            val nonSymmetricAggregates = context.referencedRelations.filter { it.value.relation.relationType == ONE_TO_MANY || it.value.relation.relationType == MANY_TO_MANY }
+            val nonSymmetricAggregates = context.referencedRelations.filter {
+                it.value.relation.relationType == ONE_TO_MANY
+                || it.value.relation.relationType == MANY_TO_MANY
+                || (relationName != null && it.value.relation.relationType == MANY_TO_ONE)
+            }
+
             val (aggregation, nonSymmetricAggregatedValue) = if (nonSymmetricAggregates.isNotEmpty()) {
                 val primaryKeyDimension = context.getModel(contextModelName)?.dimensions.find { it.primary == true }?.name
                     ?: throw MetriqlException("Primary key dimension is required for non-symmetric aggregates in `$contextModelName`", HttpResponseStatus.BAD_REQUEST)
