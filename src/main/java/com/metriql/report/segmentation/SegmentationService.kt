@@ -258,10 +258,6 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
 
         val inQueryDimensionNames = dimensions.map { it.name } + renderedDimensionAndColumnNames
 
-        if (renderedDimensions.isEmpty() && renderedMeasures.isEmpty()) {
-            throw MetriqlException("At least one measure or dimension is required to build a segmentation query", HttpResponseStatus.BAD_REQUEST)
-        }
-
         val dsl = Segmentation(
             columnNames = getColumnNames(context, mainModel, dimensions, measures),
             dimensions = renderedDimensions,

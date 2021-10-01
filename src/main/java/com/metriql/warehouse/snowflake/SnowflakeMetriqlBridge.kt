@@ -18,7 +18,7 @@ import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 
 object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
-    private val identifierRegex = "^[A-Za-z0-9_]+$".toRegex()
+    private val identifierRegex = "^[^\\_0-9][A-Za-z0-9_]*\$".toRegex()
 
     override val filters = SnowflakeFilters { SnowflakeMetriqlBridge }
     override val timeframes = SnowflakeTimeframes()
@@ -43,6 +43,7 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "DATEADD({{value[1]}}, {{value[2]}}, {{value[0]}})",
         RFunction.HEX_TO_INT to "TO_NUMBER({{value[0]}}, 'XXXXXXXXXXXXXXXX')",
+        RFunction.TO_ISO8601 to "CAST({{value[0]}} AS TEXT)"
     )
 
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)

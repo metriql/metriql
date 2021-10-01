@@ -66,11 +66,27 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
         )
     }
 
+    @Path("/metabase")
+    @POST
+    fun metabase(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, action: MetabaseAction, parameters: MetabaseParameters) {
+        runCommand(
+            request, listOf("metriql-metabase") + listOf(action.name) + buildArguments(parameters), if (action.needsStdin) {
+                val models = modelService.list(auth)
+                JsonHelper.encodeAsBytes(models)
+            } else null
+        )
+    }
+
     enum class SupersetAction(val needsStdin: Boolean) {
         `list-databases`(false), `sync-database`(true)
     }
 
+    enum class MetabaseAction(val needsStdin: Boolean) {
+        `list-databases`(false), `sync-database`(true)
+    }
+
     data class SupersetParameters(val database_id: Int?, val database_name: String?, val superset_url: String, val superset_username: String, val superset_password: String)
+    data class MetabaseParameters(val database_name: String?, val metabase_url: String, val metabase_username: String, val metabase_password: String)
 
     private fun buildArguments(dataObject: Any): List<String> {
         return dataObject::class.declaredMemberProperties

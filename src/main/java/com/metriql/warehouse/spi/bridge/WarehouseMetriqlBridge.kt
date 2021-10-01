@@ -48,7 +48,7 @@ interface WarehouseMetriqlBridge {
 
     fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: AggregationContext): String
 
-    data class RenderedField(val value: String, val join: String?, val window : Boolean, val alias : String)
+    data class RenderedField(val value: String, val join: String?, val window : Boolean, val alias : String?)
 
     /**
      * In cases like rendering jinja context can't generate join expressions. Thus they're optional

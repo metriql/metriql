@@ -2,6 +2,7 @@ package com.metriql.warehouse.spi.services.segmentation
 
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.service.auth.ProjectAuth
+import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceSupport
 
@@ -9,8 +10,11 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
     override fun supports() = listOf<ServiceSupport>()
 
     open fun getMap(context: IQueryGeneratorContext, queryDSL: Segmentation): Map<String, Any?> {
+        val projections = (queryDSL.dimensions + queryDSL.measures).ifEmpty {
+            listOf(WarehouseMetriqlBridge.RenderedField("*", null, false, null))
+        }
         return mapOf(
-            "projections" to queryDSL.dimensions + queryDSL.measures,
+            "projections" to projections,
             "tableReference" to queryDSL.tableReference,
             "joins" to queryDSL.joins,
             "limit" to (queryDSL.limit?.let { "LIMIT $it" } ?: ""),

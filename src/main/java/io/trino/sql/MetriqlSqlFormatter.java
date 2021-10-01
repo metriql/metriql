@@ -196,8 +196,14 @@ public final class MetriqlSqlFormatter {
             if(from == null || from instanceof TableSubquery) {
                 internalVisitQuerySpecification(node, indent);
             } else{
-                Pair<Model, String> modelAlias = SqlToSegmentation.Companion.getModel(context, from);
-                modelAlias = modelAlias.copy(modelAlias.getFirst(), alias != null ? alias : modelAlias.getSecond());
+                Pair<Model, List<String>> modelAlias = SqlToSegmentation.Companion.getModel(context, from);
+                List<String> finalAlias;
+                if(alias != null) {
+                    finalAlias = ImmutableList.of(alias);
+                } else {
+                    finalAlias = modelAlias.getSecond();
+                }
+                modelAlias = modelAlias.copy(modelAlias.getFirst(), finalAlias);
                 String proxyQuery = reWriter.convert(context, modelAlias, node.getSelect(), node.getWhere(),
                         node.getHaving(), node.getLimit(), node.getOrderBy());
                 append(indent, proxyQuery);

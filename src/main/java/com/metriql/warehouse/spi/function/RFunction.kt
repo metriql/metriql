@@ -86,5 +86,5 @@ enum class RFunction(val description: String?, val returnType: FieldType, val pa
         "Returns Trino version",
         STRING,
         listOf()
-    ),
+    )
 }
