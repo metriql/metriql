@@ -47,7 +47,6 @@ export default [{
   docs: defineAsyncComponent({loader: () => import('/src/assets/docs/googlesheets.md'), loadingComponent: ElSkeleton}),
   category: 'Others',
   publicDocs: 'https://metriql.com/integrations/services/google-sheets',
-  ready: false
 }, {
   label: 'Superset',
   category: 'BI Tools',
@@ -73,8 +72,7 @@ export default [{
   category: 'BI Tools',
   logo: metabaseLogo,
   publicDocs: 'https://metriql.com/integrations/bi-tools/metabase',
-  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/metabase.md'), loadingComponent: ElSkeleton}),
-  ready: false,
+  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/metabase.vue'), loadingComponent: ElSkeleton}),
 },  {
   label: 'Power BI',
   category: 'BI Tools',

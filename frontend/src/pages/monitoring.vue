@@ -35,7 +35,8 @@
                        :filter-method="(value, row) => row.source == value"></el-table-column>
       <el-table-column label="Type" width="150">
         <template #default="scope">
-            {{ scope.row.update.info.reportType }}
+            {{ scope.row.update?.info?.reportType }}
+            {{ scope.row.update }}
         </template>
       </el-table-column>
       <el-table-column label="Query">
@@ -55,13 +56,13 @@
 
     <el-dialog
       v-if="activeTask != null"
-      :title="activeTask.update.info.reportType"
+      :title="activeTask.update?.info?.reportType"
       :modelValue="activeTask != null"
       @update:modelValue="$event == false ? (activeTask = null) : null"
       width="50%">
-      <pre>{{ activeTask.update.info.query.query }}</pre>
+      <pre>{{ activeTask.update?.info?.query?.query }}</pre>
       <h4 style="margin:15px 0">Compiled:</h4>
-      <pre>{{ activeTask.update.info.compiledQuery }}</pre>
+      <pre>{{ activeTask.update?.info?.compiledQuery }}</pre>
       <template #footer>
           <span class="dialog-footer">
             <el-button @click="activeTask = null">OK</el-button>
@@ -80,6 +81,7 @@ import { computed, onMounted, ref } from 'vue'
 import { MetriqlAdmin } from '../services/MetriqlAdmin'
 import format from 'date-fns/format'
 import LiveStatistics from '/src/services/live-statistics'
+import TableLite from "vue3-table-lite";
 
 use([
   CanvasRenderer,
@@ -87,7 +89,7 @@ use([
   GridComponent,
   TitleComponent,
   TooltipComponent,
-  LegendComponent
+  LegendComponent,
 ])
 
 const states = {
@@ -111,12 +113,33 @@ const getFilters = function (tableData, property) {
 export default {
   name: 'Monitoring',
   components: {
-    VChart
+    VChart, TableLite
   },
   provide: {
     [THEME_KEY]: 'light'
   },
   computed: {
+    columns: function() {
+      return [{
+        label: "Status",
+        field: "status",
+        width: "100px",
+        sortable: true,
+        display: function (row) {
+          return (
+            `<span class="el-tag el-tag--${states[row.status].type} el-tag--small el-tag--light">${row.status}</span>`
+          );
+        },
+      }, {
+        label: "Started at",
+        field: "startedAt",
+        width: "230px",
+        sortable: true,
+        display: function (row) {
+          return this.formatDate(row.startedAt);
+        },
+      }]
+    },
     distinctSources: function () {
       return getFilters(this.filteredTableData, 'source')
     },
@@ -147,7 +170,7 @@ export default {
         + (seconds < 10 ? `0${seconds}` : seconds)
     },
     getTrimmedQuery: function (task) {
-      let query = task.update.info.compiledQuery
+      let query = task.update.info?.compiledQuery || ''
       if (query.length > 100) {
         return query.substring(0, 100)
       } else {
@@ -177,6 +200,13 @@ export default {
         type: 'time',
         splitLine: {
           show: false
+        },
+        axisPointer: {
+          snap: true,
+          handle: {
+            show: true,
+            color: 'red'
+          }
         }
       },
       yAxis: {
@@ -186,6 +216,16 @@ export default {
           show: false
         }
       },
+      dataZoom: [{
+          type: 'inside',
+          start: 0,
+          end: 20
+        },
+        {
+          start: 0,
+          end: 20
+        }
+      ],
       series: [{
         name: 'Number of queries',
         type: 'line',
@@ -232,6 +272,7 @@ export default {
       }
     })
 
+    console.log(filteredTableData)
     return {activeState, filteredTableData, states, chartOptions, queryChart, searchTerm, chartData, activeTask}
   }
 }

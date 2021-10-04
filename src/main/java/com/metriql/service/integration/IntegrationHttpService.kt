@@ -16,6 +16,7 @@ import org.rakam.server.http.annotations.QueryParam
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.logging.Logger
 import javax.inject.Named
 import javax.ws.rs.GET
 import javax.ws.rs.POST
@@ -96,6 +97,7 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
     private fun runCommand(request: RakamHttpRequest, commands: List<String>, stdin: ByteArray? = null, fileName: String? = null) {
         executor.execute {
             try {
+                logger.info("Executing command `${commands.joinToString(" ")}`")
                 val process = ProcessBuilder().command(commands).start()
 
                 if (stdin != null) {
@@ -138,5 +140,9 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
                 returnError(request, "Unknown error executing command: $e", INTERNAL_SERVER_ERROR)
             }
         }
+    }
+
+    companion object {
+        private val logger = Logger.getLogger(this::class.java.name)
     }
 }

@@ -18,23 +18,19 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.hubspot.jinjava.Jinjava;
 import com.metriql.service.model.Model;
-import com.metriql.util.JsonHelper;
-import com.metriql.warehouse.presto.PrestoMetriqlBridge;
 import com.metriql.warehouse.presto.PrestoMetriqlBridge.PrestoReverseAggregation;
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge;
 import com.metriql.warehouse.spi.function.RFunction;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
 import io.trino.sql.tree.*;
+import io.trino.sql.writer.Utf8StringReWriter;
 
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getOnlyElement;
-import static com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC;
 import static io.trino.sql.MetriqlSqlFormatter.formatSql;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;

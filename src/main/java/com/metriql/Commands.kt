@@ -32,12 +32,14 @@ import com.metriql.util.UnirestHelper
 import com.metriql.util.YamlHelper
 import com.metriql.warehouse.WarehouseConfig
 import com.metriql.warehouse.WarehouseLocator
+import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.io.File
+import java.io.FileInputStream
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.ZoneId
@@ -144,7 +146,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 } else response.body
             }
             "dbt-cloud" -> {
-//                "dbt-cloud://600685b9a9c63dfd8d9696e07ed8e1c15364dcd5@cloud.getdbt.com/api/v2/accounts/{accountId}/runs/job_definition_id=1234";
+//                ""dbt-cloud://600685b9a9c63dfd8d9696e07ed8e1c15364dcd5@cloud.getdbt.com/api/v2/accounts/{accountId}/runs/job_definition_id=1234"";
 //                "&limit=1&include_related"
 //                https://cloud.getdbt.com/api/v2/accounts/{accountId}/runs/{runId}/artifacts/manifest.json
                 TODO()
@@ -282,6 +284,10 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             "--api-auth-username-password", envvar = "METRIQL_API_AUTH_USERNAME_PASSWORD",
             help = "Your username:password pair for basic authentication"
         )
+        private val catalogFile by option(
+            "--catalog-file", envvar = "METRIQL_CATALOG_FILE",
+            help = "Metriql catalog file"
+        )
         private val apiSecretFile by option(
             "--api-auth-secret-file", envvar = "METRIQL_API_AUTH_SECRET_FILE",
             help = "If you're using metriql locally, you can set the private key file or API secret as a file argument."
@@ -317,11 +323,16 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val modelService = UpdatableModelService(null, modelsFetcher, dataSource.warehouse.bridge)
 
+            val catalogFile = when {
+                catalogFile != null -> JsonHelper.read(FileInputStream(catalogFile), CatalogFile::class.java)
+                else -> null
+            }
+
             val httpPort = System.getenv("METRIQL_RUN_PORT")?.let { Integer.parseInt(it) } ?: port
             val httpHost = System.getenv("METRIQL_RUN_HOST") ?: host
             HttpServer.start(
                 HostAndPort.fromParts(httpHost, httpPort), apiSecret, usernamePass, threads, debug, origin,
-                modelService, dataSource, enableTrinoInterface, timezone?.let { ZoneId.of(it) }
+                modelService, dataSource, enableTrinoInterface, timezone?.let { ZoneId.of(it) }, catalogFile?.catalogs
             )
         }
 

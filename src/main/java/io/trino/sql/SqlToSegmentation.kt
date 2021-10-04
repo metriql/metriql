@@ -14,8 +14,8 @@ import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
-import com.metriql.service.model.Model.Measure.AggregationType.COUNT
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
+import com.metriql.service.model.Model.Measure.AggregationType.SUM
 import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -28,6 +28,7 @@ import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.TOTAL_ROWS_MEASURE
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.trino.MetriqlMetadata
 import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
 import io.trino.sql.parser.SqlParser
@@ -122,16 +123,21 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val whereFilters = where.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
         val havingFilters = having.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
 
+        val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, orderBy)
         val query = SegmentationRecipeQuery(
             model.name,
             measures.toSet().map { Recipe.MetricReference.fromName(it) },
             dimensions.toSet().map { Recipe.DimensionReference.fromName(it) },
             (whereFilters + havingFilters).mapNotNull { it.toReference() },
             limit = parseLimit(limit.orElse(null)),
-            orders = parseOrders(references, select.selectItems, orderBy)
+            orders = orders
         ).toReportOptions(context)
 
         val (renderedQuery, _, _) = segmentationService.renderQuery(context.auth, context, query)
+
+        val projectionOrderTemplate = if(projectionOrders.any { it != null }) {
+            "\nORDER BY ${projectionOrders.joinToString(" ")}"
+        } else ""
 
         return if (projectionColumns.any { it.first != it.second && it.second != null }) {
             val quotedAlias = context.warehouseBridge.quoteIdentifier(alias[alias.size - 1])
@@ -142,7 +148,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             }
             } FROM (
                 |$renderedQuery
-                |) AS $quotedAlias""".trimMargin()
+                |) AS $quotedAlias $projectionOrderTemplate""".trimMargin()
         } else {
             renderedQuery
         }
@@ -240,7 +246,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             return if (reference != null) {
                 rewriteValueForReference(reference, node.value)
             } else {
-                throw MetriqlException("Not found $node", HttpResponseStatus.BAD_REQUEST)
+                throw MetriqlException("Not found $node", BAD_REQUEST)
             }
         }
 
@@ -269,7 +275,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             is LongLiteral -> {
                 val index = exp.value.toInt() - 1
                 if (selectItems.size <= index) {
-                    throw MetriqlException("Unable to parse GROUP BY ${exp.value}", HttpResponseStatus.BAD_REQUEST)
+                    throw MetriqlException("Unable to parse GROUP BY ${exp.value}", BAD_REQUEST)
                 }
                 when (val selectItem = selectItems[index]) {
                     is SingleColumn -> selectItem.expression
@@ -291,23 +297,41 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun parseOrders(references: Map<Node, Reference>, selectItems: List<SelectItem>, orderBy: Optional<OrderBy>): Map<Recipe.MetricReference, Recipe.OrderType>? {
+    private fun parseOrders(rewriter: MetriqlSegmentationQueryRewriter, references: Map<Node, Reference>, selectItems: List<SelectItem>, orderBy: Optional<OrderBy>): Pair<List<String?>, Map<Recipe.MetricReference, Recipe.OrderType>?> {
         if (!orderBy.isPresent) {
-            return null
+            return listOf<String>() to null
         }
 
-        return orderBy.get().sortItems.map {
+        val map = orderBy.get().sortItems.map {
             val orderType = when (it.ordering) {
                 SortItem.Ordering.DESCENDING -> Recipe.OrderType.DESC
                 SortItem.Ordering.ASCENDING -> Recipe.OrderType.ASC
             }
             if (it.nullOrdering != SortItem.NullOrdering.UNDEFINED) {
-                throw MetriqlException("NULL ORDERING is not supported yet", HttpResponseStatus.BAD_REQUEST)
+                throw MetriqlException("NULL ORDERING is not supported yet", BAD_REQUEST)
             }
             val reference = getReference(selectItems, it.sortKey)
-            val metric = Recipe.MetricReference.fromName(references[reference]?.second ?: throw TODO())
-            metric to orderType
-        }.toMap()
+            reference to orderType
+        }
+
+        val queryOrders = map.mapNotNull {
+            val metric = references[it.first]?.second?.let { ref -> Recipe.MetricReference.fromName(ref) }
+            if (metric == null) {
+                null
+            } else {
+                metric to it.second
+            }
+        }
+
+        val projectionOrders = map.map {
+            val metric = references[it.first]?.second?.let { ref -> Recipe.MetricReference.fromName(ref) }
+            if (metric == null) {
+                rewriter.process(it.first)
+            } else null
+        }
+
+
+        return projectionOrders to queryOrders.toMap()
     }
 
     private fun getReportFilter(
@@ -469,17 +493,19 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             is LongLiteral -> exp.value
             is DoubleLiteral -> exp.value
             is StringLiteral -> exp.value
-            else -> throw TODO()
+            else -> {
+                throw MetriqlException("Only scalar values are supported in WHERE. Expression is not supported: $exp ", BAD_REQUEST)
+            }
         }
     }
 
     private fun getMeasureStr(measure: Model.Measure, tableAlias: List<String>, prefix: String?): List<String> {
         val aggregations = when {
             measure.value.agg == APPROXIMATE_UNIQUE -> {
-                listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE, COUNT, null)
+                listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE, SUM, null)
             }
-            measure.value.agg != null -> listOf(measure.value.agg, COUNT, null)
-            else -> listOf(COUNT, null)
+            measure.value.agg != null -> listOf(measure.value.agg, SUM, null)
+            else -> listOf(SUM, null)
         }
 
 

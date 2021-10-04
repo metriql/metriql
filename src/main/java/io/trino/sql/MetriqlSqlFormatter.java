@@ -21,6 +21,7 @@ import com.metriql.util.MetriqlException;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.trino.sql.tree.*;
+import io.trino.sql.writer.QueryStatementReWriter;
 import kotlin.Pair;
 
 import java.util.*;
@@ -185,6 +186,7 @@ public final class MetriqlSqlFormatter {
                 throw new MetriqlException("WINDOW operations not supported", HttpResponseStatus.BAD_REQUEST);
             }
 
+            node = QueryStatementReWriter.INSTANCE.rewrite(node);
             Relation from = node.getFrom().orElse(null);
             String alias = null;
             if(from instanceof AliasedRelation) {
@@ -204,6 +206,7 @@ public final class MetriqlSqlFormatter {
                     finalAlias = modelAlias.getSecond();
                 }
                 modelAlias = modelAlias.copy(modelAlias.getFirst(), finalAlias);
+
                 String proxyQuery = reWriter.convert(context, modelAlias, node.getSelect(), node.getWhere(),
                         node.getHaving(), node.getLimit(), node.getOrderBy());
                 append(indent, proxyQuery);

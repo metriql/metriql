@@ -10,6 +10,7 @@ import com.metriql.service.model.IModelService
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException
+import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.spi.DataSource
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap
 import io.airlift.json.ObjectMapperProvider
@@ -31,12 +32,8 @@ import io.trino.spi.StandardErrorCode
 import io.trino.sql.ParameterUtils
 import io.trino.sql.analyzer.TypeSignatureTranslator
 import io.trino.sql.parser.ParsingOptions
-import io.trino.sql.planner.ParameterRewriter
 import io.trino.sql.tree.Execute
-import io.trino.sql.tree.Expression
-import io.trino.sql.tree.ExpressionTreeRewriter
 import io.trino.sql.tree.Query
-import io.trino.sql.tree.Statement
 import io.trino.testing.TestingGroupProvider
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
@@ -67,8 +64,8 @@ class StatementService(
     private val mapper = ObjectMapperProvider().get()
     private val groupProviderManager = TestingGroupProvider()
 
-    fun startServices() {
-        runner.start()
+    fun startServices(catalogs: CatalogFile.Catalogs?) {
+        runner.start(catalogs)
     }
 
     companion object {

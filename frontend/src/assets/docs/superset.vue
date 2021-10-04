@@ -27,7 +27,7 @@
         </el-alert>
 
         <div>
-          You can use the following URL to create a new database to connect Metriql:
+          You can use the following URL if you want to create a new database to connect Metriql:
 
           <el-tooltip content="Click to copy" placement="top">
             <button @click="$clipboard(url) && $event.preventDefault()">{{url}}</button>
@@ -71,7 +71,7 @@ export default {
   },
   computed: {
     url: function () {
-      return `trino://USERNAME:PASSWORD@${this.$BASE.HOSTNAME}:${this.$BASE.PORT}/metriql?protocol=${this.$BASE.PROTOCOL.replace(':', '')}`
+      return `trino://USERNAME:PASSWORD@${this.$BASE.HOSTNAME}:${this.$BASE.PORT}/metriql`
     }
   },
   methods: {

@@ -18,14 +18,14 @@ import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 
 object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
-    private val identifierRegex = "^[^\\_0-9][A-Za-z0-9_]*\$".toRegex()
+    private val identifierRegex = "^[A-Za-z0-9_]+\$".toRegex()
 
     override val filters = SnowflakeFilters { SnowflakeMetriqlBridge }
     override val timeframes = SnowflakeTimeframes()
 
     // it's not case-sensitive
     override fun quoteIdentifier(identifier: String): String {
-        return if (identifierRegex.matches(identifier)) {
+        return if (!identifier[0].isDigit() && identifierRegex.matches(identifier)) {
             identifier
         } else {
             super.quoteIdentifier(identifier)

@@ -60,7 +60,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
                 waitingJobs.forEach {
                     if (it is Task<*, *>) {
                         val queryTask = it as QueryTask
-                        queryTask.setResult(QueryResult.errorResult("We're currently operating an update. Please try again in 30 seconds."))
+                        queryTask.setResult(QueryResult.errorResult("We're currently operating an update. Please try again in 30 seconds."), failed = true)
                     }
                 }
             }

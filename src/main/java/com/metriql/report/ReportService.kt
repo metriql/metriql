@@ -1,6 +1,7 @@
 package com.metriql.report
 
 import com.metriql.db.QueryResult
+import com.metriql.db.QueryResult.QueryStats.State.FINISHED
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.audit.MetriqlEvents
@@ -78,7 +79,7 @@ open class ReportService(
                 postProcessors = postProcessors
             )
         } catch (e: Throwable) {
-            return Task.completedTask(auth, UUID.randomUUID(), QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED, null))
+            return Task.completedTask(auth, UUID.randomUUID(), QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(FINISHED, null), failed = true)
         }
     }
 }

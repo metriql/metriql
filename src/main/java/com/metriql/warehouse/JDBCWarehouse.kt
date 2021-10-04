@@ -357,7 +357,7 @@ abstract class JDBCWarehouse(
                     }
                 } catch (e: Exception) {
                     MetriqlEventBus.publish(MetriqlEvents.UnhandledTaskException(e, this))
-                    setResult(getErrorQueryResult(auth, e, query, ignoredErrorCodes))
+                    setResult(getErrorQueryResult(auth, e, query, ignoredErrorCodes), failed = true)
                 }
             }
 

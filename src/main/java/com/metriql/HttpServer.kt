@@ -35,6 +35,7 @@ import com.metriql.service.task.TaskQueueService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.logging.LogService
+import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -53,7 +54,7 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
-    private fun getServices(modelService: UpdatableModelService, dataSource: DataSource, enableJdbc: Boolean): Pair<Set<HttpService>, () -> Unit> {
+    private fun getServices(modelService: UpdatableModelService, dataSource: DataSource, enableJdbc: Boolean, catalogs : CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
         val postRun = mutableListOf<() -> Unit>()
 
@@ -67,7 +68,7 @@ object HttpServer {
         services.add(TaskHttpService(queryService.taskQueueService))
 
         if (enableJdbc) {
-            val jdbcServices = jdbcServices(queryService)
+            val jdbcServices = jdbcServices(queryService, catalogs)
             jdbcServices.first.forEach { services.add(it) }
             postRun.add(jdbcServices.second)
         }
@@ -91,14 +92,14 @@ object HttpServer {
         return QueryHttpService(modelService, { dataSource }, reportService, taskQueueService, services)
     }
 
-    private fun jdbcServices(queryService: QueryHttpService): Pair<Set<HttpService>, () -> Unit> {
+    private fun jdbcServices(queryService: QueryHttpService, catalogs : CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
         val statementService = StatementService(queryService.taskQueueService, queryService.reportService, queryService.dataSourceFetcher, queryService.modelService)
         val services = setOf(
             NodeInfoService(),
             QueryService(queryService.taskQueueService),
             statementService,
         )
-        return services to { statementService.startServices() }
+        return services to { statementService.startServices(catalogs) }
     }
 
     private fun getAttributes(auth: ProjectAuth): UserAttributeValues {
@@ -136,7 +137,8 @@ object HttpServer {
         modelService: UpdatableModelService,
         dataSource: DataSource,
         enableJdbc: Boolean,
-        timezone: ZoneId?
+        timezone: ZoneId?,
+        catalogs : CatalogFile.Catalogs?
     ) {
         val eventExecutors: EventLoopGroup = if (Epoll.isAvailable()) {
             EpollEventLoopGroup(numberOfThreads)
@@ -157,7 +159,7 @@ object HttpServer {
             }
         } else null
 
-        val (services, postRun) = getServices(modelService, dataSource, enableJdbc)
+        val (services, postRun) = getServices(modelService, dataSource, enableJdbc, catalogs)
 
         val httpServer = HttpServerBuilder()
             .setHttpServices(services)
