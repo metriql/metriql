@@ -5,5 +5,5 @@ import com.metriql.service.auth.ProjectAuth
 interface IModelService {
     fun list(auth: ProjectAuth): List<Model>
     fun getModel(auth: ProjectAuth, modelName: ModelName): Model?
-    fun update()
+    fun update(auth: ProjectAuth)
 }

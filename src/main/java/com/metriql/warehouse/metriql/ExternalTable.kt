@@ -21,7 +21,6 @@ class ExternalTable(val session: ConnectorSession, val client: ObjectStore, priv
     override fun pageSource(transactionHandle: ConnectorTransactionHandle, session: ConnectorSession?, constraint: TupleDomain<Int?>?): ConnectorPageSource {
         val stream = client.get(path)
         if (stream != null) {
-
         }
         val decodeRow = rowDecoder.decodeRow(null)
         return null!!

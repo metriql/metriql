@@ -11,13 +11,14 @@ import io.trino.sql.tree.StringLiteral
 class Utf8StringReWriter : ExpressionRewriter<Void>() {
     // Rewrite utf8 values as StringLiteral to simplify the query
     override fun rewriteFunctionCall(node: FunctionCall, context: Void?, treeRewriter: ExpressionTreeRewriter<Void>?): Expression? {
-        if(node.name.suffix.lowercase() == "from_utf8" && node.arguments.size == 1) {
+        if (node.name.suffix.lowercase() == "from_utf8" && node.arguments.size == 1) {
             val innerFunction = node.arguments[0] as? FunctionCall
-            if(innerFunction?.name?.suffix?.lowercase() == "from_hex" && node.arguments.size == 1) {
+            if (innerFunction?.name?.suffix?.lowercase() == "from_hex" && node.arguments.size == 1) {
                 val innerValue = innerFunction.arguments[0] as? StringLiteral
-                if(innerValue != null) {
+                if (innerValue != null) {
                     val utf8Value = StringFunctions.fromUtf8(
-                        VarbinaryFunctions.fromHexVarbinary(innerValue.slice)).toStringUtf8()
+                        VarbinaryFunctions.fromHexVarbinary(innerValue.slice)
+                    ).toStringUtf8()
                     return StringLiteral(utf8Value)
                 }
             }

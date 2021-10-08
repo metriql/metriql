@@ -11,7 +11,7 @@ open class TestModelService(private var models: List<Model> = listOf()) : IModel
 
     override fun getModel(auth: ProjectAuth, modelName: ModelName) = models.find { modelName.toRegex().matches(it.name) }
 
-    override fun update() {
+    override fun update(auth: ProjectAuth) {
         TODO("not implemented")
     }
 }

@@ -22,12 +22,15 @@ object QueryStatementReWriter {
 
     fun rewrite(node: QuerySpecification): QuerySpecification {
         return QuerySpecification(
-            Select(node.select.isDistinct, node.select.selectItems.map {
-                when (it) {
-                    is SingleColumn -> SingleColumn(rewrite(it.expression), it.alias)
-                    else -> it
+            Select(
+                node.select.isDistinct,
+                node.select.selectItems.map {
+                    when (it) {
+                        is SingleColumn -> SingleColumn(rewrite(it.expression), it.alias)
+                        else -> it
+                    }
                 }
-            }),
+            ),
             node.from.map {
                 when (it) {
                     is QuerySpecification -> {
@@ -44,12 +47,15 @@ object QueryStatementReWriter {
             },
             node.where.map { rewrite(it) },
             node.groupBy?.map {
-                GroupBy(it.isDistinct, it.groupingElements.map { item ->
-                    when (item) {
-                        is SimpleGroupBy -> SimpleGroupBy(item.expressions.map { exp -> rewrite(exp) })
-                        else -> item
+                GroupBy(
+                    it.isDistinct,
+                    it.groupingElements.map { item ->
+                        when (item) {
+                            is SimpleGroupBy -> SimpleGroupBy(item.expressions.map { exp -> rewrite(exp) })
+                            else -> item
+                        }
                     }
-                })
+                )
             },
             node.having.map { rewrite(it) },
             node.windows.map {

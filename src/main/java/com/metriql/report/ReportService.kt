@@ -34,15 +34,15 @@ open class ReportService(
             dataSource,
             modelService,
             rendererService,
-            reportExecutor =  { auth, type, options ->
-                    val context = createContext(auth, dataSource)
-                    getServiceForReportType(type).renderQuery(
-                        auth,
-                        context,
-                        options.toReportOptions(context),
-                        listOf(),
-                    ).query
-                },
+            reportExecutor = { auth, type, options ->
+                val context = createContext(auth, dataSource)
+                getServiceForReportType(type).renderQuery(
+                    auth,
+                    context,
+                    options.toReportOptions(context),
+                    listOf(),
+                ).query
+            },
             dependencyFetcher = dependencyFetcher,
             userAttributeFetcher = { userAttributeFetcher.invoke(it) }
         )
@@ -60,7 +60,7 @@ open class ReportService(
         context: IQueryGeneratorContext = createContext(auth, dataSource)
     ): QueryTask {
         try {
-            val (query, postProcessors, sqlQueryOptions) =  getServiceForReportType(reportType).renderQuery(
+            val (query, postProcessors, sqlQueryOptions) = getServiceForReportType(reportType).renderQuery(
                 auth,
                 context,
                 options,

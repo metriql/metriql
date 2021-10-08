@@ -72,7 +72,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         return task.taskTicket()
     }
 
-    fun currentTasks(includeResponse: Boolean = false, filterStatus: Task.Status? = null, projectId : Int? = null): List<Task.TaskTicket<out Any?>> {
+    fun currentTasks(includeResponse: Boolean = false, filterStatus: Task.Status? = null, projectId: Int? = null): List<Task.TaskTicket<out Any?>> {
         val allTasks = taskTickets.map { it.value.taskTicket(includeResponse) }
         val ordered = if (filterStatus == null && projectId == null) {
             allTasks
@@ -117,7 +117,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
     fun <T, K> execute(runnable: Task<T, K>, initialWaitInSeconds: Long): CompletableFuture<Task<T, K>> {
         if (runnable.status == Task.Status.FINISHED) {
             val id = runnable.getId()
-            if(id != null) {
+            if (id != null) {
                 taskTickets[id] = runnable
             }
             return CompletableFuture.completedFuture(runnable)
@@ -128,10 +128,9 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         val future = CompletableFuture<Task<T, K>>()
         runnable.onFinish { future.complete(runnable) }
 
-        if(initialWaitInSeconds < 0) {
+        if (initialWaitInSeconds < 0) {
             future.complete(runnable)
-        } else
-        if (initialWaitInSeconds > 0) {
+        } else if (initialWaitInSeconds > 0) {
             Scheduler.executor.schedule(
                 {
                     if (!future.isDone) {

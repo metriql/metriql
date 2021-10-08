@@ -73,7 +73,7 @@ interface IQueryGeneratorContext {
         // Target model name only for join relations
         targetModelName: ModelName? = null,
         // Instead of actual values, render alias
-        renderAlias : Boolean = false,
+        renderAlias: Boolean = false,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
     ): String
 

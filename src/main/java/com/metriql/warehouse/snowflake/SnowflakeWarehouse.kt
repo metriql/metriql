@@ -38,6 +38,10 @@ object SnowflakeWarehouse : Warehouse<SnowflakeWarehouse.SnowflakeConfig> {
         override fun isValid() = true
         override fun warehouseSchema() = schema
         override fun warehouseDatabase() = database
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 

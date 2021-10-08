@@ -27,7 +27,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.TOTAL_ROWS_MEASURE
-import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.trino.MetriqlMetadata
 import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
@@ -65,7 +64,7 @@ typealias Reference = Pair<MetricType, String>
 class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
     val parser = SqlParser()
 
-    private fun getProjectionOfColumn(rewriter : MetriqlSegmentationQueryRewriter, expression : Expression, modelName: String, alias : Optional<Identifier>): Pair<String, String?> {
+    private fun getProjectionOfColumn(rewriter: MetriqlSegmentationQueryRewriter, expression: Expression, modelName: String, alias: Optional<Identifier>): Pair<String, String?> {
         val alias = alias.orElse(null)?.let { identifier -> identifier.value }
             ?: deferenceExpression(expression, modelName)?.let { exp -> getIdentifierValue(exp) }
         val projection = rewriter.process(expression, null)
@@ -135,7 +134,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
         val (renderedQuery, _, _) = segmentationService.renderQuery(context.auth, context, query)
 
-        val projectionOrderTemplate = if(projectionOrders.any { it != null }) {
+        val projectionOrderTemplate = if (projectionOrders.any { it != null }) {
             "\nORDER BY ${projectionOrders.joinToString(" ")}"
         } else ""
 
@@ -250,8 +249,6 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             }
         }
 
-
-
         private fun rewriteValueForReference(reference: Reference, value: String): String {
             return when (reference.first) {
                 MetricType.DIMENSION -> {
@@ -329,7 +326,6 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 rewriter.process(it.first)
             } else null
         }
-
 
         return projectionOrders to queryOrders.toMap()
     }
@@ -508,7 +504,6 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             else -> listOf(SUM, null)
         }
 
-
         val suffix = ValidationUtil.quoteIdentifier("${prefix?.let { "$it." } ?: ""}${measure.name}")
         return tableAlias.flatMapIndexed { index, _ ->
             val al = tableAlias.subList(index, tableAlias.size).joinToString(".") { ValidationUtil.quoteIdentifier(it) }
@@ -516,7 +511,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
             columnValues.flatMap {
                 aggregations.map { aggregation ->
-                    if(aggregation != null) {
+                    if (aggregation != null) {
                         PrestoWarehouse.bridge.performAggregation(it, aggregation, ADHOC)
                     } else {
                         it
@@ -524,7 +519,6 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 }
             }
         }
-
     }
 
     private fun getDimensionStr(dimension: Model.Dimension, tableAlias: List<String>, prefix: String?): List<Pair<String, Reference>> {
@@ -535,8 +529,10 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
         var quotedIdentifier = quoteIdentifier(identifier)
         val rawDimension = tableAlias.flatMapIndexed { index, _ ->
-            listOf(quotedIdentifier to baseReference,
-            tableAlias.subList(index, tableAlias.size).joinToString (".") { quoteIdentifier(it) } + "." + quotedIdentifier to baseReference)
+            listOf(
+                quotedIdentifier to baseReference,
+                tableAlias.subList(index, tableAlias.size).joinToString(".") { quoteIdentifier(it) } + "." + quotedIdentifier to baseReference
+            )
         }
         return if (dimension.postOperations == null) {
             rawDimension
@@ -549,7 +545,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 tableAlias.flatMapIndexed { index, _ ->
                     listOf(
                         quotedIdentifier to reference,
-                        tableAlias.subList(index, tableAlias.size).joinToString (".") { ref -> quoteIdentifier(ref) } + "." + quotedIdentifier to reference
+                        tableAlias.subList(index, tableAlias.size).joinToString(".") { ref -> quoteIdentifier(ref) } + "." + quotedIdentifier to reference
                     )
                 }
             }

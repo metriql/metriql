@@ -83,7 +83,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
     override fun run() {
     }
 
-    protected fun getDataSource(): DataSource {
+    protected fun getProfileConfig(): WarehouseConfig {
         val dbtProjectFile = File(projectDir, "dbt_project.yml")?.let {
             if (it.exists()) {
                 YamlHelper.mapper.readValue(it.readBytes(), ProjectYaml::class.java)
@@ -116,8 +116,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             return null!!
         }
 
-        val config = JsonHelper.convert(currentProfile.outputs[currentProfile.target], WarehouseConfig::class.java)
-        return WarehouseLocator.getDataSource(config)
+        return JsonHelper.convert(currentProfile.outputs[currentProfile.target], WarehouseConfig::class.java)
     }
 
     protected fun parseRecipe(dataSource: DataSource, manifestJson: String, packageName: String = "(inline)"): Recipe {
@@ -195,7 +194,6 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
     class Test : Commands(help = "Tests metriql datasets with metadata queries") {
         override fun run() {
-
         }
     }
 
@@ -216,17 +214,20 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             }
 
             val auth = ProjectAuth.singleProject()
-            val dataSource = this.getDataSource()
+            val dataSource = WarehouseLocator.getDataSource(this.getProfileConfig())
 
             val successfulCounts = AtomicInteger()
 
             val dependencies = Recipe.Dependencies(DbtDependency(aggregatesDirectory = outputDir))
             val recipe = parseRecipe(dataSource, manifestFile.toURI().toString()).copy(dependencies = dependencies)
-            val service = DbtModelService(JinjaRendererService(), null, object : DependencyFetcher {
-                override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
-                    return dependencies
+            val service = DbtModelService(
+                JinjaRendererService(), null,
+                object : DependencyFetcher {
+                    override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
+                        return dependencies
+                    }
                 }
-            })
+            )
 
             val errors = service.addDbtFiles(
                 auth,
@@ -284,6 +285,10 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             "--api-auth-username-password", envvar = "METRIQL_API_AUTH_USERNAME_PASSWORD",
             help = "Your username:password pair for basic authentication"
         )
+        private val passCredentialsToDatasource by option(
+            "--pass-credentials-to-datasource", envvar = "METRIQL_API_PASS_CREDENTIALS_TO_DATASOURCE",
+            help = "Pass username & password to datasource configs"
+        ).flag(default = false)
         private val catalogFile by option(
             "--catalog-file", envvar = "METRIQL_CATALOG_FILE",
             help = "Metriql catalog file"
@@ -309,19 +314,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 else -> null
             }
 
-            val dataSource = this.getDataSource()
-
-            val modelsFetcher = {
-                val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
-                val recipe = this.parseRecipe(dataSource, manifest)
-                val metriqlModels = recipe.models?.map {
-                    resolveExtends(recipe.models, it).toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
-                } ?: listOf()
-                val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, DummyModelService(metriqlModels), JinjaRendererService(), null, null, null)
-                prepareModelsForInstallation(dataSource, context, metriqlModels)
-            }
-
-            val modelService = UpdatableModelService(null, modelsFetcher, dataSource.warehouse.bridge)
+            val deployment = CommunityDeployment()
 
             val catalogFile = when {
                 catalogFile != null -> JsonHelper.read(FileInputStream(catalogFile), CatalogFile::class.java)
@@ -332,11 +325,11 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val httpHost = System.getenv("METRIQL_RUN_HOST") ?: host
             HttpServer.start(
                 HostAndPort.fromParts(httpHost, httpPort), apiSecret, usernamePass, threads, debug, origin,
-                modelService, dataSource, enableTrinoInterface, timezone?.let { ZoneId.of(it) }, catalogFile?.catalogs
+                deployment, enableTrinoInterface, timezone?.let { ZoneId.of(it) }, catalogFile?.catalogs
             )
         }
 
-        private fun resolveExtends(allModels : List<Recipe.RecipeModel>, it : Recipe.RecipeModel): Recipe.RecipeModel {
+        private fun resolveExtends(allModels: List<Recipe.RecipeModel>, it: Recipe.RecipeModel): Recipe.RecipeModel {
             return if (it.extends != null) {
                 val ref = DbtModelConverter.parseRef(it.extends)
                 val parentModel = allModels.find { model -> model.name == ref } ?: throw MetriqlException(
@@ -350,9 +343,46 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 )
             } else it
         }
+
+        inner class EnterpriseDeployment : CommunityDeployment() {
+
+        }
+
+        open inner class CommunityDeployment() : Deployment {
+            private val profileConfig = getProfileConfig()
+            private val singleAuth = ProjectAuth.singleProject()
+            private val modelService = UpdatableModelService(null) { getModels(singleAuth) }
+
+            private fun getModels(auth: ProjectAuth): List<Model> {
+                val dataSource = getDataSource(auth)
+                val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
+                val recipe = parseRecipe(dataSource, manifest)
+                val metriqlModels = recipe.models?.map {
+                    resolveExtends(recipe.models, it).toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
+                } ?: listOf()
+                val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, UpdatableModelService(null) { metriqlModels }, JinjaRendererService(), null, null, null)
+                return prepareModelsForInstallation(dataSource, context, metriqlModels)
+            }
+
+            override fun getModelService() = modelService
+
+            override fun logStart() {
+                logger.info("Serving ${modelService.list(singleAuth).size} datasets")
+            }
+
+            override fun getDataSource(auth: ProjectAuth): DataSource {
+                val config = if (passCredentialsToDatasource) {
+                    profileConfig.value.withUsernamePassword(null!!, null!!)
+                } else profileConfig
+
+                return WarehouseLocator.getDataSource(profileConfig)
+            }
+        }
     }
 
     companion object {
+        internal val logger = Logger.getLogger(this::class.java.name)
+
         fun parseUserNamePass(usernamePass: String): Pair<String, String> {
             val arr = usernamePass.split(":".toRegex(), 2)
             if (arr.size != 2) {
@@ -362,16 +392,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         }
     }
 
-    internal val logger = Logger.getLogger(this::class.java.name)
-
-    open class DummyModelService(private var models: List<Model> = listOf()) : IModelService {
-
-        override fun list(auth: ProjectAuth) = models
-
-        override fun getModel(auth: ProjectAuth, modelName: ModelName) = models.find { modelName.toRegex().matches(it.name) }
-
-        override fun update() {
-            throw IllegalStateException()
-        }
+    interface Deployment {
+        fun getModelService(): IModelService
+        fun logStart()
+        fun getDataSource(auth: ProjectAuth): DataSource
     }
 }

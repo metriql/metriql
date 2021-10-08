@@ -41,6 +41,10 @@ object PostgresqlWarehouse : Warehouse<PostgresqlWarehouse.PostgresqlConfig> {
         override fun isValid() = ValidationUtil.checkForPrivateIPAccess(host) == null
         override fun warehouseSchema() = schema
         override fun warehouseDatabase() = dbname
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 

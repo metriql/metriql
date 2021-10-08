@@ -35,6 +35,10 @@ object MSSQLWarehouse : Warehouse<MSSQLWarehouse.MSSQLServerConfig> {
         override fun isValid() = checkForPrivateIPAccess(host) == null
         override fun warehouseSchema() = schema
         override fun warehouseDatabase() = database
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 

@@ -1,6 +1,5 @@
 package com.metriql.warehouse.metriql.storage
 
-import io.airlift.configuration.Config
 import io.airlift.units.DataSize
 import java.io.File
 

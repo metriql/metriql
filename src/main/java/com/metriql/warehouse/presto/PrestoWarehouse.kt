@@ -36,6 +36,10 @@ object PrestoWarehouse : Warehouse<PrestoWarehouse.PrestoConfig> {
         override fun isValid() = ValidationUtil.checkForPrivateIPAccess(host) == null
         override fun warehouseSchema() = schema
         override fun warehouseDatabase() = catalog
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 

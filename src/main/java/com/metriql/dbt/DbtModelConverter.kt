@@ -1,9 +1,7 @@
 package com.metriql.dbt
 
-import com.metriql.db.FieldType
 import com.metriql.dbt.DbtSchemaYaml.DbtModel.DbtModelColumn.ColumnMeta
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.Model
 import com.metriql.util.MetriqlException
 import com.metriql.util.TextUtil.toSlug
 import io.netty.handler.codec.http.HttpResponseStatus

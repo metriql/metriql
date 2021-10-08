@@ -1,17 +1,16 @@
 package com.metriql.service.jdbc
 
+import com.metriql.Commands
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.Companion.QUERY
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.metriql.CatalogFile
-import com.metriql.warehouse.spi.DataSource
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap
 import io.airlift.json.ObjectMapperProvider
 import io.netty.handler.codec.http.HttpHeaders
@@ -57,10 +56,9 @@ import javax.ws.rs.core.MultivaluedMap
 class StatementService(
     private val taskQueueService: TaskQueueService,
     private val reportService: ReportService,
-    private val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
-    modelService: IModelService
+    private val deployment: Commands.Deployment
 ) : HttpService() {
-    private val runner = LightweightQueryRunner(modelService)
+    private val runner = LightweightQueryRunner(deployment.getModelService())
     private val mapper = ObjectMapperProvider().get()
     private val groupProviderManager = TestingGroupProvider()
 
@@ -83,7 +81,7 @@ class StatementService(
             return true
         }
 
-        val stmt = if(rawStmt is Execute) {
+        val stmt = if (rawStmt is Execute) {
             val ps = sessionContext.preparedStatements[rawStmt.name.value]
             val test = ParameterUtils.parameterExtractor(rawStmt, rawStmt.parameters)
             val realPs = runner.runner.sqlParser.createStatement(ps, defaultParsingOptions)
@@ -138,7 +136,7 @@ class StatementService(
                 reportService.queryTask(
                     auth,
                     reportType,
-                    dataSourceFetcher.invoke(request),
+                    deployment.getDataSource(auth),
                     SqlReportOptions(sql, null, null, null)
                 )
             }

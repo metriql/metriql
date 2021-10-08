@@ -34,7 +34,7 @@ object Functions {
 
     data class ReportPair(
         val type: ReportType,
-        @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class, isNamed=true, name = "recipe")
+        @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class, isNamed = true, name = "recipe")
         val options: RecipeQuery
     )
 }

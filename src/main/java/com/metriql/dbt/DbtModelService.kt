@@ -50,7 +50,7 @@ class DbtModelService @Inject constructor(
 
         val (_, _, modelConfigMapper) = dataSource.dbtSettings()
         val models = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, recipeId) } ?: listOf()
-        val modelService = UpdatableModelService(modelService, { models }, dataSource.warehouse.bridge)
+        val modelService = UpdatableModelService(modelService, { models })
 
         val context = QueryGeneratorContext(
             auth,

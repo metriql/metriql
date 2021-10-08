@@ -17,7 +17,7 @@ import io.trino.spi.transaction.IsolationLevel
 import io.trino.transaction.InternalConnector
 import io.trino.transaction.TransactionId
 
-class ExternalConnectorFactory(private val internalNodeManager: InternalNodeManager, private val name : String, val catalog: CatalogFile.Catalogs.Catalog) : ConnectorFactory {
+class ExternalConnectorFactory(private val internalNodeManager: InternalNodeManager, private val name: String, val catalog: CatalogFile.Catalogs.Catalog) : ConnectorFactory {
     override fun getName() = name
 
     override fun create(catalogName: String?, config: MutableMap<String, String>?, context: ConnectorContext?): Connector {

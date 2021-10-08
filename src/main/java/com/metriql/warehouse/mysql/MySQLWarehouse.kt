@@ -27,6 +27,10 @@ object MySQLWarehouse : Warehouse<MySQLWarehouse.MysqlConfig> {
         override fun isValid() = ValidationUtil.checkForPrivateIPAccess(host) == null
         override fun warehouseSchema() = null
         override fun warehouseDatabase() = database
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 

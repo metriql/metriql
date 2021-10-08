@@ -32,14 +32,14 @@ object DbtManifestParser {
         mapper.setConfig(deserializationConfig)
     }
 
-    fun parse(dataSource : DataSource, manifestFile: ByteArray, modelsFilterOptional : String?): List<Recipe.RecipeModel> {
+    fun parse(dataSource: DataSource, manifestFile: ByteArray, modelsFilterOptional: String?): List<Recipe.RecipeModel> {
         val manifest = mapper.readValue(manifestFile, DbtManifest::class.java)
         modelsFilterOptional?.let { modelsFilter ->
             modelsFilter.split(" ").map {
                 val typeAndValue = it.split(":".toRegex(), 2)
 
-                val value = if(typeAndValue.size == 1) typeAndValue[0] else typeAndValue[1]
-                val type = if(typeAndValue.size == 1) null else typeAndValue[0]
+                val value = if (typeAndValue.size == 1) typeAndValue[0] else typeAndValue[1]
+                val type = if (typeAndValue.size == 1) null else typeAndValue[0]
             }
         }
         val models = manifest.nodes.mapNotNull { it.value.toModel(dataSource, manifest) }

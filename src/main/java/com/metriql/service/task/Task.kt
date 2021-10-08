@@ -3,7 +3,6 @@ package com.metriql.service.task
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.UppercaseEnum
-import net.snowflake.client.jdbc.internal.apache.arrow.flatbuf.Bool
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -50,7 +49,7 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
     }
 
     @Synchronized
-    fun setResult(result: T, failed : Boolean = false) {
+    fun setResult(result: T, failed: Boolean = false) {
         if (this.status.isDone) {
             throw IllegalStateException("Task result is already set.")
         }
@@ -146,7 +145,7 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
     }
 
     @UppercaseEnum
-    enum class Status(val isDone : Boolean) {
+    enum class Status(val isDone: Boolean) {
         QUEUED(false), RUNNING(false), CANCELED(true), FINISHED(true), FAILED(true)
     }
 
@@ -176,13 +175,13 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
     companion object {
         private val logger = Logger.getLogger(this::class.java.name)
 
-        fun <Result, Stat> completedTask(auth: ProjectAuth, id : UUID?, result: Result, stats: Stat, failed : Boolean = false): Task<Result, Stat> {
+        fun <Result, Stat> completedTask(auth: ProjectAuth, id: UUID?, result: Result, stats: Stat, failed: Boolean = false): Task<Result, Stat> {
             val value = object : Task<Result, Stat>(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {}
 
                 override fun getStats() = stats
             }
-            if(id != null) {
+            if (id != null) {
                 value.setId(id)
             }
             value.setResult(result, failed)

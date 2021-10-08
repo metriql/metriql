@@ -22,6 +22,11 @@ interface Warehouse<T : Warehouse.Config> {
 
         @JsonIgnore
         fun warehouseDatabase(): String?
+
+        @JsonIgnore
+        fun withUsernamePassword(username : String, password : String): Config {
+            throw UnsupportedOperationException()
+        }
     }
 
     data class Name(val metriql: String, val dbt: String?)

@@ -8,12 +8,12 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import org.rakam.server.http.HttpServer
 
 object RecipeUtil {
-    fun prepareModelsForInstallation(dataSource : DataSource, context : IQueryGeneratorContext, models : List<Model>): List<Model> {
+    fun prepareModelsForInstallation(dataSource: DataSource, context: IQueryGeneratorContext, models: List<Model>): List<Model> {
         checkResourceNames(models)
 
         val fieldUniquenessErrors = models.mapNotNull { model ->
             val collidingFieldNames = model.dimensions.map { it.name }.intersect(model.measures.map { it.name })
-            if(collidingFieldNames.isEmpty()) {
+            if (collidingFieldNames.isEmpty()) {
                 null
             } else {
                 "`${model.name}`: Field names must be unique, duplicate fields found: ${collidingFieldNames.map { "`$it`" }}}"

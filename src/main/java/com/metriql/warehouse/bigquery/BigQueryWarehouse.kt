@@ -1,7 +1,6 @@
 package com.metriql.warehouse.bigquery
 
 import com.fasterxml.jackson.annotation.JsonAlias
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.metriql.warehouse.spi.Warehouse
 
 object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {

@@ -91,7 +91,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     /** A public dataset can be the default project. However, we need to execute jobs on our own project */
     private fun getProjectId(): String {
         return config.project ?: credentialProjectId
-        ?: throw MetriqlException("Unable to find `project_id, please set the value in credentials", HttpResponseStatus.BAD_REQUEST)
+            ?: throw MetriqlException("Unable to find `project_id, please set the value in credentials", HttpResponseStatus.BAD_REQUEST)
     }
 
     override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {

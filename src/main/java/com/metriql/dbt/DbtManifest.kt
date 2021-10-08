@@ -49,6 +49,10 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
         data class Meta(@JsonAlias("rakam") val metriql: Recipe.RecipeModel?)
         data class Docs(val show: Boolean?)
 
+        fun meta(): Meta {
+            return config.meta ?: meta
+        }
+
         data class TestMetadata(
             val namespace: String?,
             val name: Test?,
@@ -65,7 +69,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                     val model: String,
                     val field: String,
                     val column_name: String,
-                    val name : String?,
+                    val name: String?,
                     @JsonAlias("rakam")
                     val metriql: Recipe.RecipeModel.RecipeRelation?,
                 ) : DbtModelColumnTest() {
@@ -138,7 +142,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             }
         }
 
-        data class Config(val enabled: Boolean, val materialized: String) {
+        data class Config(val enabled: Boolean, val materialized: String, val meta : Meta?) {
             companion object {
                 const val EPHEMERAL = "ephemeral"
             }
@@ -150,14 +154,15 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
         }
 
         fun toModel(datasource: DataSource, dbtManifest: DbtManifest): Recipe.RecipeModel? {
+            val metriql = meta().metriql
             if (
-                meta.metriql == null
-                || (resource_type != MODEL_RESOURCE_TYPE && resource_type != SEED_RESOURCE_TYPE)
-                || !config.enabled
-                || tags.contains(DbtModelService.tagName)
+                metriql == null ||
+                (resource_type != MODEL_RESOURCE_TYPE && resource_type != SEED_RESOURCE_TYPE) ||
+                !config.enabled ||
+                tags.contains(DbtModelService.tagName)
             ) return null
 
-            val modelName = meta.metriql?.name ?: TextUtil.toSlug("model_${package_name}_$name", true)
+            val modelName = metriql.name ?: TextUtil.toSlug("model_${package_name}_$name", true)
 
             val target = Model.Target.TargetValue.Table(database, schema, alias ?: name)
 
@@ -171,16 +176,15 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
 
             val dependencies = dbtManifest.child_map[unique_id] ?: listOf()
 
-            val recipeModel = meta.metriql
-            val model = recipeModel.copy(
+            val model = metriql.copy(
                 hidden = meta.metriql?.hidden ?: if (resource_type == SEED_RESOURCE_TYPE) (docs?.show?.let { !it } ?: true) else false,
                 name = modelName,
-                sql = if(config.materialized == Config.EPHEMERAL) raw_sql else null,
-                description = recipeModel.description ?: description,
-                label = recipeModel.label ?: toUserFriendly(name),
+                sql = if (config.materialized == Config.EPHEMERAL) raw_sql else null,
+                description = metriql.description ?: description,
+                label = metriql.label ?: toUserFriendly(name),
                 target = target,
-                dimensions = (recipeModel.dimensions ?: mapOf()) + columnDimensions,
-                measures = (recipeModel.measures ?: mapOf()) + columnMeasures,
+                dimensions = (metriql.dimensions ?: mapOf()) + columnDimensions,
+                measures = (metriql.measures ?: mapOf()) + columnMeasures,
                 _path = original_file_path,
                 package_name = package_name
             )
@@ -261,7 +265,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             return sql.replace(expressionRegex, "{{$1}}").replace(tagRegex, "{%$1%}")
         }
 
-        fun extractFields(modelName : String, columns: Map<String, DbtColumn>): MetricFields {
+        fun extractFields(modelName: String, columns: Map<String, DbtColumn>): MetricFields {
             val columnMeasures = columns.mapNotNull {
                 val measure = it.value.meta.measure?.copy(column = it.key, description = it.value.description)
 

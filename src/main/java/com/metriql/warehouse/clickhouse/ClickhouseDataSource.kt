@@ -71,7 +71,7 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
         return when (sqlType) {
             Types.ARRAY -> {
                 val arrayType = ClickHouseDataType.resolveDefaultArrayDataType(dbType)
-                when(fromGenericJDBCTypeFieldType(arrayType.jdbcType.vendorTypeNumber)) {
+                when (fromGenericJDBCTypeFieldType(arrayType.jdbcType.vendorTypeNumber)) {
                     FieldType.STRING -> FieldType.ARRAY_STRING
                     FieldType.INTEGER -> FieldType.ARRAY_INTEGER
                     FieldType.DOUBLE -> FieldType.ARRAY_DOUBLE

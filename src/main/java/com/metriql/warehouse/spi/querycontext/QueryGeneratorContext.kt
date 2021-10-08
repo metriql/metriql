@@ -116,7 +116,7 @@ class QueryGeneratorContext(
             } else {
                 dimensionName
             }
-        )
+            )
 
         val modelDimension = model.dimensions.find { it.name == dimensionNameNormalized }?.let { ModelDimension(model.name, model.target, it) }
             ?: throw MetriqlException("The dimension `$dimensionName` in model `$modelName` not found", NOT_FOUND)
@@ -204,6 +204,4 @@ class QueryGeneratorContext(
             renderAlias = renderAlias
         )
     }
-
-
 }

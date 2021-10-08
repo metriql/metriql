@@ -2,6 +2,7 @@ package com.metriql.service.integration
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.metriql.CURRENT_PATH
+import com.metriql.Commands
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IModelService
 import com.metriql.util.JsonHelper
@@ -25,7 +26,7 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.javaGetter
 
 @Path("$CURRENT_PATH/integration")
-class IntegrationHttpService(val modelService: IModelService) : HttpService() {
+class IntegrationHttpService(val deployment: Commands.Deployment) : HttpService() {
     // Run all the commands in a separate thread in order to avoid race conditions
     val executor = ThreadPoolExecutor(
         0, 1, 30L, TimeUnit.SECONDS,
@@ -39,11 +40,11 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
     @Path("/tableau")
     @GET
     fun tableau(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("dataset") dataset: String) {
-        val models = modelService.list(auth)
+        val models = deployment.getModelService().list(auth)
         val stdin = JsonHelper.encodeAsBytes(models)
 
         val apiUrl = request.headers().get("origin") ?: request.headers().get("host")?.let { "http://$it" }
-        ?: throw MetriqlException("Unable to identify metriql url", BAD_REQUEST)
+            ?: throw MetriqlException("Unable to identify metriql url", BAD_REQUEST)
         val commands = listOf("metriql-tableau", "--metriql-url", apiUrl, "--dataset", dataset, "create-tds")
         runCommand(request, commands, stdin, "$dataset.tds")
     }
@@ -51,7 +52,7 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
     @Path("/looker")
     @GET
     fun looker(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("connection") connection: String) {
-        val models = modelService.list(auth)
+        val models = deployment.getModelService().list(auth)
         val stdin = JsonHelper.encodeAsBytes(models)
         runCommand(request, listOf("metriql-lookml", "--connection", connection), stdin, "$connection.zip")
     }
@@ -60,8 +61,9 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
     @POST
     fun superset(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, action: SupersetAction, parameters: SupersetParameters) {
         runCommand(
-            request, listOf("metriql-superset") + listOf(action.name) + buildArguments(parameters), if (action.needsStdin) {
-                val models = modelService.list(auth)
+            request, listOf("metriql-superset") + listOf(action.name) + buildArguments(parameters),
+            if (action.needsStdin) {
+                val models = deployment.getModelService().list(auth)
                 JsonHelper.encodeAsBytes(models)
             } else null
         )
@@ -71,8 +73,9 @@ class IntegrationHttpService(val modelService: IModelService) : HttpService() {
     @POST
     fun metabase(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, action: MetabaseAction, parameters: MetabaseParameters) {
         runCommand(
-            request, listOf("metriql-metabase") + listOf(action.name) + buildArguments(parameters), if (action.needsStdin) {
-                val models = modelService.list(auth)
+            request, listOf("metriql-metabase") + listOf(action.name) + buildArguments(parameters),
+            if (action.needsStdin) {
+                val models = deployment.getModelService().list(auth)
                 JsonHelper.encodeAsBytes(models)
             } else null
         )
