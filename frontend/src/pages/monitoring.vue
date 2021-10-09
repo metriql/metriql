@@ -36,7 +36,6 @@
       <el-table-column label="Type" width="150">
         <template #default="scope">
             {{ scope.row.update?.info?.reportType }}
-            {{ scope.row.update }}
         </template>
       </el-table-column>
       <el-table-column label="Query">
