@@ -200,6 +200,10 @@ let URL = PROTOCOL + '//' + HOST
 const parser = document.createElement('a');
 parser.href = URL;
 
-app.config.globalProperties.$BASE = {HOST, PROTOCOL, IS_LOCAL, URL, PORT: parser.port, HOSTNAME: parser.hostname}
+let port = parser.port
+if(!port) {
+  port = PROTOCOL == 'https:' ? 443 : 80
+}
+app.config.globalProperties.$BASE = {HOST, PROTOCOL, IS_LOCAL, URL, PORT: port, HOSTNAME: parser.hostname}
 
 app.mount('#rkm-app')

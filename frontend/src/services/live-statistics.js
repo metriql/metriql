@@ -14,12 +14,14 @@ class LiveStatistics {
       let currentRoute = router.currentRoute
       if(currentRoute.value.name === 'Login') return
 
+      let auth = AuthService.getAuth()
+      let headers = {'content-type': 'application/json'}
+      if(auth != null) {
+        headers['Authorization'] = auth
+      }
       axios.get(`${BASE_URL}/api/v0/task/activeCount`,
         {
-          headers: {
-            'Authorization': AuthService.getAuth(),
-            'content-type': 'application/json'
-          }
+          headers: headers
         }).then(response => {
         let row = [new Date(), response.data]
         this.points.push(row)

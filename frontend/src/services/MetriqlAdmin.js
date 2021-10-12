@@ -13,8 +13,4 @@ export class MetriqlAdmin {
   static getTasks(data) {
     return request.get('/api/v0/task/list', data).then(response => response.data)
   }
-
-  static countOfActiveTasks() {
-    return request.get('/api/v0/task/activeCount').then(response => response.data)
-  }
 }
