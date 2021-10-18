@@ -38,6 +38,7 @@ import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
+import org.glassfish.jersey.uri.UriComponent
 import java.io.File
 import java.io.FileInputStream
 import java.net.URI
@@ -144,12 +145,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                     null
                 } else response.body
             }
-            "dbt-cloud" -> {
-//                ""dbt-cloud://600685b9a9c63dfd8d9696e07ed8e1c15364dcd5@cloud.getdbt.com/api/v2/accounts/{accountId}/runs/job_definition_id=1234"";
-//                "&limit=1&include_related"
-//                https://cloud.getdbt.com/api/v2/accounts/{accountId}/runs/{runId}/artifacts/manifest.json
-                TODO()
-            }
+            "dbt-cloud" -> getDbtCloud(manifestLocation)
             "file" -> {
                 val file = File(manifestLocation).absoluteFile
                 if (!file.exists()) {
@@ -190,6 +186,50 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             Recipe("local://metriql", "master", null, Recipe.Config(packageName), packageName, models = models)
         }
+    }
+
+    private fun getDbtCloud(manifestLocation: URI) : ByteArray? {
+        val project = try {
+            Integer.parseInt((manifestLocation.path ?: "/").substring(1))
+        } catch (e: Exception) {
+            echo("Unable to parse the project for dbt-cloud scheme. $DBT_CLOUD_URL", err = true)
+            return null
+        }
+        val query = UriComponent.decodeQuery(manifestLocation.query, true)
+        val jobId = query["job_id"]?.get(0)
+        if(jobId == null) {
+            echo("{job_id} query parameter is missing in dbt-cloud URI. $DBT_CLOUD_URL", err = true)
+            return null
+        }
+        if(manifestLocation.userInfo == null) {
+            echo("{api_key} is missing in dbt-cloud URI. $DBT_CLOUD_URL", err = true)
+            return null
+        }
+        val lastRunRequest = UnirestHelper.unirest
+            .get("https://${manifestLocation.host}/api/v2/accounts/$project/runs?job_definition_id=$jobId&limit=1&order_by=-finished_at")
+            .header("Authorization", "Token ${manifestLocation.userInfo}")
+            .asJson()
+        if (lastRunRequest.status != 200) {
+            echo("Unable to fetch last run id from dbt Cloud: ${lastRunRequest.body}")
+            return null
+        }
+        var runId = lastRunRequest.body.`object`.getJSONArray("data")?.getJSONObject(0)?.getString("id")
+        if(runId == null) {
+            echo("Unable to fetch last run id from dbt Cloud, there should be at least one successful run for job id: $jobId")
+            return null
+        }
+
+        val manifestFileRequest = UnirestHelper.unirest
+            .get("https://${manifestLocation.host}/api/v2/accounts/$project/runs/$runId/artifacts/manifest.json")
+            .header("Authorization", "Token ${manifestLocation.userInfo}")
+            .asBytes()
+
+        if(manifestFileRequest.status != 200) {
+            echo("Unable to manifest.json file from run id $runId: ${String(manifestFileRequest.body)}")
+            return null
+        }
+
+        return manifestFileRequest.body
     }
 
     class Test : Commands(help = "Tests metriql datasets with metadata queries") {
@@ -348,7 +388,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
         }
 
-        open inner class CommunityDeployment() : Deployment {
+        open inner class CommunityDeployment : Deployment {
             private val profileConfig = getProfileConfig()
             private val singleAuth = ProjectAuth.singleProject()
             private val modelService = UpdatableModelService(null) { getModels(singleAuth) }
@@ -382,6 +422,8 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
     companion object {
         internal val logger = Logger.getLogger(this::class.java.name)
+
+        const val DBT_CLOUD_URL = "It should follow the following format: dbt-cloud://{api_key}@{dbt_cloud_url}/{account_id}?job_id={job_id}"
 
         fun parseUserNamePass(usernamePass: String): Pair<String, String> {
             val arr = usernamePass.split(":".toRegex(), 2)
