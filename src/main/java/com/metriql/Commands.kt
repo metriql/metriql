@@ -8,6 +8,7 @@ import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
+import com.google.common.base.Splitter
 import com.google.common.net.HostAndPort
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifestParser
@@ -38,7 +39,6 @@ import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
-import org.glassfish.jersey.uri.UriComponent
 import java.io.File
 import java.io.FileInputStream
 import java.net.URI
@@ -188,20 +188,23 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         }
     }
 
-    private fun getDbtCloud(manifestLocation: URI) : ByteArray? {
+    private fun getDbtCloud(manifestLocation: URI): ByteArray? {
         val project = try {
             Integer.parseInt((manifestLocation.path ?: "/").substring(1))
         } catch (e: Exception) {
             echo("Unable to parse the project for dbt-cloud scheme. $DBT_CLOUD_URL", err = true)
             return null
         }
-        val query = UriComponent.decodeQuery(manifestLocation.query, true)
+
+        val query: Map<String, String> = Splitter.on('&').trimResults()
+            .withKeyValueSeparator('=').split(manifestLocation.query)
+
         val jobId = query["job_id"]?.get(0)
-        if(jobId == null) {
+        if (jobId == null) {
             echo("{job_id} query parameter is missing in dbt-cloud URI. $DBT_CLOUD_URL", err = true)
             return null
         }
-        if(manifestLocation.userInfo == null) {
+        if (manifestLocation.userInfo == null) {
             echo("{api_key} is missing in dbt-cloud URI. $DBT_CLOUD_URL", err = true)
             return null
         }
@@ -214,7 +217,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             return null
         }
         var runId = lastRunRequest.body.`object`.getJSONArray("data")?.getJSONObject(0)?.getString("id")
-        if(runId == null) {
+        if (runId == null) {
             echo("Unable to fetch last run id from dbt Cloud, there should be at least one successful run for job id: $jobId")
             return null
         }
@@ -224,7 +227,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             .header("Authorization", "Token ${manifestLocation.userInfo}")
             .asBytes()
 
-        if(manifestFileRequest.status != 200) {
+        if (manifestFileRequest.status != 200) {
             echo("Unable to manifest.json file from run id $runId: ${String(manifestFileRequest.body)}")
             return null
         }
