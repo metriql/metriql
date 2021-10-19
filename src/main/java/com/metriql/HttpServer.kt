@@ -13,7 +13,7 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.funnel.FunnelService
 import com.metriql.report.retention.RetentionService
 import com.metriql.report.segmentation.SegmentationService
-import com.metriql.report.sql.MqlService
+import com.metriql.report.mql.MqlService
 import com.metriql.report.sql.SqlService
 import com.metriql.service.QueryHttpService
 import com.metriql.service.auth.ProjectAuth

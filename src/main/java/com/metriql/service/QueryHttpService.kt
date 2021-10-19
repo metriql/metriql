@@ -50,7 +50,7 @@ open class QueryHttpService(
     @GET
     @Path("/ticker")
     fun ticker(): TickerInfo {
-        val activeTasks = taskQueueService.currentTasks().count { !it.isDone() }
+        val activeTasks = taskQueueService.currentTasks().count { !it.status.isDone }
         return TickerInfo(activeTasks, lastMetadataChangeTime, startTime)
     }
 

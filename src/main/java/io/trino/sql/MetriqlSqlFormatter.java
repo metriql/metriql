@@ -16,6 +16,7 @@ package io.trino.sql;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.metriql.service.model.Model;
 import com.metriql.util.MetriqlException;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
@@ -43,15 +44,15 @@ public final class MetriqlSqlFormatter {
     private MetriqlSqlFormatter() {
     }
 
-    public static String formatSql(Node root, SqlToSegmentation reWriter, IQueryGeneratorContext context) {
+    public static String formatSql(Node root, SqlToSegmentation reWriter, IQueryGeneratorContext context, Map<NodeRef<Parameter>, Expression> parameterMap) {
         StringBuilder builder = new StringBuilder();
-        new Formatter(builder, reWriter, context).process(root, 0);
+        new Formatter(builder, reWriter, context, parameterMap).process(root, 0);
         return builder.toString();
     }
 
     static String formatName(QualifiedName name, SqlToSegmentation reWriter, IQueryGeneratorContext context) {
         return name.getOriginalParts().stream()
-                .map(exp -> formatExpression(exp, reWriter, context))
+                .map(exp -> formatExpression(exp, reWriter, context, ImmutableMap.of()))
                 .collect(joining("."));
     }
 
@@ -59,12 +60,14 @@ public final class MetriqlSqlFormatter {
         private final StringBuilder builder;
         private final IQueryGeneratorContext context;
         private final SqlToSegmentation reWriter;
+        private final Map<NodeRef<Parameter>, Expression> parameterMap;
         private final Set<String> withs = new HashSet<>();
 
-        public Formatter(StringBuilder builder, SqlToSegmentation reWriter, IQueryGeneratorContext context) {
+        public Formatter(StringBuilder builder, SqlToSegmentation reWriter, IQueryGeneratorContext context, Map<NodeRef<Parameter>, Expression> parameterMap) {
             this.builder = builder;
             this.reWriter = reWriter;
             this.context = context;
+            this.parameterMap = parameterMap;
         }
 
         @Override
@@ -75,7 +78,7 @@ public final class MetriqlSqlFormatter {
         @Override
         protected Void visitExpression(Expression node, Integer indent) {
             checkArgument(indent == 0, "visitExpression should only be called at root");
-            builder.append(formatExpression(node, reWriter, context));
+            builder.append(formatExpression(node, reWriter, context, parameterMap));
             return null;
         }
 
@@ -90,7 +93,7 @@ public final class MetriqlSqlFormatter {
         protected Void visitUnnest(Unnest node, Integer indent) {
             builder.append("UNNEST(")
                     .append(node.getExpressions().stream()
-                            .map(i -> formatExpression(i, reWriter, context))
+                            .map(i -> formatExpression(i, reWriter, context, parameterMap))
                             .collect(joining(", ")))
                     .append(")");
             if (node.isWithOrdinality()) {
@@ -149,7 +152,7 @@ public final class MetriqlSqlFormatter {
                 while (queries.hasNext()) {
                     WithQuery query = queries.next();
                     withs.add(query.getName().getValue());
-                    append(indent, formatExpression(query.getName(), reWriter, context));
+                    append(indent, formatExpression(query.getName(), reWriter, context, parameterMap));
                     query.getColumnNames().ifPresent(columnNames -> appendAliasColumns(builder, columnNames, reWriter, context));
                     builder.append(" AS ");
                     process(new TableSubquery(query.getQuery()), indent);
@@ -189,25 +192,25 @@ public final class MetriqlSqlFormatter {
             node = QueryStatementReWriter.INSTANCE.rewrite(node);
             Relation from = node.getFrom().orElse(null);
             String alias = null;
-            if(from instanceof AliasedRelation) {
+            if (from instanceof AliasedRelation) {
                 AliasedRelation aliasedRelation = (AliasedRelation) from;
                 alias = aliasedRelation.getAlias().getValue();
                 from = aliasedRelation.getRelation();
             }
 
-            if(from == null || from instanceof TableSubquery) {
+            if (from == null || from instanceof TableSubquery) {
                 internalVisitQuerySpecification(node, indent);
-            } else{
+            } else {
                 Pair<Model, List<String>> modelAlias = SqlToSegmentation.Companion.getModel(context, from);
                 List<String> finalAlias;
-                if(alias != null) {
+                if (alias != null) {
                     finalAlias = ImmutableList.of(alias);
                 } else {
                     finalAlias = modelAlias.getSecond();
                 }
                 modelAlias = modelAlias.copy(modelAlias.getFirst(), finalAlias);
 
-                String proxyQuery = reWriter.convert(context, modelAlias, node.getSelect(), node.getWhere(),
+                String proxyQuery = reWriter.convert(context, parameterMap, modelAlias, node.getSelect(), node.getWhere(),
                         node.getHaving(), node.getLimit(), node.getOrderBy());
                 append(indent, proxyQuery);
             }
@@ -228,7 +231,7 @@ public final class MetriqlSqlFormatter {
             builder.append('\n');
 
             if (node.getWhere().isPresent()) {
-                append(indent, "WHERE " + ExpressionFormatter.formatExpression(node.getWhere().get()))
+                append(indent, "WHERE " + formatExpression(node.getWhere().get(), reWriter, context, parameterMap))
                         .append('\n');
             }
 
@@ -237,14 +240,14 @@ public final class MetriqlSqlFormatter {
             }
 
             if (node.getHaving().isPresent()) {
-                append(indent, "HAVING " + ExpressionFormatter.formatExpression(node.getHaving().get()))
+                append(indent, "HAVING " + formatExpression(node.getHaving().get(), reWriter, context, parameterMap))
                         .append('\n');
             }
 
             if (!node.getWindows().isEmpty()) {
                 append(indent, "WINDOW");
                 formatDefinitionList(node.getWindows().stream()
-                        .map(definition -> ExpressionFormatter.formatExpression(definition.getName()) + " AS " + formatWindowSpecification(definition.getWindow()))
+                        .map(definition -> formatExpression(definition.getName(), reWriter, context, parameterMap) + " AS " + formatWindowSpecification(definition.getWindow()))
                         .collect(toImmutableList()), indent + 1);
             }
 
@@ -261,8 +264,7 @@ public final class MetriqlSqlFormatter {
             }
         }
 
-        private String formatGroupBy(List<GroupingElement> groupingElements)
-        {
+        private String formatGroupBy(List<GroupingElement> groupingElements) {
             ImmutableList.Builder<String> resultStrings = ImmutableList.builder();
 
             for (GroupingElement groupingElement : groupingElements) {
@@ -270,22 +272,18 @@ public final class MetriqlSqlFormatter {
                 if (groupingElement instanceof SimpleGroupBy) {
                     List<Expression> columns = groupingElement.getExpressions();
                     if (columns.size() == 1) {
-                        result = formatExpression(getOnlyElement(columns), reWriter, context);
-                    }
-                    else {
+                        result = formatExpression(getOnlyElement(columns), reWriter, context, parameterMap);
+                    } else {
                         result = formatGroupingSet(columns);
                     }
-                }
-                else if (groupingElement instanceof GroupingSets) {
+                } else if (groupingElement instanceof GroupingSets) {
                     result = format("GROUPING SETS (%s)", Joiner.on(", ").join(
                             ((GroupingSets) groupingElement).getSets().stream()
                                     .map(set -> formatGroupingSet(set))
                                     .iterator()));
-                }
-                else if (groupingElement instanceof Cube) {
+                } else if (groupingElement instanceof Cube) {
                     result = format("CUBE %s", formatGroupingSet(groupingElement.getExpressions()));
-                }
-                else if (groupingElement instanceof Rollup) {
+                } else if (groupingElement instanceof Rollup) {
                     result = format("ROLLUP %s", formatGroupingSet(groupingElement.getExpressions()));
                 }
                 resultStrings.add(result);
@@ -293,16 +291,15 @@ public final class MetriqlSqlFormatter {
             return Joiner.on(", ").join(resultStrings.build());
         }
 
-        private static String formatGroupingSet(List<Expression> groupingSet)
-        {
+        private String formatGroupingSet(List<Expression> groupingSet) {
             return format("(%s)", Joiner.on(", ").join(groupingSet.stream()
-                    .map(ExpressionFormatter::formatExpression)
+                    .map(exp -> formatExpression(exp, reWriter, context, parameterMap))
                     .iterator()));
         }
 
         @Override
         protected Void visitOrderBy(OrderBy node, Integer indent) {
-            append(indent, new MetriqlExpressionFormatter.Formatter(reWriter, context).formatOrderBy(node))
+            append(indent, new MetriqlExpressionFormatter.Formatter(reWriter, context, parameterMap).formatOrderBy(node))
                     .append('\n');
             return null;
         }
@@ -310,14 +307,14 @@ public final class MetriqlSqlFormatter {
         @Override
         protected Void visitOffset(Offset node, Integer indent) {
             append(indent, "OFFSET ")
-                    .append(formatExpression(node.getRowCount(), reWriter, context))
+                    .append(formatExpression(node.getRowCount(), reWriter, context, parameterMap))
                     .append(" ROWS\n");
             return null;
         }
 
         @Override
         protected Void visitFetchFirst(FetchFirst node, Integer indent) {
-            append(indent, "FETCH FIRST " + node.getRowCount().map(count -> formatExpression(count, reWriter, context) + " ROWS ").orElse("ROW "))
+            append(indent, "FETCH FIRST " + node.getRowCount().map(count -> formatExpression(count, reWriter, context, parameterMap) + " ROWS ").orElse("ROW "))
                     .append(node.isWithTies() ? "WITH TIES" : "ONLY")
                     .append('\n');
             return null;
@@ -326,7 +323,7 @@ public final class MetriqlSqlFormatter {
         @Override
         protected Void visitLimit(Limit node, Integer indent) {
             append(indent, "LIMIT ")
-                    .append(formatExpression(node.getRowCount(), reWriter, context))
+                    .append(formatExpression(node.getRowCount(), reWriter, context, parameterMap))
                     .append('\n');
             return null;
         }
@@ -360,10 +357,10 @@ public final class MetriqlSqlFormatter {
 
         @Override
         protected Void visitSingleColumn(SingleColumn node, Integer indent) {
-            builder.append(formatExpression(node.getExpression(), reWriter, context));
+            builder.append(formatExpression(node.getExpression(), reWriter, context, parameterMap));
             if (node.getAlias().isPresent()) {
                 builder.append(' ')
-                        .append(formatExpression(node.getAlias().get(), reWriter, context));
+                        .append(formatExpression(node.getAlias().get(), reWriter, context, parameterMap));
             }
 
             return null;
@@ -372,14 +369,14 @@ public final class MetriqlSqlFormatter {
         @Override
         protected Void visitAllColumns(AllColumns node, Integer context) {
             node.getTarget().ifPresent(value -> builder
-                    .append(formatExpression(value, reWriter, this.context))
+                    .append(formatExpression(value, reWriter, this.context, parameterMap))
                     .append("."));
             builder.append("*");
 
             if (!node.getAliases().isEmpty()) {
                 builder.append(" AS (")
                         .append(Joiner.on(", ").join(node.getAliases().stream()
-                                .map(i -> formatExpression(i, reWriter, this.context))
+                                .map(i -> formatExpression(i, reWriter, this.context, parameterMap))
                                 .collect(toImmutableList())))
                         .append(")");
             }
@@ -404,7 +401,7 @@ public final class MetriqlSqlFormatter {
             processRelationSuffix(node.getRelation(), indent);
 
             builder.append(' ')
-                    .append(formatExpression(node.getAlias(), reWriter, context));
+                    .append(formatExpression(node.getAlias(), reWriter, context, parameterMap));
             appendAliasColumns(builder, node.getColumnNames(), reWriter, context);
 
             return null;
@@ -443,7 +440,7 @@ public final class MetriqlSqlFormatter {
                         .append(indentString(indent))
                         .append(first ? "  " : ", ");
 
-                builder.append(formatExpression(row, reWriter, context));
+                builder.append(formatExpression(row, reWriter, context, parameterMap));
                 first = false;
             }
             builder.append('\n');
@@ -652,8 +649,8 @@ public final class MetriqlSqlFormatter {
 
             String propertyList = properties.stream()
                     .map(element -> INDENT +
-                            formatExpression(element.getName(), reWriter, context) + " = " +
-                            formatExpression(element.getValue(), reWriter, context))
+                            formatExpression(element.getName(), reWriter, context, parameterMap) + " = " +
+                            formatExpression(element.getValue(), reWriter, context, parameterMap))
                     .collect(joining(",\n"));
 
             return "\nWITH (\n" + propertyList + "\n)";
@@ -665,8 +662,8 @@ public final class MetriqlSqlFormatter {
             }
 
             String propertyList = properties.stream()
-                    .map(element -> formatExpression(element.getName(), reWriter, context) + " = " +
-                            formatExpression(element.getValue(), reWriter, context))
+                    .map(element -> formatExpression(element.getName(), reWriter, context, parameterMap) + " = " +
+                            formatExpression(element.getValue(), reWriter, context, parameterMap))
                     .collect(joining(", "));
 
             return " WITH ( " + propertyList + " )";
@@ -674,7 +671,7 @@ public final class MetriqlSqlFormatter {
 
         private String formatColumnDefinition(ColumnDefinition column) {
             StringBuilder sb = new StringBuilder()
-                    .append(formatExpression(column.getName(), reWriter, context))
+                    .append(formatExpression(column.getName(), reWriter, context, parameterMap))
                     .append(" ").append(column.getType());
             if (!column.isNullable()) {
                 sb.append(" NOT NULL");
@@ -722,7 +719,7 @@ public final class MetriqlSqlFormatter {
                 builder.append(node.getName().get())
                         .append(" => ");
             }
-            builder.append(formatExpression(node.getValue(), reWriter, context));
+            builder.append(formatExpression(node.getValue(), reWriter, context, parameterMap));
 
             return null;
         }
@@ -782,6 +779,18 @@ public final class MetriqlSqlFormatter {
             return Strings.repeat(INDENT, indent);
         }
 
+        private void appendAliasColumns(StringBuilder builder, List<Identifier> columns, SqlToSegmentation reWriter, IQueryGeneratorContext bridge) {
+            if ((columns != null) && (!columns.isEmpty())) {
+                String formattedColumns = columns.stream()
+                        .map(i -> formatExpression(i, reWriter, bridge, parameterMap))
+                        .collect(Collectors.joining(", "));
+
+                builder.append(" (")
+                        .append(formattedColumns)
+                        .append(')');
+            }
+        }
+
         private void formatDefinitionList(List<String> elements, int indent) {
             if (elements.size() == 1) {
                 builder.append(" ")
@@ -796,18 +805,6 @@ public final class MetriqlSqlFormatter {
                 append(indent, elements.get(elements.size() - 1))
                         .append("\n");
             }
-        }
-    }
-
-    private static void appendAliasColumns(StringBuilder builder, List<Identifier> columns, SqlToSegmentation reWriter, IQueryGeneratorContext bridge) {
-        if ((columns != null) && (!columns.isEmpty())) {
-            String formattedColumns = columns.stream()
-                    .map(i -> formatExpression(i, reWriter, bridge))
-                    .collect(Collectors.joining(", "));
-
-            builder.append(" (")
-                    .append(formattedColumns)
-                    .append(')');
         }
     }
 

@@ -363,7 +363,7 @@ abstract class JDBCWarehouse(
 
             override fun getStats(): QueryResult.QueryStats {
 //                val unwrap = resultSet!!.unwrap(SnowflakeResultSet::class.java)
-                return syncStats(!isDone(), query)
+                return syncStats(!status.isDone, query)
             }
         }
     }

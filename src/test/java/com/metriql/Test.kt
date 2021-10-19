@@ -74,7 +74,7 @@ class Test {
             null,
             null
         )
-        val output = MetriqlSqlFormatter.formatSql(stmt, null!!, context)
+        val output = MetriqlSqlFormatter.formatSql(stmt, null!!, context, null)
         println(output)
     }
 }

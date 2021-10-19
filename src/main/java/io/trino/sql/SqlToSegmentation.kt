@@ -49,7 +49,9 @@ import io.trino.sql.tree.Literal
 import io.trino.sql.tree.LogicalBinaryExpression
 import io.trino.sql.tree.LongLiteral
 import io.trino.sql.tree.Node
+import io.trino.sql.tree.NodeRef
 import io.trino.sql.tree.OrderBy
+import io.trino.sql.tree.Parameter
 import io.trino.sql.tree.Relation
 import io.trino.sql.tree.Select
 import io.trino.sql.tree.SelectItem
@@ -73,6 +75,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
     fun convert(
         context: IQueryGeneratorContext,
+        parameterMap: Map<NodeRef<Parameter>, Expression>,
         modelAlias: Pair<Model, List<String>>,
         select: Select,
         where: Optional<Expression>,
@@ -102,7 +105,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 //            it.expressions.map { exp -> getReference(query.select.selectItems, exp) }
 //        }?.toList() ?: listOf()
 
-        val rewriter = MetriqlSegmentationQueryRewriter(context, model, references, dimensions, measures)
+        val rewriter = MetriqlSegmentationQueryRewriter(context, model, references, dimensions, measures, parameterMap)
 
         val projectionColumns = select.selectItems.flatMap {
             when (it) {
@@ -119,8 +122,8 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             }
         }
 
-        val whereFilters = where.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
-        val havingFilters = having.orElse(null)?.let { processWhereExpression(context, references, model, it) } ?: listOf()
+        val whereFilters = where.orElse(null)?.let { processWhereExpression(context, parameterMap, references, model, it) } ?: listOf()
+        val havingFilters = having.orElse(null)?.let { processWhereExpression(context, parameterMap, references, model, it) } ?: listOf()
 
         val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, orderBy)
         val query = SegmentationRecipeQuery(
@@ -183,7 +186,8 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         private val references: Map<Node, Reference>,
         val dimensions: MutableList<String>,
         val measures: MutableList<String>,
-    ) : MetriqlExpressionFormatter.Formatter(this, context) {
+        parameterMap : Map<NodeRef<Parameter>, Expression>,
+    ) : MetriqlExpressionFormatter.Formatter(this, context, parameterMap) {
         override fun visitFunctionCall(node: FunctionCall, context: Void?): String? {
             if (node.name.prefix.isPresent) {
                 throw UnsupportedOperationException("schema functions are not supported")
@@ -360,6 +364,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
     private fun processWhereExpression(
         context: IQueryGeneratorContext,
+        parameterMap : Map<NodeRef<Parameter>, Expression>,
         references: Map<Node, Reference>,
         model: Model,
         exp: Expression
@@ -407,8 +412,8 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 )
             }
             is LogicalBinaryExpression -> {
-                val left = processWhereExpression(context, references, model, exp.left)
-                val right = processWhereExpression(context, references, model, exp.right)
+                val left = processWhereExpression(context, parameterMap, references, model, exp.left)
+                val right = processWhereExpression(context, parameterMap, references, model, exp.right)
                 val allFilters = (left ?: listOf()) + (right ?: listOf())
 
                 when (exp.operator) {
@@ -442,7 +447,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     false -> null
                     else -> {
                         val metricReference = references[exp.left] ?: references[exp.right] ?: TODO()
-                        val value = getFilterValue(if (references.containsKey(exp.left)) exp.right else exp.left)
+                        val value = getFilterValue(parameterMap, if (references.containsKey(exp.left)) exp.right else exp.left)
                         getReportFilter(context, model, metricReference, { convertMetriqlOperator(exp.operator, it.operatorClass.java) }, value)
                     }
                 }
@@ -484,11 +489,12 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getFilterValue(exp: Expression): Any {
+    private fun getFilterValue(parameterMap : Map<NodeRef<Parameter>, Expression>, exp: Expression): Any? {
         return when (exp) {
             is LongLiteral -> exp.value
             is DoubleLiteral -> exp.value
             is StringLiteral -> exp.value
+            is Parameter -> getFilterValue(parameterMap, parameterMap[NodeRef.of(exp)]!!)
             else -> {
                 throw MetriqlException("Only scalar values are supported in WHERE. Expression is not supported: $exp ", BAD_REQUEST)
             }

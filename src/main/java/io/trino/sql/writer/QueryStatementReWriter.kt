@@ -1,24 +1,38 @@
 package io.trino.sql.writer
 
+import io.trino.sql.planner.ParameterRewriter
+import io.trino.sql.tree.AstVisitor
 import io.trino.sql.tree.Expression
 import io.trino.sql.tree.ExpressionTreeRewriter
 import io.trino.sql.tree.GroupBy
+import io.trino.sql.tree.Node
+import io.trino.sql.tree.NodeRef
 import io.trino.sql.tree.Offset
 import io.trino.sql.tree.OrderBy
+import io.trino.sql.tree.Parameter
+import io.trino.sql.tree.Query
 import io.trino.sql.tree.QuerySpecification
+import io.trino.sql.tree.Relation
 import io.trino.sql.tree.Select
 import io.trino.sql.tree.SimpleGroupBy
 import io.trino.sql.tree.SingleColumn
 import io.trino.sql.tree.SortItem
+import io.trino.sql.tree.Statement
+import io.trino.sql.tree.Table
 import io.trino.sql.tree.Unnest
 import io.trino.sql.tree.Values
 import io.trino.sql.tree.WindowDefinition
 import io.trino.sql.tree.WindowSpecification
+import java.util.concurrent.atomic.AtomicReference
 
 object QueryStatementReWriter {
-    private val rewriters = listOf(
+    private val reWriters = listOf(
         Utf8StringReWriter()
     )
+
+    fun rewrite(statement: Statement, parameters : Map<NodeRef<Parameter>, Expression>): Statement {
+        return ParameterReplacerVisitor(parameters).process(statement) as Statement
+    }
 
     fun rewrite(node: QuerySpecification): QuerySpecification {
         return QuerySpecification(
@@ -72,9 +86,27 @@ object QueryStatementReWriter {
 
     private fun rewrite(expression: Expression): Expression {
         var exp = expression
-        for (rewriter in rewriters) {
+        for (rewriter in reWriters) {
             exp = ExpressionTreeRewriter.rewriteWith(rewriter, exp)
         }
         return exp
+    }
+
+    class ParameterReplacerVisitor(val parameters : Map<NodeRef<Parameter>, Expression>) : AstVisitor<Node, Void?>() {
+        override fun visitQuerySpecification(node: QuerySpecification, context: Void?): Node {
+            return rewrite(node)
+        }
+
+        override fun visitQuery(node: Query, context: Void?): Node {
+            return super.visitQuery(node, context)
+        }
+
+        override fun visitExpression(node: Expression, context: Void?): Node {
+            return ExpressionTreeRewriter.rewriteWith(ParameterRewriter(parameters), node)
+        }
+
+        override fun visitNode(node: Node, context: Void?): Node {
+            return node
+        }
     }
 }

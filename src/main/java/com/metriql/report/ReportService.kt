@@ -44,7 +44,7 @@ open class ReportService(
                 ).query
             },
             dependencyFetcher = dependencyFetcher,
-            userAttributeFetcher = { userAttributeFetcher.invoke(it) }
+            userAttributeFetcher = { userAttributeFetcher.invoke(it) },
         )
     }
 
@@ -56,7 +56,6 @@ open class ReportService(
         reportFilters: List<ReportFilter> = listOf(),
         isBackgroundTask: Boolean = false,
         useCache: Boolean = true,
-        variables: Map<String, Any>? = null,
         context: IQueryGeneratorContext = createContext(auth, dataSource)
     ): QueryTask {
         try {

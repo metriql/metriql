@@ -128,12 +128,7 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
         val status: Status,
         val update: Any?,
         val result: T?
-    ) {
-        @JsonIgnore
-        fun isDone(): Boolean {
-            return status == Status.FINISHED || status == Status.CANCELED
-        }
-    }
+    )
 
     fun taskTicket(includeResponse: Boolean = true): TaskTicket<T> {
         if (status != Status.FINISHED && id == null) {
@@ -154,10 +149,6 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
             throw IllegalStateException()
         }
         status = Status.RUNNING
-    }
-
-    fun isDone(): Boolean {
-        return status == Status.FINISHED || status == Status.CANCELED
     }
 
     fun getLastAccessedAt(): Long? {
