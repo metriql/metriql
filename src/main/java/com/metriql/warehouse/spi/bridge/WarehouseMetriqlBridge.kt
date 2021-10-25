@@ -31,6 +31,7 @@ fun getRequiredFunction(functions: RFunctions, function: RFunction): String {
 }
 
 interface WarehouseMetriqlBridge {
+    val mqlTypeMap: Map<String, String>
     val filters: WarehouseFilters
     val timeframes: WarehouseTimeframes
     val queryGenerators: Map<ServiceType, ServiceQueryGenerator<*, *, *>>

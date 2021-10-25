@@ -41,6 +41,7 @@ import com.metriql.warehouse.spi.filter.FilterOperator
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.trino.spi.type.StandardTypes
 import java.time.LocalDate
 
 abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
@@ -49,6 +50,20 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     override fun quoteIdentifier(identifier: String) = ValidationUtil.quoteIdentifier(identifier, quote)
 
     override val metricRenderHook = object : WarehouseMetriqlBridge.MetricRenderHook {}
+
+    override val mqlTypeMap = mapOf(
+        StandardTypes.BOOLEAN to "boolean",
+        StandardTypes.VARCHAR to "varchar",
+        StandardTypes.BIGINT to "bigint",
+        StandardTypes.INTEGER to "integer",
+        StandardTypes.SMALLINT to "smallint",
+        StandardTypes.DATE to "date",
+        StandardTypes.DECIMAL to "decimal",
+        StandardTypes.DOUBLE to "double",
+        StandardTypes.TIMESTAMP to "timestamp",
+        StandardTypes.TIME to "time",
+        StandardTypes.CHAR to "char",
+    )
 
     override val functions = mapOf(
         RFunction.NOW to "CURRENT_TIMESTAMP",

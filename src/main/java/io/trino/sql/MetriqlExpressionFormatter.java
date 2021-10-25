@@ -455,8 +455,10 @@ public final class MetriqlExpressionFormatter {
 
         @Override
         public String visitCast(Cast node, Void context) {
-            return (node.isSafe() ? "TRY_CAST" : "CAST") +
-                    "(" + process(node.getExpression(), context) + " AS " + process(node.getType(), context) + ")";
+            if (node.isSafe()) {
+                throw new UnsupportedOperationException("try_cast is not supported");
+            }
+            return "CAST(" + process(node.getExpression(), context) + " AS " + process(node.getType(), context) + ")";
         }
 
         @Override
@@ -563,12 +565,20 @@ public final class MetriqlExpressionFormatter {
         @Override
         protected String visitGenericDataType(GenericDataType node, Void context) {
             StringBuilder result = new StringBuilder();
-            result.append(node.getName());
+
+            String name = node.getName().getValue();
+            String nativeTypeName = queryContext.getWarehouseBridge().getMqlTypeMap().get(name);
+            if (nativeTypeName == null) {
+                throw new UnsupportedOperationException(String.format("MQL type %s is not supported for the adapter", name));
+            }
+
+            result.append(nativeTypeName);
 
             if (!node.getArguments().isEmpty()) {
                 result.append(node.getArguments().stream()
                         .map(this::process)
                         .collect(joining(", ", "(", ")")));
+                throw new UnsupportedOperationException(String.format("Generic arguments %s is not supported", result.toString()));
             }
 
             return result.toString();
