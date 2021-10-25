@@ -41,7 +41,7 @@
   </div>
 </template>
 <script>
-import { AuthService } from '../../services/auth'
+import { AuthService, AuthType } from '../../services/auth'
 
 export default {
   data() {
