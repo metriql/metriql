@@ -74,14 +74,14 @@ class BigQueryQueryTask(
                 val errorMessage = queryJob.status.error?.message
                 val exception = MetriqlException(errorMessage, HttpResponseStatus.BAD_REQUEST)
                 MetriqlEventBus.publish(MetriqlEvents.InternalException(exception as Throwable, auth.userId, auth.projectId))
-                setResult(QueryResult.errorResult(QueryResult.QueryError.create(errorMessage ?: "N/A")))
+                setResult(QueryResult.errorResult(QueryResult.QueryError.create(errorMessage ?: "N/A")), failed = true)
             }
             val tableResult = queryJob.getQueryResults(BigQuery.QueryResultsOption.pageSize(limit.toLong()))
             val queryResult = getQueryResultFromTableResult(tableResult.schema, tableResult)
 
             setResult(queryResult)
         } catch (e: Throwable) {
-            setResult(QueryResult.errorResult(QueryResult.QueryError.create(e.message ?: "N/A")))
+            setResult(QueryResult.errorResult(QueryResult.QueryError.create(e.message ?: "N/A")), failed = true)
         }
     }
 

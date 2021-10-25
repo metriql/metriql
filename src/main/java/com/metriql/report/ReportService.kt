@@ -1,6 +1,7 @@
 package com.metriql.report
 
 import com.metriql.db.QueryResult
+import com.metriql.db.QueryResult.QueryStats.State.FINISHED
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.audit.MetriqlEvents
@@ -33,17 +34,17 @@ open class ReportService(
             dataSource,
             modelService,
             rendererService,
-            reportExecutor =  { auth, type, options ->
-                    val context = createContext(auth, dataSource)
-                    getServiceForReportType(type).renderQuery(
-                        auth,
-                        context,
-                        options.toReportOptions(context),
-                        listOf(),
-                    ).query
-                },
+            reportExecutor = { auth, type, options ->
+                val context = createContext(auth, dataSource)
+                getServiceForReportType(type).renderQuery(
+                    auth,
+                    context,
+                    options.toReportOptions(context),
+                    listOf(),
+                ).query
+            },
             dependencyFetcher = dependencyFetcher,
-            userAttributeFetcher = { userAttributeFetcher.invoke(it) }
+            userAttributeFetcher = { userAttributeFetcher.invoke(it) },
         )
     }
 
@@ -55,11 +56,10 @@ open class ReportService(
         reportFilters: List<ReportFilter> = listOf(),
         isBackgroundTask: Boolean = false,
         useCache: Boolean = true,
-        variables: Map<String, Any>? = null,
         context: IQueryGeneratorContext = createContext(auth, dataSource)
     ): QueryTask {
         try {
-            val (query, postProcessors, sqlQueryOptions) =  getServiceForReportType(reportType).renderQuery(
+            val (query, postProcessors, sqlQueryOptions) = getServiceForReportType(reportType).renderQuery(
                 auth,
                 context,
                 options,
@@ -78,7 +78,7 @@ open class ReportService(
                 postProcessors = postProcessors
             )
         } catch (e: Throwable) {
-            return Task.completedTask(auth, UUID.randomUUID(), QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(QueryResult.QueryStats.State.FINISHED, null))
+            return Task.completedTask(auth, UUID.randomUUID(), QueryResult.errorResult(QueryResult.QueryError.create(e)), QueryResult.QueryStats(FINISHED, null), failed = true)
         }
     }
 }

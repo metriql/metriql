@@ -37,7 +37,7 @@ class TaskHttpService @Inject constructor(val service: TaskQueueService) : HttpS
         if (!auth.isSuperuser) {
             throw MetriqlException(HttpResponseStatus.FORBIDDEN)
         }
-        return service.currentTasks().count { !it.isDone() }
+        return service.currentTasks().count { !it.status.isDone }
     }
 
     @ApiOperation(value = "List all tasks")

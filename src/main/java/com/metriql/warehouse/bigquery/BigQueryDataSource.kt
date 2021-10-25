@@ -1,7 +1,6 @@
 package com.metriql.warehouse.bigquery
 
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.auth.oauth2.OAuth2Credentials
+import com.fasterxml.jackson.core.type.TypeReference
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.auth.oauth2.UserCredentials
 import com.google.cloud.bigquery.BigQuery
@@ -50,7 +49,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     init {
         val bigQuery = BigQueryOptions.newBuilder()
 
-        if(config.project != null) {
+        if (config.project != null) {
             bigQuery.setProjectId(config.project)
         }
 
@@ -62,8 +61,8 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                         .setRefreshToken(config.refresh_token).build()
                 )
             }
-            config.serviceAccountJSON != null -> {
-                val fromStream = ServiceAccountCredentials.fromStream(StringInputStream(config.serviceAccountJSON))
+            config.keyfile_json != null -> {
+                val fromStream = ServiceAccountCredentials.fromStream(StringInputStream(config.keyfile_json))
                 credentialProjectId = fromStream.projectId
                 bigQuery.setCredentials(fromStream)
             }
@@ -73,12 +72,15 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 bigQuery.setCredentials(fromStream)
             }
             else -> {
-                val localKeyFile = File(System.getProperty("user.home"), ".gcloud/keyfile.json")
+                val localKeyFile = System.getenv("GCLOUD_CONFIG_DIR")?.let { File(it, "application_default_credentials.json") } ?: File(
+                    System.getProperty("user.home"),
+                    ".config/gcloud/application_default_credentials.json"
+                )
+
                 if (!localKeyFile.exists()) {
                     throw MetriqlException("$localKeyFile not found connecting the BigQuery.", HttpResponseStatus.BAD_REQUEST)
                 }
-                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(localKeyFile))
-                credentialProjectId = fromStream.projectId
+                val fromStream = UserCredentials.fromStream(FileInputStream(localKeyFile))
                 bigQuery.setCredentials(fromStream)
             }
         }
@@ -89,7 +91,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     /** A public dataset can be the default project. However, we need to execute jobs on our own project */
     private fun getProjectId(): String {
         return config.project ?: credentialProjectId
-        ?: throw MetriqlException("Unable to find `project_id, please set the value in credentials", HttpResponseStatus.BAD_REQUEST)
+            ?: throw MetriqlException("Unable to find `project_id, please set the value in credentials", HttpResponseStatus.BAD_REQUEST)
     }
 
     override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {
@@ -298,12 +300,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     override fun dbtSettings(): DbtSettings {
         return DbtSettings(
             "bigquery",
-            mapOf(
-                "method" to "service-account-json",
-                "keyfile_json" to JsonHelper.read(config.serviceAccountJSON, ObjectNode::class.java),
-                "database" to getProjectId(),
-                "schema" to (config.dataset)
-            )
+            JsonHelper.convert(config, object : TypeReference<Map<String, Any>>() {})
         )
     }
 

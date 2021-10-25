@@ -29,6 +29,7 @@ import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.services.RecipeQuery
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
+import io.trino.sql.tree.Expression
 import java.util.LinkedHashMap
 import java.util.concurrent.ConcurrentHashMap
 
@@ -116,7 +117,7 @@ class QueryGeneratorContext(
             } else {
                 dimensionName
             }
-        )
+            )
 
         val modelDimension = model.dimensions.find { it.name == dimensionNameNormalized }?.let { ModelDimension(model.name, model.target, it) }
             ?: throw MetriqlException("The dimension `$dimensionName` in model `$modelName` not found", NOT_FOUND)
@@ -204,6 +205,4 @@ class QueryGeneratorContext(
             renderAlias = renderAlias
         )
     }
-
-
 }

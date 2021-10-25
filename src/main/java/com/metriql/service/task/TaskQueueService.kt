@@ -27,7 +27,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
                     val currentTimeMillis = System.currentTimeMillis()
                     taskTickets.forEach {
                         if (it.value.getLastAccessedAt() == null || (currentTimeMillis - it.value.getLastAccessedAt()!! > ORPHAN_TASK_AGE_MILLIS)) {
-                            if (!it.value.isDone()) {
+                            if (!it.value.status.isDone) {
                                 ContextLogger.log(logger, "Cancelling orphan task: ${it.key}", ProjectAuth.systemUser(0, 0))
                                 it.value.cancel()
                             }
@@ -60,7 +60,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
                 waitingJobs.forEach {
                     if (it is Task<*, *>) {
                         val queryTask = it as QueryTask
-                        queryTask.setResult(QueryResult.errorResult("We're currently operating an update. Please try again in 30 seconds."))
+                        queryTask.setResult(QueryResult.errorResult("We're currently operating an update. Please try again in 30 seconds."), failed = true)
                     }
                 }
             }
@@ -72,7 +72,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         return task.taskTicket()
     }
 
-    fun currentTasks(includeResponse: Boolean = false, filterStatus: Task.Status? = null, projectId : Int? = null): List<Task.TaskTicket<out Any?>> {
+    fun currentTasks(includeResponse: Boolean = false, filterStatus: Task.Status? = null, projectId: Int? = null): List<Task.TaskTicket<out Any?>> {
         val allTasks = taskTickets.map { it.value.taskTicket(includeResponse) }
         val ordered = if (filterStatus == null && projectId == null) {
             allTasks
@@ -107,7 +107,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         if (taskTickets.size >= MAXIMUM_ITEMS_IN_TASK_LIST) {
             val iterator = taskTickets.iterator()
             val item = iterator.next()
-            if (!item.value.isDone()) {
+            if (!item.value.status.isDone) {
                 throw IllegalStateException()
             }
             iterator.remove()
@@ -115,9 +115,9 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
     }
 
     fun <T, K> execute(runnable: Task<T, K>, initialWaitInSeconds: Long): CompletableFuture<Task<T, K>> {
-        if (runnable.status == Task.Status.FINISHED) {
+        if (runnable.status.isDone) {
             val id = runnable.getId()
-            if(id != null) {
+            if (id != null) {
                 taskTickets[id] = runnable
             }
             return CompletableFuture.completedFuture(runnable)
@@ -128,10 +128,9 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         val future = CompletableFuture<Task<T, K>>()
         runnable.onFinish { future.complete(runnable) }
 
-        if(initialWaitInSeconds < 0) {
+        if (initialWaitInSeconds < 0) {
             future.complete(runnable)
-        } else
-        if (initialWaitInSeconds > 0) {
+        } else if (initialWaitInSeconds > 0) {
             Scheduler.executor.schedule(
                 {
                     if (!future.isDone) {

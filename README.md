@@ -19,9 +19,12 @@ This is the core repository of the [metriql](http://metriql.com) project. It inc
 
 ## Recent Posts
 
-* [OLAP in the modern data stack](https://metriql.com/blog/2021/09/07/olap-in-modern-data-stack)
 * [Metriql launch post](https://metriql.com/blog/introducing-metriql-open-source-metrics-store)
 * [Common metric types](https://metriql.com/blog/common-metric-types)
+* [OLAP in the modern data stack](https://metriql.com/blog/2021/09/07/olap-in-modern-data-stack)
+* [How we built Metriql Public Demo](https://metriql.com/blog/2021/09/29/how-we-built-our-public-demo)
+* [Best practices to optimize the query costs in BigQuery](https://metriql.com/blog/2021/09/30/best-practices-to-optimize-the-query-costs-in-bigquery/)
+
 
 ## Contributors ✨
 

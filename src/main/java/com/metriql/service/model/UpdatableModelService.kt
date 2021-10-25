@@ -1,15 +1,14 @@
 package com.metriql.service.model
 
-import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 
-class UpdatableModelService(val modelService: IModelService?, private val modelsFetcher: () -> List<Model>, val bridge: WarehouseMetriqlBridge) : IModelService {
+class UpdatableModelService(val modelService: IModelService?, private val modelsFetcher: () -> List<Model>) : IModelService {
+
     @Volatile
     var currentModels = modelsFetcher.invoke()
 
     @Synchronized
-    override fun update() {
+    override fun update(auth: ProjectAuth) {
         currentModels = modelsFetcher.invoke()
     }
 

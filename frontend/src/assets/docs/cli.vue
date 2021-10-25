@@ -23,7 +23,7 @@ export default {
   computed: {
     command: function() {
       const isPasswordless = AuthService.getAuth() == AuthType.NONE
-      return `trino-cli --host ${this.$BASE.HOSTNAME} --port ${this.$BASE.PORT}` + (isPasswordless ? '--password' : '')
+      return `trino-cli --server ${this.$BASE.HOST} --catalog metriql --schema public` + (isPasswordless ? '--password' : '')
     }
   }
 }

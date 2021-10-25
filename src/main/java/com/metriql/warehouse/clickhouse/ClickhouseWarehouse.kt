@@ -25,6 +25,7 @@ object ClickhouseWarehouse : Warehouse<ClickhouseConfig> {
         val port: Int,
         val database: String,
         val user: String,
+        @JsonAlias("pass")
         val password: String,
         val usePool: Boolean,
         val connectionParameters: Map<String, String>?
@@ -34,8 +35,11 @@ object ClickhouseWarehouse : Warehouse<ClickhouseConfig> {
         override fun isValid() = ValidationUtil.checkForPrivateIPAccess(host) == null
         override fun warehouseSchema() = null
         override fun warehouseDatabase() = database
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 
 class ClickhouseWarehouseProxy : Warehouse<ClickhouseConfig> by ClickhouseWarehouse
-

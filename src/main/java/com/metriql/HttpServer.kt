@@ -13,7 +13,7 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.funnel.FunnelService
 import com.metriql.report.retention.RetentionService
 import com.metriql.report.segmentation.SegmentationService
-import com.metriql.report.sql.MqlService
+import com.metriql.report.mql.MqlService
 import com.metriql.report.sql.SqlService
 import com.metriql.service.QueryHttpService
 import com.metriql.service.auth.ProjectAuth
@@ -28,14 +28,13 @@ import com.metriql.service.jdbc.StatementService
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.ModelName
-import com.metriql.service.model.UpdatableModelService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.logging.LogService
-import com.metriql.warehouse.spi.DataSource
+import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions
@@ -53,21 +52,21 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
-    private fun getServices(modelService: UpdatableModelService, dataSource: DataSource, enableJdbc: Boolean): Pair<Set<HttpService>, () -> Unit> {
+    private fun getServices(deployment: Commands.Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
         val postRun = mutableListOf<() -> Unit>()
 
         services.add(OptionMethodHttpService())
         services.add(BaseHttpService())
-        services.add(IntegrationHttpService(modelService))
+        services.add(IntegrationHttpService(deployment))
 
-        val queryService = getQueryService(modelService, dataSource)
+        val queryService = getQueryService(deployment)
         services.add(queryService)
 
         services.add(TaskHttpService(queryService.taskQueueService))
 
         if (enableJdbc) {
-            val jdbcServices = jdbcServices(queryService)
+            val jdbcServices = jdbcServices(queryService, catalogs)
             jdbcServices.first.forEach { services.add(it) }
             postRun.add(jdbcServices.second)
         }
@@ -75,30 +74,33 @@ object HttpServer {
         return services to { postRun.forEach { it.invoke() } }
     }
 
-    private fun getQueryService(modelService: UpdatableModelService, dataSource: DataSource): QueryHttpService {
+    private fun getQueryService(deployment: Commands.Deployment): QueryHttpService {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
         val cacheConfig = CacheBuilderSpec.parse("")
         val cacheService = InMemoryCacheService(cacheConfig)
-        val services = getReportServices(modelService)
+        val services = getReportServices(deployment.getModelService())
 
-        val reportService = ReportService(modelService, JinjaRendererService(), SqlQueryTaskGenerator(cacheService), services, this::getAttributes, object : DependencyFetcher {
-            override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
-                return Recipe.Dependencies()
+        val reportService = ReportService(
+            deployment.getModelService(), JinjaRendererService(), SqlQueryTaskGenerator(cacheService), services, this::getAttributes,
+            object : DependencyFetcher {
+                override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
+                    return Recipe.Dependencies()
+                }
             }
-        })
-        return QueryHttpService(modelService, { dataSource }, reportService, taskQueueService, services)
+        )
+        return QueryHttpService(deployment, reportService, taskQueueService, services)
     }
 
-    private fun jdbcServices(queryService: QueryHttpService): Pair<Set<HttpService>, () -> Unit> {
-        val statementService = StatementService(queryService.taskQueueService, queryService.reportService, queryService.dataSourceFetcher, queryService.modelService)
+    private fun jdbcServices(queryService: QueryHttpService, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
+        val statementService = StatementService(queryService.taskQueueService, queryService.reportService, queryService.deployment)
         val services = setOf(
             NodeInfoService(),
             QueryService(queryService.taskQueueService),
             statementService,
         )
-        return services to { statementService.startServices() }
+        return services to { statementService.startServices(catalogs) }
     }
 
     private fun getAttributes(auth: ProjectAuth): UserAttributeValues {
@@ -133,10 +135,10 @@ object HttpServer {
         numberOfThreads: Int,
         isDebug: Boolean,
         origin: String?,
-        modelService: UpdatableModelService,
-        dataSource: DataSource,
+        deployment: Commands.Deployment,
         enableJdbc: Boolean,
-        timezone: ZoneId?
+        timezone: ZoneId?,
+        catalogs: CatalogFile.Catalogs?
     ) {
         val eventExecutors: EventLoopGroup = if (Epoll.isAvailable()) {
             EpollEventLoopGroup(numberOfThreads)
@@ -149,7 +151,7 @@ object HttpServer {
             {
                 if (it.user == user && it.pass == pass) {
                     ProjectAuth(
-                        -1, -1, isOwner = true,
+                        user, -1, isOwner = true,
                         isSuperuser = true, email = null, permissions = null,
                         attributes = mapOf(), timezone = timezone, source = null
                     )
@@ -157,7 +159,7 @@ object HttpServer {
             }
         } else null
 
-        val (services, postRun) = getServices(modelService, dataSource, enableJdbc)
+        val (services, postRun) = getServices(deployment, enableJdbc, catalogs)
 
         val httpServer = HttpServerBuilder()
             .setHttpServices(services)
@@ -203,5 +205,6 @@ object HttpServer {
 
         build.bind(address.host, address.port)
         postRun.invoke()
+        deployment.logStart()
     }
 }

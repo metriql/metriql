@@ -19,7 +19,7 @@ FROM openjdk:11-jre-slim
 COPY --from=backend /app/target/metriql-*-bundle /
 
 # install packages required at runtime
-RUN apt-get update && apt-get install python-dev python3-pip -y && pip3 install "pip>=20" && pip3 install metriql-lookml==0.2 metriql-tableau==0.3 metriql-superset==0.3
+RUN apt-get update && apt-get install python-dev python3-pip -y && pip3 install "pip>=20" && pip3 install metriql-lookml==0.2 metriql-tableau==0.3 metriql-superset==0.4 metriql-metabase==0.5
 
 RUN mv metriql-* app
 

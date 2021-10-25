@@ -1,16 +1,16 @@
 package com.metriql.service.jdbc
 
+import com.metriql.Commands
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.Companion.QUERY
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.mql.MqlReportOptions
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException
-import com.metriql.warehouse.spi.DataSource
+import com.metriql.warehouse.metriql.CatalogFile
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap
 import io.airlift.json.ObjectMapperProvider
 import io.netty.handler.codec.http.HttpHeaders
@@ -28,13 +28,9 @@ import io.trino.client.StatementStats
 import io.trino.server.HttpRequestSessionContext
 import io.trino.spi.ErrorType
 import io.trino.spi.StandardErrorCode
-import io.trino.sql.ParameterUtils
 import io.trino.sql.analyzer.TypeSignatureTranslator
 import io.trino.sql.parser.ParsingOptions
-import io.trino.sql.planner.ParameterRewriter
 import io.trino.sql.tree.Execute
-import io.trino.sql.tree.Expression
-import io.trino.sql.tree.ExpressionTreeRewriter
 import io.trino.sql.tree.Query
 import io.trino.sql.tree.Statement
 import io.trino.testing.TestingGroupProvider
@@ -60,15 +56,14 @@ import javax.ws.rs.core.MultivaluedMap
 class StatementService(
     private val taskQueueService: TaskQueueService,
     private val reportService: ReportService,
-    private val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
-    modelService: IModelService
+    private val deployment: Commands.Deployment
 ) : HttpService() {
-    private val runner = LightweightQueryRunner(modelService)
+    private val runner = LightweightQueryRunner(deployment.getModelService())
     private val mapper = ObjectMapperProvider().get()
     private val groupProviderManager = TestingGroupProvider()
 
-    fun startServices() {
-        runner.start()
+    fun startServices(catalogs: CatalogFile.Catalogs?) {
+        runner.start(catalogs)
     }
 
     companion object {
@@ -77,28 +72,13 @@ class StatementService(
         private val logger = Logger.getLogger(this::class.java.name)
     }
 
-    private fun isMetadataQuery(sql: String, sessionContext: HttpRequestSessionContext, defaultCatalog: String): Boolean {
+    private fun isMetadataQuery(statement: Statement, defaultCatalog: String): Boolean {
         val isMetadata = AtomicReference<Boolean?>()
-        val rawStmt = try {
-            runner.runner.sqlParser.createStatement(sql, defaultParsingOptions)
-        } catch (e: Exception) {
-            // since it's a trino query, let the executor handle the exception
-            return true
-        }
 
-        val stmt = if(rawStmt is Execute) {
-            val ps = sessionContext.preparedStatements[rawStmt.name.value]
-            val test = ParameterUtils.parameterExtractor(rawStmt, rawStmt.parameters)
-            val realPs = runner.runner.sqlParser.createStatement(ps, defaultParsingOptions)
-//            val rewritten = ExpressionTreeRewriter.rewriteWith(ParameterRewriter(test), realPs)
-
-            rawStmt
-        } else rawStmt
-
-        return if (stmt !is Query || sql == "select version()") {
+        return if (statement !is Query) {
             true
         } else {
-            IsMetriqlQueryVisitor(defaultCatalog).process(stmt, isMetadata)
+            IsMetriqlQueryVisitor(defaultCatalog).process(statement, isMetadata)
             isMetadata.get()?.let { !it } ?: false
         }
     }
@@ -135,14 +115,34 @@ class StatementService(
                 ReportType.MQL
             }
 
-            val task = if (reportType == ReportType.MQL && isMetadataQuery(sql, sessionContext, "metriql")) {
+            val rawStmt = try {
+                runner.runner.sqlParser.createStatement(sql, defaultParsingOptions)
+            } catch (e: Exception) {
+                // since it's a trino query, let the executor handle the exception
+                null
+            }
+
+            val (statement, parameters) = if (rawStmt is Execute) {
+                val ps = sessionContext.preparedStatements[rawStmt.name.value]
+                runner.runner.sqlParser.createStatement(ps, defaultParsingOptions) to rawStmt.parameters
+            } else rawStmt to null
+
+            val task = if (reportType == ReportType.MQL && (statement == null || isMetadataQuery(statement, "metriql"))) {
                 runner.createTask(auth, sessionContext, sql)
             } else {
+                val dataSource = deployment.getDataSource(auth)
+                val context = reportService.createContext(auth, dataSource)
+
+                val finalSql = if (rawStmt is Execute) {
+                    sessionContext.preparedStatements[rawStmt.name.value]!!
+                } else sql
+
                 reportService.queryTask(
                     auth,
                     reportType,
-                    dataSourceFetcher.invoke(request),
-                    SqlReportOptions(sql, null, null, null)
+                    dataSource,
+                    MqlReportOptions(finalSql, null, parameters, null),
+                    context = context
                 )
             }
 
@@ -192,7 +192,7 @@ class StatementService(
                 .setTotalSplits(1)
                 .setSubStages(listOf())
 
-            if (task.isDone()) {
+            if (task.status.isDone) {
                 stageStats
                     .setCompletedSplits(1)
                     .setDone(true)
@@ -207,25 +207,26 @@ class StatementService(
 
         val queryUri = URI("http://$uri/v1/statement/queued/?id=$id")
 
+        val error = task.result?.error?.let {
+            QueryError(
+                it.message + "\n" + task.result?.properties?.get(QUERY),
+                it.sqlState,
+                10,
+                StandardErrorCode.GENERIC_USER_ERROR.name,
+                ErrorType.USER_ERROR.name,
+                null,
+                FailureInfo("metriql", it.message, null, listOf(), listOf(), null)
+            )
+        }
         val results = QueryResults(
             id,
             if (task.id == null) null else queryUri,
             if (task.id == null || task.status != Task.Status.RUNNING) null else queryUri,
-            if (!firstCall && (task.isDone() || task.id == null)) null else queryUri,
+            if (!firstCall && (task.status.isDone || task.id == null)) null else queryUri,
             if (firstCall) null else columns,
             if (firstCall) null else (task.result?.result as Iterable<List<Object>>?),
             stats.build(),
-            task.result?.error?.let {
-                QueryError(
-                    it.message + "\n" + task.result?.properties?.get(QUERY),
-                    it.sqlState,
-                    10,
-                    StandardErrorCode.GENERIC_USER_ERROR.name,
-                    ErrorType.USER_ERROR.name,
-                    null,
-                    FailureInfo("metriql", it.message, null, listOf(), listOf(), null)
-                )
-            },
+            if (firstCall) null else error,
             listOf(),
             task.result?.properties?.get(QUERY_TYPE) as String?,
             null

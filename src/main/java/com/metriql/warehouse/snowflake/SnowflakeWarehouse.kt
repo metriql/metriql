@@ -1,5 +1,6 @@
 package com.metriql.warehouse.snowflake
 
+import com.fasterxml.jackson.annotation.JsonAlias
 import com.metriql.warehouse.spi.Warehouse
 import net.snowflake.client.jdbc.SnowflakeDriver
 import java.sql.DriverManager
@@ -18,6 +19,7 @@ object SnowflakeWarehouse : Warehouse<SnowflakeWarehouse.SnowflakeConfig> {
     data class SnowflakeConfig(
         val account: String,
         val user: String,
+        @JsonAlias("pass")
         val password: String?,
         val database: String,
         val schema: String,
@@ -36,6 +38,10 @@ object SnowflakeWarehouse : Warehouse<SnowflakeWarehouse.SnowflakeConfig> {
         override fun isValid() = true
         override fun warehouseSchema() = schema
         override fun warehouseDatabase() = database
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 

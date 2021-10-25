@@ -100,10 +100,13 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             useAggregate = true
         )
 
-        return IAdHocService.RenderedQuery(query, postProcessors = listOf { queryResult ->
-            val metadata = queryResult.metadata?.mapIndexed { index, col -> col.copy(name = dsl.columnNames[index]) }
-            queryResult.copy(metadata = metadata)
-        })
+        return IAdHocService.RenderedQuery(
+            query,
+            postProcessors = listOf { queryResult ->
+                val metadata = queryResult.metadata?.mapIndexed { index, col -> col.copy(name = dsl.columnNames[index]) }
+                queryResult.copy(metadata = metadata)
+            }
+        )
     }
 
     fun renderQuery(
@@ -258,10 +261,6 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
 
         val inQueryDimensionNames = dimensions.map { it.name } + renderedDimensionAndColumnNames
 
-        if (renderedDimensions.isEmpty() && renderedMeasures.isEmpty()) {
-            throw MetriqlException("At least one measure or dimension is required to build a segmentation query", HttpResponseStatus.BAD_REQUEST)
-        }
-
         val dsl = Segmentation(
             columnNames = getColumnNames(context, mainModel, dimensions, measures),
             dimensions = renderedDimensions,
@@ -386,16 +385,16 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         return aggregateModel?.target?.value as? Table to dsl
     }
 
-    private fun getColumnNames(context : IQueryGeneratorContext, mainModel : Model, dimensions : List<ReportMetric.ReportDimension>, measures : List<ReportMetric.ReportMeasure>): List<String> {
+    private fun getColumnNames(context: IQueryGeneratorContext, mainModel: Model, dimensions: List<ReportMetric.ReportDimension>, measures: List<ReportMetric.ReportMeasure>): List<String> {
         val dimensionNames = dimensions.map {
-            val modelName = if(it.relationName == null) it.modelName else {
+            val modelName = if (it.relationName == null) it.modelName else {
                 mainModel.relations.find { relation -> relation.name == it.relationName }!!.modelName
             }
             context.getModelDimension(it.name, modelName).dimension
         }.map { it.label ?: it.name }
 
         val measureNames = measures.map {
-            val modelName = if(it.relationName == null) it.modelName else {
+            val modelName = if (it.relationName == null) it.modelName else {
                 mainModel.relations.find { relation -> relation.name == it.relationName }!!.modelName
             }
             context.getModelMeasure(it.name, modelName).measure

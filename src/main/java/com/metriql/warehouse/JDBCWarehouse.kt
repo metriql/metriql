@@ -357,13 +357,13 @@ abstract class JDBCWarehouse(
                     }
                 } catch (e: Exception) {
                     MetriqlEventBus.publish(MetriqlEvents.UnhandledTaskException(e, this))
-                    setResult(getErrorQueryResult(auth, e, query, ignoredErrorCodes))
+                    setResult(getErrorQueryResult(auth, e, query, ignoredErrorCodes), failed = true)
                 }
             }
 
             override fun getStats(): QueryResult.QueryStats {
 //                val unwrap = resultSet!!.unwrap(SnowflakeResultSet::class.java)
-                return syncStats(!isDone(), query)
+                return syncStats(!status.isDone, query)
             }
         }
     }

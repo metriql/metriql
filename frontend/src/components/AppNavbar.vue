@@ -61,6 +61,7 @@ export default {
 
     LiveStatistics.register(function(count) {
       activeTaskCount.value = count[1]
+      connectError.value = null
     }, (err) => {
       connectError.value = err
     })

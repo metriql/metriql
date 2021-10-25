@@ -338,7 +338,11 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         }
 
         val renderedValue = if (measure.value.agg != null) {
-            val nonSymmetricAggregates = context.referencedRelations.filter { it.value.relation.relationType == ONE_TO_MANY || it.value.relation.relationType == MANY_TO_MANY  || it.value.relation.relationType == MANY_TO_ONE }
+            val nonSymmetricAggregates = context.referencedRelations.filter {
+                it.value.relation.relationType == ONE_TO_MANY ||
+                    it.value.relation.relationType == MANY_TO_MANY ||
+                    (relationName != null && it.value.relation.relationType == MANY_TO_ONE)
+            }
             val (aggregation, nonSymmetricAggregatedValue) = if (nonSymmetricAggregates.isNotEmpty()) {
                 val primaryKeyDimension = context.getModel(contextModelName)?.dimensions.find { it.primary == true }?.name
                     ?: throw MetriqlException("Primary key dimension is required for non-symmetric aggregates in `$contextModelName`", HttpResponseStatus.BAD_REQUEST)
@@ -472,7 +476,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
         val value = metricRenderHook.dimensionBeforePostOperation(context, metricPositionType, dimension, postOperation, rawValue)
 
-        val postProcessedDimension =  if (postOperation != null) { // && modelDimension.dimension.fieldType != null
+        val postProcessedDimension = if (postOperation != null) { // && modelDimension.dimension.fieldType != null
             val template = when (postOperation.type) {
                 ReportMetric.PostOperation.Type.TIMESTAMP -> timeframes.timestampPostOperations[postOperation.value]
                 ReportMetric.PostOperation.Type.DATE -> timeframes.datePostOperations[postOperation.value]

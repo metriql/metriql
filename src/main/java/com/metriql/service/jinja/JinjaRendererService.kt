@@ -12,7 +12,6 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 import javax.inject.Inject
 
-
 class JinjaRendererService @Inject constructor() {
     val jinja: Jinjava = RecursiveJinjava()
 
@@ -37,7 +36,7 @@ class JinjaRendererService @Inject constructor() {
         variables: Map<String, Any> = mapOf(),
         renderAlias: Boolean = false,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
-        ): String {
+    ): String {
         /*
         * select {{model.firebase_event_in_app_purchase.dimension.user__region_code}}, count(*)
         * from {{model.firebase_event_in_app_purchase}}

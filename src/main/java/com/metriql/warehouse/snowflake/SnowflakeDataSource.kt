@@ -61,6 +61,9 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
         if (config.warehouse != null) {
             properties["dataSource.warehouse"] = config.warehouse
         }
+        if (config.role != null) {
+            properties["dataSource.role"] = config.role
+        }
         config.connectionParameters?.forEach { (k, v) ->
             properties["dataSource.$k"] = v
         }
@@ -134,7 +137,7 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
                 config.password?.let { "password" to it } ?: null,
                 config.private_key_passphrase?.let { "private_key_passphrase" to it } ?: null,
                 config.private_key_path?.let { "private_key_path" to it } ?: null,
-                ).toMap()
+            ).toMap()
         )
     }
 }

@@ -49,8 +49,8 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
     }
 
     @Synchronized
-    fun setResult(result: T) {
-        if (this.result == Status.FINISHED) {
+    fun setResult(result: T, failed: Boolean = false) {
+        if (this.status.isDone) {
             throw IllegalStateException("Task result is already set.")
         }
 
@@ -61,7 +61,7 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
         this.result = processedResult
 
         endedAt = Instant.now()
-        this.status = Status.FINISHED
+        this.status = if (failed) Status.FAILED else Status.FINISHED
 
         for (delegate in delegates) {
             // Delegates may perform intensive works.
@@ -128,12 +128,7 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
         val status: Status,
         val update: Any?,
         val result: T?
-    ) {
-        @JsonIgnore
-        fun isDone(): Boolean {
-            return status == Status.FINISHED || status == Status.CANCELED
-        }
-    }
+    )
 
     fun taskTicket(includeResponse: Boolean = true): TaskTicket<T> {
         if (status != Status.FINISHED && id == null) {
@@ -145,8 +140,8 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
     }
 
     @UppercaseEnum
-    enum class Status {
-        QUEUED, RUNNING, CANCELED, FINISHED
+    enum class Status(val isDone: Boolean) {
+        QUEUED(false), RUNNING(false), CANCELED(true), FINISHED(true), FAILED(true)
     }
 
     fun markAsRunning() {
@@ -154,10 +149,6 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
             throw IllegalStateException()
         }
         status = Status.RUNNING
-    }
-
-    fun isDone(): Boolean {
-        return status == Status.FINISHED || status == Status.CANCELED
     }
 
     fun getLastAccessedAt(): Long? {
@@ -175,16 +166,16 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
     companion object {
         private val logger = Logger.getLogger(this::class.java.name)
 
-        fun <Result, Stat> completedTask(auth: ProjectAuth, id : UUID?, result: Result, stats: Stat): Task<Result, Stat> {
+        fun <Result, Stat> completedTask(auth: ProjectAuth, id: UUID?, result: Result, stats: Stat, failed: Boolean = false): Task<Result, Stat> {
             val value = object : Task<Result, Stat>(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {}
 
                 override fun getStats() = stats
             }
-            if(id != null) {
+            if (id != null) {
                 value.setId(id)
             }
-            value.setResult(result)
+            value.setResult(result, failed)
             return value
         }
     }

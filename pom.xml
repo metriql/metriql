@@ -30,7 +30,7 @@
         <air.version>200</air.version>
         <trino.version>357</trino.version>
         <testcontainers.version>1.15.3</testcontainers.version>
-        <dep.kotlin.version>1.5.0</dep.kotlin.version>
+        <dep.kotlin.version>1.5.30</dep.kotlin.version>
         <check.skip-dependency>false</check.skip-dependency>
         <check.fail-dependency>true</check.fail-dependency>
         <dep.jinja.version>2.5.7</dep.jinja.version>
@@ -413,6 +413,12 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>trino-record-decoder</artifactId>
+            <version>${trino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-client</artifactId>
             <version>${trino.version}</version>
         </dependency>
@@ -433,6 +439,12 @@
             <groupId>io.airlift</groupId>
             <artifactId>json</artifactId>
             <version>206</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>slice</artifactId>
+            <version>0.39</version>
         </dependency>
 
         <dependency>

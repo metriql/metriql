@@ -263,15 +263,15 @@ public class JsonHelper {
     }
 
     private static class PolymorphicTypeAnnotationIntrospector extends AnnotationIntrospector {
-        protected TypeResolverBuilder<?> typeResolver(String externalProperty) {
-            if (externalProperty == null) {
-                return null;
+        protected TypeResolverBuilder<?> typeResolver(String property, JsonTypeInfo.As inclusion) {
+            if (property != null) {
+                StdTypeResolverBuilder b = new StdTypeResolverBuilder();
+                b = b.init(JsonTypeInfo.Id.NAME, null);
+                b = b.inclusion(inclusion);
+                b = b.typeProperty(property);
+                return b;
             }
-            StdTypeResolverBuilder b = new StdTypeResolverBuilder();
-            b = b.init(JsonTypeInfo.Id.NAME, null);
-            b = b.inclusion(JsonTypeInfo.As.EXTERNAL_PROPERTY);
-            b = b.typeProperty(externalProperty);
-            return b;
+            return null;
         }
 
         @Override
@@ -290,13 +290,19 @@ public class JsonHelper {
         @Override
         public TypeResolverBuilder<?> findTypeResolver(MapperConfig<?> config, AnnotatedClass ac, JavaType baseType) {
             PolymorphicTypeStr annotation = ac.getAnnotation(PolymorphicTypeStr.class);
-            return typeResolver(annotation == null ? null : annotation.externalProperty());
+            if(annotation == null) {
+                return null;
+            }
+            return typeResolver(annotation.externalProperty(), annotation.inclusion());
         }
 
         @Override
         public TypeResolverBuilder<?> findPropertyTypeResolver(MapperConfig<?> config, AnnotatedMember am, JavaType baseType) {
             PolymorphicTypeStr annotation = am.getAnnotation(PolymorphicTypeStr.class);
-            return typeResolver(annotation == null ? null : annotation.externalProperty());
+            if(annotation == null) {
+                return null;
+            }
+            return typeResolver(annotation.externalProperty(), annotation.inclusion());
         }
 
 
@@ -364,13 +370,19 @@ public class JsonHelper {
         @Override
         public TypeResolverBuilder<?> findTypeResolver(MapperConfig<?> config, AnnotatedClass ac, JavaType baseType) {
             PolymorphicTypeInt annotation = ac.getAnnotation(PolymorphicTypeInt.class);
-            return typeResolver(annotation == null ? null : annotation.externalProperty());
+            if(annotation == null) {
+                return null;
+            }
+            return typeResolver(annotation.externalProperty(), annotation.inclusion());
         }
 
         @Override
         public TypeResolverBuilder<?> findPropertyTypeResolver(MapperConfig<?> config, AnnotatedMember am, JavaType baseType) {
             PolymorphicTypeInt annotation = am.getAnnotation(PolymorphicTypeInt.class);
-            return typeResolver(annotation == null ? null : annotation.externalProperty());
+            if(annotation == null) {
+                return null;
+            }
+            return typeResolver(annotation.externalProperty(), annotation.inclusion());
         }
 
         @Override
@@ -465,7 +477,7 @@ public class JsonHelper {
 
                     String name = p.getText().toUpperCase(Locale.ENGLISH);
                     // TODO: find a more reliable way to see if the value is null
-                    if(name.equals("NULL")) {
+                    if (name.equals("NULL")) {
                         return null;
                     }
                     Object value = checkForName(values, name);
@@ -483,7 +495,7 @@ public class JsonHelper {
                         return null;
                     }
 
-                    if(ctxt.isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)) {
+                    if (ctxt.isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)) {
                         // TODO: return the actual value
                         return null;
                     }

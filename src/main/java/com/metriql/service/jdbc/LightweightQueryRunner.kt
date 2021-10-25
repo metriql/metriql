@@ -6,8 +6,10 @@ import com.metriql.report.ReportType
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IModelService
+import com.metriql.warehouse.metriql.CatalogFile
+import com.metriql.warehouse.metriql.ExternalConnectorFactory
 import com.metriql.warehouse.spi.WarehouseAuth
-import io.trino.LocalQueryRunner
+import io.trino.LocalTrinoQueryRunner
 import io.trino.MetriqlConnectorFactory
 import io.trino.MetriqlMetadata.Companion.getMetriqlType
 import io.trino.execution.warnings.WarningCollector
@@ -21,8 +23,8 @@ import java.util.logging.Logger
 const val QUERY_TYPE = "QUERY_TYPE"
 
 class LightweightQueryRunner(private val modelService: IModelService) {
-    val runner: LocalQueryRunner by lazy {
-        var internalRunner = LocalQueryRunner(FeaturesConfig(), NodeSpillConfig())
+    val runner: LocalTrinoQueryRunner by lazy {
+        var internalRunner = LocalTrinoQueryRunner(FeaturesConfig(), NodeSpillConfig())
         internalRunner.createCatalog("metriql", MetriqlConnectorFactory(internalRunner.nodeManager, modelService), mapOf())
         // internalRunner.createCatalog("tpch", TpchConnectorFactory(), mapOf("tpch.produce-pages" to "true"))
         internalRunner
@@ -32,7 +34,10 @@ class LightweightQueryRunner(private val modelService: IModelService) {
         return TrinoQueryTask(sessionContext, sql, auth.warehouseAuth())
     }
 
-    fun start() {
+    fun start(catalogs: CatalogFile.Catalogs?) {
+        catalogs?.forEach { name, catalog ->
+            runner.createCatalog(name, ExternalConnectorFactory(runner.nodeManager, name, catalog), mapOf())
+        }
         runner
     }
 
@@ -44,6 +49,7 @@ class LightweightQueryRunner(private val modelService: IModelService) {
                 Status.RUNNING -> QueryResult.QueryStats.State.RUNNING
                 Status.CANCELED -> QueryResult.QueryStats.State.FINISHED
                 Status.FINISHED -> QueryResult.QueryStats.State.FINISHED
+                Status.FAILED -> QueryResult.QueryStats.State.FINISHED
             }
             val info = QueryResult.QueryStats.QueryInfo(ReportType.SQL, SqlReportOptions(sql, null, null, null), sql)
             return QueryResult.QueryStats(state, info)
@@ -62,7 +68,7 @@ class LightweightQueryRunner(private val modelService: IModelService) {
             } catch (e: Exception) {
                 val fallbackErrorMessage = "Error running metadata query"
                 logger.log(Level.WARNING, fallbackErrorMessage, e)
-                setResult(QueryResult.errorResult(e.message ?: fallbackErrorMessage))
+                setResult(QueryResult.errorResult(e.message ?: fallbackErrorMessage), failed = true)
             }
         }
     }

@@ -68,7 +68,7 @@ class DbtJinjaRenderer {
         )
     }
 
-    fun renderProfiles(content : String, vars : Map<String, Any?>): String? {
+    fun renderProfiles(content: String, vars: Map<String, Any?>): String? {
         return jinjava.render(content, mapOf("_vars" to vars))
     }
 

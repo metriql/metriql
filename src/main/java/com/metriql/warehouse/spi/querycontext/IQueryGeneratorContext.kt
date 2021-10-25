@@ -23,9 +23,10 @@ import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.filter.DateRange
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.trino.sql.tree.Expression
+import io.trino.sql.tree.NodeRef
+import io.trino.sql.tree.Parameter
 import java.util.LinkedHashMap
-
-open class DelegatedQueryContext(b: IQueryGeneratorContext) : IQueryGeneratorContext by b
 
 interface IQueryGeneratorContext {
     val auth: ProjectAuth
@@ -73,7 +74,7 @@ interface IQueryGeneratorContext {
         // Target model name only for join relations
         targetModelName: ModelName? = null,
         // Instead of actual values, render alias
-        renderAlias : Boolean = false,
+        renderAlias: Boolean = false,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
     ): String
 

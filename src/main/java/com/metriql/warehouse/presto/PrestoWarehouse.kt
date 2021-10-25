@@ -1,5 +1,6 @@
 package com.metriql.warehouse.presto
 
+import com.fasterxml.jackson.annotation.JsonAlias
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.spi.Warehouse
 import io.trino.jdbc.TrinoDriver
@@ -22,6 +23,7 @@ object PrestoWarehouse : Warehouse<PrestoWarehouse.PrestoConfig> {
         val catalog: String,
         val schema: String,
         val user: String,
+        @JsonAlias("pass")
         val password: String?,
         val method: Method? = null,
         val usePool: Boolean? = null,
@@ -34,6 +36,10 @@ object PrestoWarehouse : Warehouse<PrestoWarehouse.PrestoConfig> {
         override fun isValid() = ValidationUtil.checkForPrivateIPAccess(host) == null
         override fun warehouseSchema() = schema
         override fun warehouseDatabase() = catalog
+
+        override fun withUsernamePassword(username: String, password: String): Warehouse.Config {
+            return this.copy(user = username, password = password)
+        }
     }
 }
 

@@ -76,11 +76,13 @@ class MetriqlAuthRequestParameterFactory(
                 }
 
                 if (auth == null) {
-                    val redirectUri = ""
-                    val tokenUri = ""
-                    request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
-                    if (basicAuthLoader != null) {
-                        request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
+                    if(request.headers().get("sec-fetch-mode") == "navigate") {
+                        val redirectUri = ""
+                        val tokenUri = ""
+                        request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
+                        if (basicAuthLoader != null) {
+                            request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
+                        }
                     }
                     throw MetriqlException(UNAUTHORIZED)
                 } else {

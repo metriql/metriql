@@ -1,6 +1,7 @@
 package com.metriql.util
 
 import com.fasterxml.jackson.annotation.JacksonAnnotation
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.lang.annotation.Inherited
 import kotlin.reflect.KClass
 
@@ -19,6 +20,7 @@ import kotlin.reflect.KClass
 @JacksonAnnotation
 annotation class PolymorphicTypeStr<E>(
     val externalProperty: String,
+    val inclusion: JsonTypeInfo.As = JsonTypeInfo.As.EXTERNAL_PROPERTY,
     val valuesEnum: KClass<E>,
     val isNamed: Boolean = false,
     val name: String = ""
@@ -45,6 +47,7 @@ interface StrValueEnum {
 @JacksonAnnotation
 annotation class PolymorphicTypeInt<E>(
     val externalProperty: String,
+    val inclusion: JsonTypeInfo.As = JsonTypeInfo.As.EXTERNAL_PROPERTY,
     val valuesEnum: KClass<E>
 ) where E : Enum<E>, E : IntValueEnum
 

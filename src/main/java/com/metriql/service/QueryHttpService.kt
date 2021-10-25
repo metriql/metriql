@@ -1,18 +1,17 @@
 package com.metriql.service
 
 import com.metriql.CURRENT_PATH
+import com.metriql.Commands
 import com.metriql.db.QueryResult
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.SuccessMessage
-import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.services.RecipeQuery
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import org.rakam.server.http.HttpService
@@ -32,27 +31,26 @@ import javax.ws.rs.Path
 @Api(value = CURRENT_PATH, nickname = "query", description = "Query Service Endpoints", tags = ["query"])
 @Path(CURRENT_PATH)
 open class QueryHttpService(
-    val modelService: IModelService,
-    val dataSourceFetcher: (RakamHttpRequest) -> DataSource,
+    val deployment: Commands.Deployment,
     val reportService: ReportService,
     val taskQueueService: TaskQueueService,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>
 ) : HttpService() {
-    private val startTime : Instant = Instant.now()
-    private var lastMetadataChangeTime : Instant = Instant.now()
+    private val startTime: Instant = Instant.now()
+    private var lastMetadataChangeTime: Instant = Instant.now()
 
     @ApiOperation(value = "Get metadata")
     @GET
     @Path("/metadata")
     fun metadata(@Named("userContext") auth: ProjectAuth): List<Model> {
-        return modelService.list(auth)
+        return deployment.getModelService().list(auth)
     }
 
     @ApiOperation(value = "Get ticker info")
     @GET
     @Path("/ticker")
     fun ticker(): TickerInfo {
-        val activeTasks = taskQueueService.currentTasks().count { !it.isDone() }
+        val activeTasks = taskQueueService.currentTasks().count { !it.status.isDone }
         return TickerInfo(activeTasks, lastMetadataChangeTime, startTime)
     }
 
@@ -60,7 +58,7 @@ open class QueryHttpService(
     @PUT
     @Path("/update-manifest")
     fun updateManifest(@Named("userContext") auth: ProjectAuth): SuccessMessage {
-        modelService.update()
+        deployment.getModelService().update(auth)
         synchronized(this) {
             lastMetadataChangeTime = Instant.now()
         }
@@ -70,8 +68,8 @@ open class QueryHttpService(
     @ApiOperation(value = "Generate SQL")
     @JsonRequest
     @Path("/sql")
-    fun sql(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @BodyParam query: Query): String {
-        val context = reportService.createContext(auth, dataSourceFetcher.invoke(request))
+    fun sql(@Named("userContext") auth: ProjectAuth, @BodyParam query: Query): String {
+        val context = reportService.createContext(auth, deployment.getDataSource(auth))
         val compiled = reportService.getServiceForReportType(query.type).renderQuery(
             auth,
             context,
@@ -92,7 +90,7 @@ open class QueryHttpService(
         @QueryParam("useCache", required = false) useCache: Boolean?,
         @QueryParam("initialWaitInSeconds", required = false) initialWaitInSeconds: Long?
     ): CompletableFuture<Task.TaskTicket<QueryResult>> {
-        val context = reportService.createContext(auth, dataSourceFetcher.invoke(request))
+        val context = reportService.createContext(auth, deployment.getDataSource(auth))
         val task = reportService.queryTask(
             auth, query.type, context.datasource, query.report.toReportOptions(context),
             isBackgroundTask = false,
@@ -109,6 +107,5 @@ open class QueryHttpService(
         val report: RecipeQuery
     )
 
-    data class TickerInfo(val activeTasks : Int, val lastMetadataChangeTime : Instant, val startTime : Instant)
-
+    data class TickerInfo(val activeTasks: Int, val lastMetadataChangeTime: Instant, val startTime: Instant)
 }

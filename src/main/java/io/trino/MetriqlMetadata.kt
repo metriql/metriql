@@ -86,7 +86,7 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
         }
     }
 
-    class ModelProxy(val models: List<Model>, val model: Model) : SystemTable {
+    class ModelProxy(val models: List<Model>, val model: Model, val distinct: Boolean = false) : SystemTable {
 
         override fun pageSource(transactionHandle: ConnectorTransactionHandle, session: ConnectorSession, constraint: TupleDomain<Int>): ConnectorPageSource {
             throw UnsupportedOperationException("Metadata queries doesn't support data processing")
@@ -122,7 +122,7 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
 
         private fun addColumnsForModel(columns: MutableList<ColumnMetadata>, model: Model, relation: Model.Relation?) {
             model.dimensions.forEach { dimension ->
-                if (dimension.postOperations != null) {
+                if (dimension.postOperations != null && !distinct) {
                     dimension.postOperations.forEach { timeframe -> columns.add(toColumnMetadata(dimension, relation?.name, timeframe)) }
                 } else columns.add(toColumnMetadata(dimension, relation?.name))
             }
@@ -193,6 +193,7 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
                 TimestampWithTimeZoneType.TIMESTAMP_TZ_MILLIS.baseName == name -> FieldType.TIMESTAMP
                 type.baseName == "array" -> TODO()
                 type.baseName == "map" -> TODO()
+                type == UnknownType.UNKNOWN -> FieldType.UNKNOWN
                 else -> throw UnsupportedOperationException("Unable to identify $type")
             }
         }

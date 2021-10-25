@@ -28,8 +28,8 @@ data class SegmentationReportOptions(
     val orders: List<Order>? = null
 ) : ServiceReportOptions {
     init {
-        if (limit != null && (limit < 1 || limit > WarehouseQueryTask.MAX_LIMIT)) {
-            throw MetriqlException("Segmentation limit can not be less than 1 or more than ${WarehouseQueryTask.MAX_LIMIT}", HttpResponseStatus.BAD_REQUEST)
+        if (limit != null && (limit < 0 || limit > WarehouseQueryTask.MAX_LIMIT)) {
+            throw MetriqlException("Segmentation limit can not be less than 0 or more than ${WarehouseQueryTask.MAX_LIMIT}", HttpResponseStatus.BAD_REQUEST)
         }
     }
 

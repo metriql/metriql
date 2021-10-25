@@ -126,7 +126,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 
-public class LocalQueryRunner {
+public class LocalTrinoQueryRunner {
     public final SqlParser sqlParser;
     public final InMemoryNodeManager nodeManager;
 
@@ -170,7 +170,7 @@ public class LocalQueryRunner {
     private final ImmutableMap<Class<? extends Statement>, DataDefinitionTask<?>> dataDefinitionTask;
     private final QuerySessionSupplier sessionSupplier;
 
-    public LocalQueryRunner(FeaturesConfig featuresConfig, NodeSpillConfig nodeSpillConfig) {
+    public LocalTrinoQueryRunner(FeaturesConfig featuresConfig, NodeSpillConfig nodeSpillConfig) {
         this.taskManagerConfig = new TaskManagerConfig().setTaskConcurrency(4);
         this.nodeSpillConfig = requireNonNull(nodeSpillConfig, "nodeSpillConfig is null");
         this.notificationExecutor = newCachedThreadPool(daemonThreadsNamed("local-query-runner-executor-%s"));

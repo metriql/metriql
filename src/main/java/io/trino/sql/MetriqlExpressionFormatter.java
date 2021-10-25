@@ -18,23 +18,17 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.hubspot.jinjava.Jinjava;
 import com.metriql.service.model.Model;
-import com.metriql.util.JsonHelper;
-import com.metriql.warehouse.presto.PrestoMetriqlBridge;
 import com.metriql.warehouse.presto.PrestoMetriqlBridge.PrestoReverseAggregation;
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge;
 import com.metriql.warehouse.spi.function.RFunction;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
 import io.trino.sql.tree.*;
 
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.getOnlyElement;
-import static com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC;
 import static io.trino.sql.MetriqlSqlFormatter.formatSql;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -46,8 +40,8 @@ public final class MetriqlExpressionFormatter {
     private MetriqlExpressionFormatter() {
     }
 
-    public static String formatExpression(Expression expression, SqlToSegmentation reWriter, IQueryGeneratorContext context) {
-        return new Formatter(reWriter, context).process(expression, null);
+    public static String formatExpression(Expression expression, SqlToSegmentation reWriter, IQueryGeneratorContext context, Map<NodeRef<Parameter>, Expression> parameters) {
+        return new Formatter(reWriter, context, parameters).process(expression, null);
     }
 
     protected static String formatIdentifier(String rawValue, IQueryGeneratorContext context) {
@@ -57,10 +51,12 @@ public final class MetriqlExpressionFormatter {
     public static class Formatter extends AstVisitor<String, Void> {
         protected final IQueryGeneratorContext queryContext;
         private final SqlToSegmentation reWriter;
+        private final Map<NodeRef<Parameter>, Expression> parameters;
 
-        public Formatter(SqlToSegmentation reWriter, IQueryGeneratorContext queryContext) {
+        public Formatter(SqlToSegmentation reWriter, IQueryGeneratorContext queryContext, Map<NodeRef<Parameter>, Expression> parameters) {
             this.reWriter = reWriter;
             this.queryContext = queryContext;
+            this.parameters = parameters;
         }
 
         @Override
@@ -215,12 +211,12 @@ public final class MetriqlExpressionFormatter {
 
         @Override
         protected String visitSubqueryExpression(SubqueryExpression node, Void context) {
-            return "(" + formatSql(node.getQuery(), reWriter, queryContext) + ")";
+            return "(" + formatSql(node.getQuery(), reWriter, queryContext, parameters) + ")";
         }
 
         @Override
         protected String visitExists(ExistsPredicate node, Void context) {
-            return "(EXISTS " + formatSql(node.getSubquery(), reWriter, queryContext) + ")";
+            return "(EXISTS " + formatSql(node.getSubquery(), reWriter, queryContext, parameters) + ")";
         }
 
         @Override
@@ -234,7 +230,7 @@ public final class MetriqlExpressionFormatter {
 
         @Override
         protected String visitLambdaArgumentDeclaration(LambdaArgumentDeclaration node, Void context) {
-            return formatExpression(node.getName(), reWriter, queryContext);
+            return formatExpression(node.getName(), reWriter, queryContext, parameters);
         }
 
         @Override
@@ -281,7 +277,7 @@ public final class MetriqlExpressionFormatter {
                     PrestoReverseAggregation reverseAggregation = PrestoReverseAggregation.valueOf(name);
 
                     Model.Measure.AggregationType aggregation;
-                    if(node.isDistinct()) {
+                    if (node.isDistinct()) {
                         aggregation = reverseAggregation.getDistinctAggregation();
                     } else {
                         aggregation = reverseAggregation.getAggregation();
@@ -632,7 +628,7 @@ public final class MetriqlExpressionFormatter {
 
         private String formatWindow(Window window) {
             if (window instanceof WindowReference) {
-                return formatExpression(((WindowReference) window).getName(), reWriter, queryContext);
+                return formatExpression(((WindowReference) window).getName(), reWriter, queryContext, parameters);
             }
 
             return formatWindowSpecification((WindowSpecification) window);
@@ -642,11 +638,11 @@ public final class MetriqlExpressionFormatter {
             List<String> parts = new ArrayList<>();
 
             if (windowSpecification.getExistingWindowName().isPresent()) {
-                parts.add(formatExpression(windowSpecification.getExistingWindowName().get(), reWriter, queryContext));
+                parts.add(formatExpression(windowSpecification.getExistingWindowName().get(), reWriter, queryContext, parameters));
             }
             if (!windowSpecification.getPartitionBy().isEmpty()) {
                 parts.add("PARTITION BY " + windowSpecification.getPartitionBy().stream()
-                        .map(i -> formatExpression(i, reWriter, queryContext))
+                        .map(i -> formatExpression(i, reWriter, queryContext, parameters))
                         .collect(joining(", ")));
             }
             if (windowSpecification.getOrderBy().isPresent()) {
@@ -673,7 +669,7 @@ public final class MetriqlExpressionFormatter {
             return input -> {
                 StringBuilder builder = new StringBuilder();
 
-                builder.append(formatExpression(input.getSortKey(), reWriter, queryContext));
+                builder.append(formatExpression(input.getSortKey(), reWriter, queryContext, parameters));
 
                 switch (input.getOrdering()) {
                     case ASCENDING:
@@ -705,7 +701,6 @@ public final class MetriqlExpressionFormatter {
         }
 
 
-
         private String formatFrame(WindowFrame windowFrame) {
             StringBuilder builder = new StringBuilder();
 
@@ -729,11 +724,11 @@ public final class MetriqlExpressionFormatter {
                 case UNBOUNDED_PRECEDING:
                     return "UNBOUNDED PRECEDING";
                 case PRECEDING:
-                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext) + " PRECEDING";
+                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext, parameters) + " PRECEDING";
                 case CURRENT_ROW:
                     return "CURRENT ROW";
                 case FOLLOWING:
-                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext) + " FOLLOWING";
+                    return formatExpression(frameBound.getValue().get(), reWriter, queryContext, parameters) + " FOLLOWING";
                 case UNBOUNDED_FOLLOWING:
                     return "UNBOUNDED FOLLOWING";
             }
