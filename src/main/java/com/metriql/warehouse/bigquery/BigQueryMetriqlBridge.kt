@@ -17,6 +17,7 @@ import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
+import io.trino.spi.type.StandardTypes
 
 object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
     override val filters = BigQueryFilters { BigQueryMetriqlBridge }
@@ -29,6 +30,8 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
         ServiceType.RETENTION to BigQueryRetentionQueryGenerator(),
         ServiceType.FLOW to ANSISQLFlowQueryGenerator(),
     )
+
+    override val mqlTypeMap = super.mqlTypeMap + mapOf(StandardTypes.VARCHAR to "string")
 
     override val functions = super.functions + mapOf(
         RFunction.DATE_ADD to "DATE_ADD({{value[0]}}, INTERVAL {{value[2]}} {{value[1]}})",
@@ -60,6 +63,12 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
             }
         }
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
+
+    override fun quoteIdentifier(identifier: String): String {
+        return super.quoteIdentifier(identifier
+            .replace(".", "__")
+            .replace("::", "___"))
+    }
 
     override fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
         return if (aggregationType == APPROXIMATE_UNIQUE) {

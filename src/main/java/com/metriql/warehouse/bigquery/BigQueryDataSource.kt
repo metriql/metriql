@@ -36,10 +36,12 @@ import com.metriql.warehouse.spi.TableName
 import com.metriql.warehouse.spi.TableSchema
 import com.metriql.warehouse.spi.WarehouseAuth
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import net.snowflake.client.jdbc.internal.amazonaws.util.StringInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) : DataSource {
     override val warehouse = BigQueryWarehouse
@@ -77,8 +79,28 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                     ".config/gcloud/application_default_credentials.json"
                 )
 
+                if (config.project == null) {
+                    val exec = Runtime.getRuntime().exec("gcloud config get-value project")
+                    val isSuccess = exec.waitFor(10, TimeUnit.SECONDS)
+                    if (!isSuccess) {
+                        exec.destroyForcibly()
+                        throw MetriqlException(
+                            "Unable to get default project from `gcloud`. Please set the `project` either in config or via running `gcloud config set project [PROJECT_NAME]`",
+                            BAD_REQUEST
+                        )
+                    }
+                    credentialProjectId = String(exec.inputStream.readAllBytes()).trim()
+                    val error = String(exec.errorStream.readAllBytes()).trim()
+                    if(error.isNotEmpty()) {
+                        throw MetriqlException(
+                            "Unable to get default project from `gcloud`: $error",
+                            BAD_REQUEST
+                        )
+                    }
+                }
+
                 if (!localKeyFile.exists()) {
-                    throw MetriqlException("$localKeyFile not found connecting the BigQuery.", HttpResponseStatus.BAD_REQUEST)
+                    throw MetriqlException("$localKeyFile not found connecting the BigQuery.", BAD_REQUEST)
                 }
                 val fromStream = UserCredentials.fromStream(FileInputStream(localKeyFile))
                 bigQuery.setCredentials(fromStream)
@@ -91,7 +113,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     /** A public dataset can be the default project. However, we need to execute jobs on our own project */
     private fun getProjectId(): String {
         return config.project ?: credentialProjectId
-            ?: throw MetriqlException("Unable to find `project_id, please set the value in credentials", HttpResponseStatus.BAD_REQUEST)
+        ?: throw MetriqlException("Unable to find `project_id`, please set the value in credentials", BAD_REQUEST)
     }
 
     override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {
@@ -122,9 +144,9 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
             .waitFor()
 
         if (queryJob == null) {
-            throw MetriqlException("Task not longer exists", HttpResponseStatus.BAD_REQUEST)
+            throw MetriqlException("Task not longer exists", BAD_REQUEST)
         } else if (queryJob.status.error != null) {
-            throw MetriqlException(queryJob.status.error.toString(), HttpResponseStatus.BAD_REQUEST)
+            throw MetriqlException(queryJob.status.error.toString(), BAD_REQUEST)
         }
         return queryJob.getQueryResults()
     }
@@ -140,7 +162,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
             try {
                 bigQuery.getDataset(config.dataset) ?: throw MetriqlException(
                     "Dataset '${config.dataset}' does not exists in project '${config.project}'",
-                    HttpResponseStatus.BAD_REQUEST
+                    BAD_REQUEST
                 )
             } catch (e: BigQueryException) {
                 throw MetriqlException("Could not fetch the dataset: ${e.message}", HttpResponseStatus.FORBIDDEN)
@@ -196,7 +218,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         queryJob.waitFor()
         if (queryJob.status.error != null) {
             val errorMessage = queryJob.status.error?.message
-            throw MetriqlException(errorMessage, HttpResponseStatus.BAD_REQUEST)
+            throw MetriqlException(errorMessage, BAD_REQUEST)
         }
         val columns = queryJob
             .getQueryResults()
