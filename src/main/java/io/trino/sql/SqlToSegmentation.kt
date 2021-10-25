@@ -8,6 +8,7 @@ import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType
 import com.metriql.report.data.ReportFilter.Type.METRIC_FILTER
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.mql.MqlService
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
@@ -30,7 +31,6 @@ import com.metriql.warehouse.spi.querycontext.TOTAL_ROWS_MEASURE
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.trino.MetriqlMetadata
 import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
-import io.trino.sql.parser.SqlParser
 import io.trino.sql.tree.AllColumns
 import io.trino.sql.tree.BetweenPredicate
 import io.trino.sql.tree.BooleanLiteral
@@ -62,15 +62,14 @@ import io.trino.sql.tree.Table
 import java.util.Optional
 
 typealias Reference = Pair<MetricType, String>
+typealias ExpressionAliasProjection = Triple<String, String?, Boolean>
 
 class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
-    val parser = SqlParser()
-
-    private fun getProjectionOfColumn(rewriter: MetriqlSegmentationQueryRewriter, expression: Expression, modelName: String, alias: Optional<Identifier>): Pair<String, String?> {
+    private fun getProjectionOfColumn(rewriter: MetriqlSegmentationQueryRewriter, expression: Expression, modelName: String, alias: Optional<Identifier>): ExpressionAliasProjection {
         val alias = alias.orElse(null)?.let { identifier -> identifier.value }
             ?: deferenceExpression(expression, modelName)?.let { exp -> getIdentifierValue(exp) }
         val projection = rewriter.process(expression, null)
-        return Pair(projection, alias)
+        return Triple(projection, alias, expression is Identifier)
     }
 
     fun convert(
@@ -141,7 +140,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             "\nORDER BY ${projectionOrders.joinToString(" ")}"
         } else ""
 
-        return if (projectionColumns.any { it.first != it.second && it.second != null }) {
+        return if (projectionColumns.any { (it.first != it.second && it.second != null) || !it.third }) {
             val quotedAlias = context.warehouseBridge.quoteIdentifier(alias[alias.size - 1])
             """SELECT ${
             projectionColumns.joinToString(", ") { col ->
@@ -188,6 +187,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val measures: MutableList<String>,
         parameterMap : Map<NodeRef<Parameter>, Expression>,
     ) : MetriqlExpressionFormatter.Formatter(this, context, parameterMap) {
+
         override fun visitFunctionCall(node: FunctionCall, context: Void?): String? {
             if (node.name.prefix.isPresent) {
                 throw UnsupportedOperationException("schema functions are not supported")
@@ -577,7 +577,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     }
 
     private fun parseExpression(expression: String): Expression {
-        return parser.createExpression(expression, defaultParsingOptions)
+        return MqlService.parser.createExpression(expression, defaultParsingOptions)
     }
 
     companion object {

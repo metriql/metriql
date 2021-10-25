@@ -20,8 +20,6 @@ import io.trino.sql.tree.NodeRef
 import io.trino.sql.tree.Parameter
 
 class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : IAdHocService<MqlReportOptions> {
-    val parser = SqlParser()
-
     override fun renderQuery(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
@@ -33,6 +31,8 @@ class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : 
 
         val compiledQuery = try {
             MetriqlSqlFormatter.formatSql(statement, reWriter, context, parameterMap)
+        } catch (e: MetriqlException) {
+            throw e
         } catch (e: Exception) {
             throw MetriqlException("Unable to parse query: $e", HttpResponseStatus.BAD_REQUEST)
         }
@@ -44,4 +44,8 @@ class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : 
     }
 
     override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: MqlReportOptions): Set<ModelName> = setOf()
+
+    companion object {
+        val parser = SqlParser()
+    }
 }

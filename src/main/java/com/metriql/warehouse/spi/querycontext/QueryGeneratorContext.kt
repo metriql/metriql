@@ -29,7 +29,6 @@ import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.services.RecipeQuery
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
-import io.trino.sql.tree.Expression
 import java.util.LinkedHashMap
 import java.util.concurrent.ConcurrentHashMap
 

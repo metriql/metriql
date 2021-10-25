@@ -111,6 +111,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 NOT_NULL(AnyValue::class),
                 ACCEPTED_VALUES(AcceptedValues::class),
                 RELATIONSHIPS(Relationships::class),
+
                 @JsonEnumDefaultValue
                 UNKNOWN(AnyValue::class);
 
@@ -119,17 +120,6 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
 
             fun applyTestToModel(model: Recipe.RecipeModel, packageName: String): Recipe.RecipeModel {
                 return when (kwargs) {
-                    is Relationships -> {
-                        if (kwargs.getSourceModelName(packageName) == model.name) {
-                            val toRelation = kwargs.toRelation(packageName)
-                            if (toRelation != null) {
-                                val reference = toRelation.name ?: kwargs.getReferenceLabel(packageName)
-                                model.copy(relations = (model.relations ?: mapOf()) + mapOf(reference to toRelation))
-                            } else {
-                                model
-                            }
-                        } else model
-                    }
                     is AcceptedValues -> model
                     is AnyValue -> {
                         when (this.name) {
@@ -142,7 +132,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             }
         }
 
-        data class Config(val enabled: Boolean, val materialized: String, val meta : Meta?) {
+        data class Config(val enabled: Boolean, val materialized: String, val meta: Meta?) {
             companion object {
                 const val EPHEMERAL = "ephemeral"
             }
@@ -272,7 +262,8 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 if (measure == null) {
                     null
                 } else {
-                    val measureName = it.value.meta?.measure?.name ?: throw MetriqlException("Measure name is not set for column `$modelName`.`${it.value.name}`", HttpResponseStatus.BAD_REQUEST)
+                    val measureName =
+                        it.value.meta?.measure?.name ?: throw MetriqlException("Measure name is not set for column `$modelName`.`${it.value.name}`", HttpResponseStatus.BAD_REQUEST)
                     measureName to measure
                 }
             }.toMap()
