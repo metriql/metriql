@@ -2,9 +2,8 @@ package com.metriql.service.integration
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.metriql.CURRENT_PATH
-import com.metriql.Commands
+import com.metriql.deployment.Deployment
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import io.netty.handler.codec.http.HttpHeaders
@@ -26,7 +25,7 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.javaGetter
 
 @Path("$CURRENT_PATH/integration")
-class IntegrationHttpService(val deployment: Commands.Deployment) : HttpService() {
+class IntegrationHttpService(val deployment: Deployment) : HttpService() {
     // Run all the commands in a separate thread in order to avoid race conditions
     val executor = ThreadPoolExecutor(
         0, 1, 30L, TimeUnit.SECONDS,

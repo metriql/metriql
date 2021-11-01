@@ -1,6 +1,7 @@
 package com.metriql.report
 
 import com.metriql.db.QueryResult
+import com.metriql.db.QueryResult.PropertyKey.CACHE_TIME
 import com.metriql.db.QueryResult.QueryStats
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent
@@ -90,8 +91,8 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
 
             if (cacheResult != null && !cacheResult.isExpired(TimeUnit.HOURS.toSeconds(1))) {
                 val result = JsonHelper.convert(cacheResult.value, QueryResult::class.java)
-                result.setQueryProperties(query, limit)
-                result.setProperty("cacheTime", cacheResult.createdAt)
+                setQueryProperties(result, query, limit)
+                result.setProperty(CACHE_TIME, cacheResult.createdAt)
                 val stats = QueryStats(QueryStats.State.FINISHED, queryInfo, nodes = 1, percentage = 100.0)
                 val taskId = UUID.nameUUIDFromBytes(JsonHelper.encodeAsBytes(cacheIdentifier))
                 val completedTask = Task.completedTask(auth, taskId, result, stats)
@@ -128,10 +129,15 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
         }
 
         task.addPostProcessor {
-            it.setQueryProperties(compiledQuery, limit)
+            setQueryProperties(it, compiledQuery, limit)
             it
         }
 
         return task
+    }
+
+    fun setQueryProperties(result: QueryResult, query: String, limit: Int) {
+        result.setProperty(QueryResult.PropertyKey.QUERY, query)
+        result.setProperty(QueryResult.PropertyKey.LIMIT, limit)
     }
 }

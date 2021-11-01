@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.report.ReportType
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.util.MetriqlException
+import com.metriql.util.toCamelCase
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
@@ -29,19 +30,17 @@ data class QueryResult @JsonCreator constructor(
     )
 
     @Synchronized
-    fun setProperty(key: String, value: Any) {
+    fun setProperty(key: PropertyKey, value: Any) {
         val map = ConcurrentHashMap<String, Any>()
         if (properties != null) {
             map.putAll(properties!!)
         }
-        map[key] = value
+        map[toCamelCase(key.name)] = value
         properties = map
     }
 
-    @Synchronized
-    fun setQueryProperties(query: String, limit: Int) {
-        setProperty(QUERY, query)
-        setProperty(QUERY_LIMIT, limit)
+    fun getProperty(key: PropertyKey): Any? {
+        return properties?.get(toCamelCase(key.name))
     }
 
     data class QueryColumn(
@@ -115,9 +114,6 @@ data class QueryResult @JsonCreator constructor(
     }
 
     companion object {
-        const val QUERY = "query"
-        const val QUERY_LIMIT = "limit"
-
         private val EMPTY = QueryResult(listOf(), listOf())
 
         fun errorResult(message: String): QueryResult {
@@ -145,5 +141,9 @@ data class QueryResult @JsonCreator constructor(
                 obj
             }
         }
+    }
+
+    enum class PropertyKey {
+        QUERY, LIMIT, CACHE_TIME, SUMMARIZED
     }
 }

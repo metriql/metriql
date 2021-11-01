@@ -1,8 +1,7 @@
 package com.metriql.service.jdbc
 
-import com.metriql.Commands
 import com.metriql.db.QueryResult
-import com.metriql.db.QueryResult.Companion.QUERY
+import com.metriql.deployment.Deployment
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.report.mql.MqlReportOptions
@@ -56,7 +55,7 @@ import javax.ws.rs.core.MultivaluedMap
 class StatementService(
     private val taskQueueService: TaskQueueService,
     private val reportService: ReportService,
-    private val deployment: Commands.Deployment
+    private val deployment: Deployment
 ) : HttpService() {
     private val runner = LightweightQueryRunner(deployment.getModelService())
     private val mapper = ObjectMapperProvider().get()
@@ -209,7 +208,7 @@ class StatementService(
 
         val error = task.result?.error?.let {
             QueryError(
-                it.message + "\n" + task.result?.properties?.get(QUERY),
+                it.message + "\n" + task.result?.getProperty(QueryResult.PropertyKey.QUERY),
                 it.sqlState,
                 10,
                 StandardErrorCode.GENERIC_USER_ERROR.name,
@@ -218,13 +217,14 @@ class StatementService(
                 FailureInfo("metriql", it.message, null, listOf(), listOf(), null)
             )
         }
+
         val results = QueryResults(
             id,
             if (task.id == null) null else queryUri,
             if (task.id == null || task.status != Task.Status.RUNNING) null else queryUri,
             if (!firstCall && (task.status.isDone || task.id == null)) null else queryUri,
             if (firstCall) null else columns,
-            if (firstCall) null else (task.result?.result as Iterable<List<Object>>?),
+            if (firstCall) null else (task.result?.let { transformQueryResult(it) }),
             stats.build(),
             if (firstCall) null else error,
             listOf(),
@@ -233,6 +233,32 @@ class StatementService(
         )
 
         return results
+    }
+
+    private fun transformQueryResult(result: QueryResult): Iterable<List<Any?>>? {
+        return result.result
+//        if (result.metadata == null || result.result == null) {
+//            return null
+//        }
+//
+//        val types = result.metadata?.map { it.type ?: FieldType.UNKNOWN }
+//
+//        if (types.none { it == FieldType.TIMESTAMP } || result.getProperty(CACHE_TIME) != null) {
+//            return result.result
+//        }
+//
+//        return result.result?.map { row ->
+//            row.mapIndexed { idx, cell ->
+//                when (types[idx]) {
+//                    FieldType.TIMESTAMP -> {
+//                        val localDateTime = cell as LocalDateTime
+//                        val zone = TimeZoneKey.UTC_KEY
+//                        SqlTimestampWithTimeZone.newInstance(3, localDateTime.atZone(zone.zoneId).toEpochSecond() * 1000, 0, zone)
+//                    }
+//                    else -> cell
+//                }
+//            }
+//        }
     }
 
     @Path("/queued")

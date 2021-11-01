@@ -1,47 +1,31 @@
 package com.metriql
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
-import com.google.common.base.Splitter
 import com.google.common.net.HostAndPort
-import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.dbt.DbtManifestParser
-import com.metriql.dbt.DbtModelConverter
 import com.metriql.dbt.DbtModelService
-import com.metriql.dbt.DbtProfiles
 import com.metriql.dbt.FileHandler
-import com.metriql.dbt.ProjectYaml
+import com.metriql.deployment.MultiTenantDeployment
+import com.metriql.deployment.SingleTenantDeployment
+import com.metriql.deployment.SingleTenantDeployment.Companion.getProfileConfigForSingleTenant
+import com.metriql.deployment.SingleTenantDeployment.Companion.parseRecipe
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.IModelService
-import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
-import com.metriql.service.model.UpdatableModelService
 import com.metriql.util.JsonHelper
-import com.metriql.util.MetriqlException
-import com.metriql.util.RecipeUtil.prepareModelsForInstallation
 import com.metriql.util.TextUtil
-import com.metriql.util.UnirestHelper
-import com.metriql.util.YamlHelper
-import com.metriql.warehouse.WarehouseConfig
 import com.metriql.warehouse.WarehouseLocator
 import com.metriql.warehouse.metriql.CatalogFile
-import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
-import io.netty.handler.codec.http.HttpResponseStatus
 import java.io.File
 import java.io.FileInputStream
-import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.ZoneId
 import java.util.Base64
@@ -52,7 +36,7 @@ import kotlin.system.exitProcess
 open class Commands(help: String? = null) : CliktCommand(help = help ?: "", printHelpOnEmptyArgs = help == null) {
     val version by option("--version", help = "Print version name and exit", hidden = true).flag()
     val debug by option("-d", "--debug", help = "Enable debugging").flag()
-    private val profilesDir by option(
+    val profilesDir by option(
         "--profiles-dir",
         help = "Which directory to look in for the profiles.yml file. Default = ~/.dbt",
         envvar = "DBT_PROFILES_DIR"
@@ -76,163 +60,13 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             "This argument overrides variables defined in your dbt_project.yml file. " +
             "This argument should be a YAML string, eg. '{my_variable: my_value}'"
     )
+    val multiTenantUrl by option("--multi-tenant-url", help = "", envvar = "METRIQL_MULTI_TENANT_URL")
 
     override fun aliases(): Map<String, List<String>> = mapOf(
         "run" to listOf("serve")
     )
 
     override fun run() {
-    }
-
-    protected fun getProfileConfig(): WarehouseConfig {
-        val dbtProjectFile = File(projectDir, "dbt_project.yml")?.let {
-            if (it.exists()) {
-                YamlHelper.mapper.readValue(it.readBytes(), ProjectYaml::class.java)
-            } else null
-        }
-
-        val content = if (profilesContent != null) {
-            profilesContent!!
-        } else {
-            val profilesFile = File(profilesDir, "profiles.yml")
-            if (!profilesFile.exists()) {
-                echo("profiles.yml does not exist in ${profilesFile.absoluteFile}. Please set --profiles-dir option.", err = true)
-                exitProcess(1)
-            }
-            profilesFile.readText(StandardCharsets.UTF_8)
-        }
-
-        val varMap = if (vars != null) {
-            YamlHelper.mapper.readValue(vars, object : TypeReference<Map<String, Any?>>() {})
-        } else mapOf()
-
-        val compiledProfiles = DbtJinjaRenderer.renderer.renderProfiles(content, varMap)
-
-        val profiles = YamlHelper.mapper.readValue(compiledProfiles, DbtProfiles::class.java)
-        val currentProfile = profiles[profile ?: dbtProjectFile?.profile ?: "default"]
-        if (currentProfile == null) {
-            echo("profile $profile doesn't exist", err = true)
-            exitProcess(1)
-            // it's not reachable anyway
-            return null!!
-        }
-
-        return JsonHelper.convert(currentProfile.outputs[currentProfile.target], WarehouseConfig::class.java)
-    }
-
-    protected fun parseRecipe(dataSource: DataSource, manifestJson: String, packageName: String = "(inline)"): Recipe {
-        if (version) {
-            echo(TextUtil.version(), trailingNewline = true)
-            exitProcess(0)
-        }
-
-        val manifestLocation = URI(manifestJson)
-        val content = when (manifestLocation.scheme) {
-            "http", "https" -> {
-                val request = UnirestHelper.unirest.get(manifestJson)
-                if (manifestLocation.userInfo != null) {
-                    val (user, pass) = parseUserNamePass(manifestLocation.userInfo)
-                    request.basicAuth(user, pass)
-                }
-                echo("Fetching manifest.json file from $manifestJson")
-
-                val response = request.asBytes()
-                if (response.status != 200) {
-                    echo(
-                        "Unable to fetch manifest file from $manifestJson: ${response.statusText}",
-                        err = true
-                    )
-                    null
-                } else response.body
-            }
-            "dbt-cloud" -> getDbtCloud(manifestLocation)
-            "file" -> {
-                val file = File(manifestLocation).absoluteFile
-                if (!file.exists()) {
-                    echo(
-                        "manifest.json file (specified in --manifest-json option) could not found, please compile dbt models before running metriql, path is: $file",
-                        err = true
-                    )
-                    null
-                } else {
-                    file.readBytes()
-                }
-            }
-            null -> {
-                echo("Manifest file should be an URI with one of http, https, and file schema. Example: file:/etc/manifest.json")
-                null
-            }
-            else -> {
-                echo("Manifest file scheme ${manifestLocation.scheme} is not supported. $manifestJson", err = true)
-                null
-            }
-        }
-
-        return if (content == null) {
-            exitProcess(1)
-            // this code is unreachable as we're exiting the process
-            null!!
-        } else {
-            val models = try {
-                DbtManifestParser.parse(dataSource, content, models)
-            } catch (manifestEx: MismatchedInputException) {
-                // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
-                try {
-                    JsonHelper.read(content, object : TypeReference<List<Model>>() {}).map { Recipe.RecipeModel.fromModel(it) }
-                } catch (metriqlModelEx: Exception) {
-                    throw manifestEx
-                }
-            }
-
-            Recipe("local://metriql", "master", null, Recipe.Config(packageName), packageName, models = models)
-        }
-    }
-
-    private fun getDbtCloud(manifestLocation: URI): ByteArray? {
-        val project = try {
-            Integer.parseInt((manifestLocation.path ?: "/").substring(1))
-        } catch (e: Exception) {
-            echo("Unable to parse the project for dbt-cloud scheme. $DBT_CLOUD_URL", err = true)
-            return null
-        }
-
-        val query: Map<String, String> = Splitter.on('&').trimResults()
-            .withKeyValueSeparator('=').split(manifestLocation.query)
-
-        val jobId = query["job_id"]?.get(0)
-        if (jobId == null) {
-            echo("{job_id} query parameter is missing in dbt-cloud URI. $DBT_CLOUD_URL", err = true)
-            return null
-        }
-        if (manifestLocation.userInfo == null) {
-            echo("{api_key} is missing in dbt-cloud URI. $DBT_CLOUD_URL", err = true)
-            return null
-        }
-        val lastRunRequest = UnirestHelper.unirest
-            .get("https://${manifestLocation.host}/api/v2/accounts/$project/runs?job_definition_id=$jobId&limit=1&order_by=-finished_at")
-            .header("Authorization", "Token ${manifestLocation.userInfo}")
-            .asJson()
-        if (lastRunRequest.status != 200) {
-            echo("Unable to fetch last run id from dbt Cloud: ${lastRunRequest.body}")
-            return null
-        }
-        var runId = lastRunRequest.body.`object`.getJSONArray("data")?.getJSONObject(0)?.getString("id")
-        if (runId == null) {
-            echo("Unable to fetch last run id from dbt Cloud, there should be at least one successful run for job id: $jobId")
-            return null
-        }
-
-        val manifestFileRequest = UnirestHelper.unirest
-            .get("https://${manifestLocation.host}/api/v2/accounts/$project/runs/$runId/artifacts/manifest.json")
-            .header("Authorization", "Token ${manifestLocation.userInfo}")
-            .asBytes()
-
-        if (manifestFileRequest.status != 200) {
-            echo("Unable to manifest.json file from run id $runId: ${String(manifestFileRequest.body)}")
-            return null
-        }
-
-        return manifestFileRequest.body
     }
 
     class Test : Commands(help = "Tests metriql datasets with metadata queries") {
@@ -244,6 +78,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         private val outputDir by option("--output-dir", "-o", help = "Which directory to create aggregate models.", envvar = "METRIQL_OUTPUT_DIR").default("models/rakam")
 
         override fun run() {
+            super.checkVersion()
             val dbtProject = File(projectDir, "dbt_project.yml")
             if (!dbtProject.exists()) {
                 echo("dbt_project.yml doesn't exist in `${dbtProject.absolutePath}`, not a valid dbt project.", err = true)
@@ -257,12 +92,26 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             }
 
             val auth = ProjectAuth.singleProject()
-            val dataSource = WarehouseLocator.getDataSource(this.getProfileConfig())
+            val config = try {
+                getProfileConfigForSingleTenant(projectDir, super.profilesContent, profilesDir, vars, profile)
+            } catch (e: IllegalArgumentException) {
+                echo(e.message, err = true)
+                exitProcess(1)
+            }
+
+            val dataSource = WarehouseLocator.getDataSource(config)
 
             val successfulCounts = AtomicInteger()
 
             val dependencies = Recipe.Dependencies(DbtDependency(aggregatesDirectory = outputDir))
-            val recipe = parseRecipe(dataSource, manifestFile.toURI().toString()).copy(dependencies = dependencies)
+            val recipe = try {
+                val manifestJson = manifestFile.toURI().toString()
+                echo("Fetching manifest.json file from $manifestJson")
+                parseRecipe(dataSource, manifestJson, models).copy(dependencies = dependencies)
+            } catch (e: IllegalArgumentException) {
+                echo(e.message, err = true)
+                exitProcess(1)
+            }
             val service = DbtModelService(
                 JinjaRendererService(), null,
                 object : DependencyFetcher {
@@ -347,6 +196,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         )
 
         override fun run() {
+            super.checkVersion()
             val apiSecret = when {
                 apiSecretBase64 != null -> {
                     String(Base64.getDecoder().decode(apiSecretBase64), StandardCharsets.UTF_8)
@@ -357,7 +207,14 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 else -> null
             }
 
-            val deployment = CommunityDeployment()
+            val timezone = timezone?.let { ZoneId.of(it) }
+
+            val arg = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
+            val deployment = if (multiTenantUrl != null) {
+                MultiTenantDeployment(multiTenantUrl!!)
+            } else {
+                SingleTenantDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile)
+            }
 
             val catalogFile = when {
                 catalogFile != null -> JsonHelper.read(FileInputStream(catalogFile), CatalogFile::class.java)
@@ -367,66 +224,21 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val httpPort = System.getenv("METRIQL_RUN_PORT")?.let { Integer.parseInt(it) } ?: port
             val httpHost = System.getenv("METRIQL_RUN_HOST") ?: host
             HttpServer.start(
-                HostAndPort.fromParts(httpHost, httpPort), apiSecret, usernamePass, threads, debug, origin,
-                deployment, enableTrinoInterface, timezone?.let { ZoneId.of(it) }, catalogFile?.catalogs
+                HostAndPort.fromParts(httpHost, httpPort), apiSecret, threads, debug, origin,
+                deployment, enableTrinoInterface, timezone, catalogFile?.catalogs
             )
         }
+    }
 
-        private fun resolveExtends(allModels: List<Recipe.RecipeModel>, it: Recipe.RecipeModel): Recipe.RecipeModel {
-            return if (it.extends != null) {
-                val ref = DbtModelConverter.parseRef(it.extends)
-                val parentModel = allModels.find { model -> model.name == ref } ?: throw MetriqlException(
-                    "${it.name}: extends ${it.extends} not found.",
-                    HttpResponseStatus.BAD_REQUEST
-                )
-                it.copy(
-                    dimensions = (it.dimensions ?: mapOf()) + (parentModel.dimensions ?: mapOf()),
-                    measures = (it.measures ?: mapOf()) + (parentModel.measures ?: mapOf()),
-                    relations = (it.relations ?: mapOf()) + (parentModel.relations ?: mapOf())
-                )
-            } else it
-        }
-
-        inner class EnterpriseDeployment : CommunityDeployment() {
-
-        }
-
-        open inner class CommunityDeployment : Deployment {
-            private val profileConfig = getProfileConfig()
-            private val singleAuth = ProjectAuth.singleProject()
-            private val modelService = UpdatableModelService(null) { getModels(singleAuth) }
-
-            private fun getModels(auth: ProjectAuth): List<Model> {
-                val dataSource = getDataSource(auth)
-                val manifest = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
-                val recipe = parseRecipe(dataSource, manifest)
-                val metriqlModels = recipe.models?.map {
-                    resolveExtends(recipe.models, it).toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
-                } ?: listOf()
-                val context = QueryGeneratorContext(ProjectAuth.systemUser(-1), dataSource, UpdatableModelService(null) { metriqlModels }, JinjaRendererService(), null, null, null)
-                return prepareModelsForInstallation(dataSource, context, metriqlModels)
-            }
-
-            override fun getModelService() = modelService
-
-            override fun logStart() {
-                logger.info("Serving ${modelService.list(singleAuth).size} datasets")
-            }
-
-            override fun getDataSource(auth: ProjectAuth): DataSource {
-                val config = if (passCredentialsToDatasource) {
-                    profileConfig.value.withUsernamePassword(null!!, null!!)
-                } else profileConfig
-
-                return WarehouseLocator.getDataSource(profileConfig)
-            }
+    protected fun checkVersion() {
+        if (version) {
+            echo(TextUtil.version(), trailingNewline = true)
+            exitProcess(0)
         }
     }
 
     companion object {
         internal val logger = Logger.getLogger(this::class.java.name)
-
-        const val DBT_CLOUD_URL = "It should follow the following format: dbt-cloud://{api_key}@{dbt_cloud_url}/{account_id}?job_id={job_id}"
 
         fun parseUserNamePass(usernamePass: String): Pair<String, String> {
             val arr = usernamePass.split(":".toRegex(), 2)
@@ -435,11 +247,5 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             }
             return Pair(arr[0], arr[1])
         }
-    }
-
-    interface Deployment {
-        fun getModelService(): IModelService
-        fun logStart()
-        fun getDataSource(auth: ProjectAuth): DataSource
     }
 }

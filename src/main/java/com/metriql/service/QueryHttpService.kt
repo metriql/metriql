@@ -1,8 +1,8 @@
 package com.metriql.service
 
 import com.metriql.CURRENT_PATH
-import com.metriql.Commands
 import com.metriql.db.QueryResult
+import com.metriql.deployment.Deployment
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
@@ -31,7 +31,7 @@ import javax.ws.rs.Path
 @Api(value = CURRENT_PATH, nickname = "query", description = "Query Service Endpoints", tags = ["query"])
 @Path(CURRENT_PATH)
 open class QueryHttpService(
-    val deployment: Commands.Deployment,
+    val deployment: Deployment,
     val reportService: ReportService,
     val taskQueueService: TaskQueueService,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>

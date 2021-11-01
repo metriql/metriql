@@ -1,6 +1,7 @@
 package com.metriql.report.funnel
 
 import com.metriql.db.QueryResult
+import com.metriql.db.QueryResult.PropertyKey.SUMMARIZED
 import com.metriql.report.IAdHocService
 import com.metriql.report.data.Dataset
 import com.metriql.report.data.ReportFilter
@@ -140,7 +141,7 @@ class FunnelService @Inject constructor(
         result: QueryResult,
     ): QueryResult {
         if (result.result != null) {
-            result.setProperty("summarized", false)
+            result.setProperty(SUMMARIZED, false)
         }
         return result
     }

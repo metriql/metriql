@@ -3,8 +3,8 @@ package com.metriql
 import com.google.common.cache.CacheBuilderSpec
 import com.google.common.collect.ImmutableMap
 import com.google.common.net.HostAndPort
-import com.metriql.Commands.Companion.parseUserNamePass
 import com.metriql.bootstrap.OptionMethodHttpService
+import com.metriql.deployment.Deployment
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
@@ -52,7 +52,7 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
-    private fun getServices(deployment: Commands.Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
+    private fun getServices(deployment: Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
         val postRun = mutableListOf<() -> Unit>()
 
@@ -74,7 +74,7 @@ object HttpServer {
         return services to { postRun.forEach { it.invoke() } }
     }
 
-    private fun getQueryService(deployment: Commands.Deployment): QueryHttpService {
+    private fun getQueryService(deployment: Deployment): QueryHttpService {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
@@ -131,11 +131,10 @@ object HttpServer {
     fun start(
         address: HostAndPort,
         oauthApiSecret: String?,
-        usernamePass: String?,
         numberOfThreads: Int,
         isDebug: Boolean,
         origin: String?,
-        deployment: Commands.Deployment,
+        deployment: Deployment,
         enableJdbc: Boolean,
         timezone: ZoneId?,
         catalogs: CatalogFile.Catalogs?
@@ -145,19 +144,6 @@ object HttpServer {
         } else {
             NioEventLoopGroup(numberOfThreads)
         }
-
-        val basicAuthLoader: BasicAuthLoader? = if (usernamePass != null) {
-            val (user, pass) = parseUserNamePass(usernamePass);
-            {
-                if (it.user == user && it.pass == pass) {
-                    ProjectAuth(
-                        user, -1, isOwner = true,
-                        isSuperuser = true, email = null, permissions = null,
-                        attributes = mapOf(), timezone = timezone, source = null
-                    )
-                } else null
-            }
-        } else null
 
         val (services, postRun) = getServices(deployment, enableJdbc, catalogs)
 
@@ -177,7 +163,7 @@ object HttpServer {
             }
             .setOverridenMappings(ImmutableMap.of(ZoneId::class.java, PrimitiveType.STRING))
             .setCustomRequestParameters(
-                mapOf("userContext" to MetriqlAuthRequestParameterFactory(oauthApiSecret, basicAuthLoader, timezone))
+                mapOf("userContext" to MetriqlAuthRequestParameterFactory(oauthApiSecret, deployment, timezone))
             )
             .addPostProcessor { response ->
                 if (origin != null) {

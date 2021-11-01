@@ -1,5 +1,6 @@
 package com.metriql
 
+import com.metriql.deployment.Deployment
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.MetriqlException
 import io.jsonwebtoken.Claims
@@ -27,19 +28,14 @@ import javax.crypto.spec.SecretKeySpec
 import javax.ws.rs.core.HttpHeaders
 
 data class UserContext(val user: String, val pass: String, val request: RakamHttpRequest)
-typealias BasicAuthLoader = (UserContext) -> ProjectAuth?
 
 class MetriqlAuthRequestParameterFactory(
     private val oauthApiSecret: String?,
-    private val basicAuthLoader: BasicAuthLoader?,
+    private val deployment: Deployment,
     private val timezone: ZoneId?
 ) : IRequestParameterFactory {
     override fun create(m: Method): IRequestParameter<ProjectAuth> {
         return IRequestParameter<ProjectAuth> { _, request ->
-            // no authentication method is provided
-            if (oauthApiSecret == null && basicAuthLoader == null) {
-                ProjectAuth.singleProject(null)
-            } else {
 
                 val token = request.headers().get(AUTHORIZATION)?.split(" ".toRegex(), 2)
                 val auth = when (token?.get(0)?.lowercase()) {
@@ -68,9 +64,8 @@ class MetriqlAuthRequestParameterFactory(
                         ProjectAuth.singleProject(null)
                     }
                     "basic" -> {
-                        val loader = basicAuthLoader ?: throw getAuthException("Basic auth")
                         val userPass = String(Base64.getDecoder().decode(token[1]), StandardCharsets.UTF_8).split(":".toRegex(), 2)
-                        loader.invoke(UserContext(userPass[0], userPass[1], request))
+                        deployment.getAuth(UserContext(userPass[0], userPass[1], request))
                     }
                     else -> null
                 }
@@ -80,7 +75,7 @@ class MetriqlAuthRequestParameterFactory(
                         val redirectUri = ""
                         val tokenUri = ""
                         request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
-                        if (basicAuthLoader != null) {
+                        if (deployment.isAnonymous()) {
                             request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
                         }
                     }
@@ -122,4 +117,3 @@ class MetriqlAuthRequestParameterFactory(
             } else publicKey ?: throw UnsupportedJwtException(String.format("JWT is signed with %s, but no key is configured", algorithm))
         }
     }
-}
