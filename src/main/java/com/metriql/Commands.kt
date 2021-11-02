@@ -1,6 +1,8 @@
 package com.metriql
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
@@ -24,6 +26,7 @@ import com.metriql.warehouse.WarehouseLocator
 import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
+import io.airlift.units.Duration
 import java.io.File
 import java.io.FileInputStream
 import java.nio.charset.StandardCharsets
@@ -60,7 +63,20 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             "This argument overrides variables defined in your dbt_project.yml file. " +
             "This argument should be a YAML string, eg. '{my_variable: my_value}'"
     )
-    val multiTenantUrl by option("--multi-tenant-url", help = "", envvar = "METRIQL_MULTI_TENANT_URL")
+    val multiTenantUrl by option(
+        "--multi-tenant-url",
+        help = "Enables multi-tenant deployment using the auth URL that you provided. Ignores all the other parameters.",
+        envvar = "METRIQL_MULTI_TENANT_URL"
+    )
+    val multiTenantCacheDuration by option(
+        "--multi-tenant-cache-duration",
+        help = "The cache duration for successful auth requests in when multi-tenant deployment is enabled. You can use `m` for minutes, `s` for seconds, and `h` for hours.",
+        envvar = "METRIQL_MULTI_TENANT_CACHE_DURATION"
+    ).default("10m")
+
+    init {
+        context { helpFormatter = CliktHelpFormatter(showDefaultValues = true) }
+    }
 
     override fun aliases(): Map<String, List<String>> = mapOf(
         "run" to listOf("serve")
@@ -211,7 +227,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val arg = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
             val deployment = if (multiTenantUrl != null) {
-                MultiTenantDeployment(multiTenantUrl!!)
+                MultiTenantDeployment(multiTenantUrl!!, Duration.valueOf(multiTenantCacheDuration))
             } else {
                 SingleTenantDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile)
             }

@@ -13,16 +13,16 @@ import com.metriql.util.UnirestHelper
 import com.metriql.warehouse.WarehouseConfig
 import com.metriql.warehouse.WarehouseLocator
 import com.metriql.warehouse.spi.DataSource
+import io.airlift.units.Duration
 import io.netty.handler.codec.http.HttpResponseStatus
-import java.time.Duration
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 
 typealias ManifestCacheHolder = Optional<Pair<Instant, List<Model>>>
 
-class MultiTenantDeployment(private val multiTenantUrl: String) : Deployment {
-    private val cache = CacheBuilder.newBuilder().expireAfterWrite(Duration.ofHours(1))
+class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration : Duration) : Deployment {
+    private val cache = CacheBuilder.newBuilder().expireAfterWrite(java.time.Duration.ofMillis(cacheExpiration.toMillis()))
         .build<String, Optional<AdapterManifest>>()
     private val manifestCache = ConcurrentHashMap<String, ManifestCacheHolder>()
 
