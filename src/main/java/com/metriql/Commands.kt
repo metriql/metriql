@@ -44,7 +44,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         help = "Which directory to look in for the profiles.yml file. Default = ~/.dbt",
         envvar = "DBT_PROFILES_DIR"
     ).defaultLazy { "${System.getProperty("user.home")}/.dbt/" }
-    private val profilesContent by option(
+    protected val profilesContent by option(
         help = "Profiles content as YML, overrides --profiles-dir option",
         envvar = "DBT_PROFILES_CONTENT"
     )
