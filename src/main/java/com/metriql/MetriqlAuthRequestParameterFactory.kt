@@ -27,7 +27,7 @@ import java.util.Base64
 import javax.crypto.spec.SecretKeySpec
 import javax.ws.rs.core.HttpHeaders
 
-data class UserContext(val user: String, val pass: String, val request: RakamHttpRequest)
+data class UserContext(val user: String?, val pass: String?, val request: RakamHttpRequest)
 
 class MetriqlAuthRequestParameterFactory(
     private val oauthApiSecret: String?,
@@ -79,7 +79,11 @@ class MetriqlAuthRequestParameterFactory(
                             request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
                         }
                     }
-                    throw MetriqlException(UNAUTHORIZED)
+                    if (!deployment.isAnonymous()) {
+                        throw MetriqlException(UNAUTHORIZED)
+                    } else {
+                        deployment.getAuth(UserContext(null, null, request))
+                    }
                 } else {
                     auth.copy(source = request.headers().get("X-Metriql-Source"), timezone = timezone)
                 }

@@ -32,18 +32,19 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration 
     override fun isAnonymous() = false
 
     override fun getAuth(context: UserContext): ProjectAuth {
-        val cachedAuth = cache.get(context.user) { Optional.empty() }
+        val user = context.user ?: throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
+        val cachedAuth = cache.get(user) { Optional.empty() }
         val auth = ProjectAuth(
-            context.user, -1, isOwner = true,
+            user, -1, isOwner = true,
             isSuperuser = true, email = null, permissions = null,
             attributes = mapOf(), timezone = null, source = null
         )
 
         if (cachedAuth.isEmpty) {
             synchronized(cachedAuth) {
-                if (cache.getIfPresent(context.user)?.isEmpty == true) {
+                if (cache.getIfPresent(user)?.isEmpty == true) {
                     val request = UnirestHelper.unirest.get(multiTenantUrl)
-                        .basicAuth(context.user, context.pass)
+                        .basicAuth(user, context.pass)
                         .header("Content-Type", "application/json")
                         .asObject(Response::class.java)
                     if (request.status != 200) {
@@ -71,7 +72,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration 
                         updateAtAndModelPair.get().second
                     }
 
-                    cache.put(context.user, Optional.of(AdapterManifest(dataSource, models, request.body.manifest.updated_at)))
+                    cache.put(user, Optional.of(AdapterManifest(dataSource, models, request.body.manifest.updated_at)))
                 }
             }
         }

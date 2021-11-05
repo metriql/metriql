@@ -54,7 +54,7 @@ class SingleTenantDeployment(
 
     override fun getAuth(it: UserContext): ProjectAuth {
         if(usernamePassPair == null) {
-            return ProjectAuth.singleProject(null)
+            return ProjectAuth.singleProject(timezone)
         }
 
         return if (it.user == usernamePassPair.first && it.pass == usernamePassPair.second) {
