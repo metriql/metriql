@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.util.JsonHelper
+import com.metriql.util.JsonUtil.convertToUserFriendlyError
 import com.metriql.warehouse.spi.DataSource
 
 object DbtManifestParser {
@@ -33,7 +34,11 @@ object DbtManifestParser {
     }
 
     fun parse(dataSource: DataSource, manifestFile: ByteArray, modelsFilterOptional: String?): List<Recipe.RecipeModel> {
-        val manifest = mapper.readValue(manifestFile, DbtManifest::class.java)
+        val manifest = try {
+            mapper.readValue(manifestFile, DbtManifest::class.java)
+        } catch (e: Exception) {
+            throw DbtYamlParser.ParseException(convertToUserFriendlyError(e))
+        }
         modelsFilterOptional?.let { modelsFilter ->
             modelsFilter.split(" ").map {
                 val typeAndValue = it.split(":".toRegex(), 2)
