@@ -75,7 +75,7 @@ class MetriqlAuthRequestParameterFactory(
                         val redirectUri = ""
                         val tokenUri = ""
                         request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
-                        if (deployment.isAnonymous()) {
+                        if (!deployment.isAnonymous()) {
                             request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
                         }
                     }
