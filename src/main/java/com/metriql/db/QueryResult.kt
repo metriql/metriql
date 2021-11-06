@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.report.ReportType
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.util.MetriqlException
+import com.metriql.util.UppercaseEnum
 import com.metriql.util.toCamelCase
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.sql.SQLException
@@ -143,6 +144,7 @@ data class QueryResult @JsonCreator constructor(
         }
     }
 
+    @UppercaseEnum
     enum class PropertyKey {
         QUERY, LIMIT, CACHE_TIME, SUMMARIZED
     }
