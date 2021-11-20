@@ -15,7 +15,6 @@ import jinjava.javax.el.ELException
 import java.io.File
 import java.lang.reflect.Method
 
-const val IS_LABEL = "_label"
 const val IS_MATCH = "_match"
 
 class DbtJinjaRenderer {
@@ -47,16 +46,6 @@ class DbtJinjaRenderer {
         } else {
             dataset
         }
-    }
-
-    fun getReferenceLabel(content: String, packageName: String): String {
-        return jinjava.render(
-            content,
-            mapOf(
-                "_package_name" to packageName,
-                IS_LABEL to true,
-            )
-        )
     }
 
     fun renderReference(content: String, packageName: String): String {
@@ -140,7 +129,6 @@ class DbtJinjaRenderer {
             val sourceName = "${if (hasPackageNameAsArgument) args[1]!! else args[0]!!}_$name"
 
             return when {
-                context[IS_LABEL] == true -> name
                 context[IS_MATCH] == true -> DbtManifest.getModelNameRegex("source", sourceName, packageName)
                 else -> DbtManifest.getModelName("source", sourceName, packageName!!)
             }
@@ -178,12 +166,7 @@ class DbtJinjaRenderer {
 
             val model = if (args.size == 1) args[0]!! else args[1]!!
 
-            if (context[IS_LABEL] == true) {
-                return model
-            }
-
             return when {
-                context[IS_LABEL] == true -> model
                 context[IS_MATCH] == true -> {
                     DbtManifest.getModelNameRegex("model", model, packageName)
                 }

@@ -11,6 +11,7 @@ import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType
 import com.metriql.service.model.Model.Measure.AggregationType.AVERAGE
 import com.metriql.service.model.Model.Measure.AggregationType.AVERAGE_DISTINCT
+import com.metriql.service.model.Model.Measure.AggregationType.SQL
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
 import com.metriql.service.model.Model.Measure.AggregationType.MAXIMUM
@@ -232,6 +233,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 ADHOC -> "avg(distinct $columnValue)"
                 else -> null
             }
+            SQL -> columnValue
             else -> null
         } ?: throw MetriqlException("`$aggregationType` measure is not supported for $context(`$columnValue`)", HttpResponseStatus.BAD_REQUEST)
     }

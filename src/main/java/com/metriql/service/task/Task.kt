@@ -146,7 +146,7 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
 
     fun markAsRunning() {
         if (status != Status.QUEUED) {
-            throw IllegalStateException()
+            throw IllegalStateException("The task must be in ${Status.QUEUED} status but it's $status")
         }
         status = Status.RUNNING
     }

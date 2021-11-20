@@ -2,16 +2,17 @@ package com.metriql.dbt
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AcceptedValues
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AnyValue
-import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.Relationships
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Companion.fromDimension
+import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeMeasure.Filter
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DiscoverService.Companion.createDimensionsFromColumns
 import com.metriql.service.model.Model
+import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
@@ -20,11 +21,82 @@ import com.metriql.util.TextUtil.toUserFriendly
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.DataSource
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 import kotlin.reflect.KClass
 
 typealias MetricFields = Pair<Map<String, Recipe.RecipeModel.Metric.RecipeMeasure>, Map<String, Recipe.RecipeModel.Metric.RecipeDimension>>
 
-data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, Source>, val generated_at: String?, val child_map: Map<String, List<String>>) {
+data class DbtManifest(
+    val nodes: Map<String, Node>,
+    val sources: Map<String, Source>,
+    val generated_at: String?,
+    val child_map: Map<String, List<String>>,
+    val metrics: Map<String, Metric>
+) {
+    data class Metric(
+        val unique_id: String,
+        val package_name: String,
+        val path: String,
+        val model: String,
+        val name: String,
+        val description: String?,
+        val label: String?,
+        val type: Model.Measure.AggregationType,
+        val sql: String?,
+        val timestamp: String?,
+        val time_grains: List<String>,
+        val dimensions: List<String>?,
+        val filters: List<Filter>?,
+        val meta: Node.Meta,
+        val tags: List<String>?,
+        val original_file_path: String,
+    ) {
+        fun toModel(manifest: DbtManifest?, modelsAndSources: List<Recipe.RecipeModel>): Recipe.RecipeModel? {
+            val datasetName = "metric_${package_name}_$name"
+            val sourceModelName = DbtJinjaRenderer.renderer.renderReference("{{$model}}", package_name)
+            val sourceModel = modelsAndSources.find { it.name == sourceModelName }
+                ?: throw MetriqlException("Unable to find `$name` metric's parent model `$model`", NOT_FOUND)
+
+            val measureFilters = filters?.let { it.map { filter -> Filter(filter.field, operator = filter.convertPostOperation(sourceModel, name), value = filter.value) } }
+
+            val mappings = sourceModel.mappings ?: Model.MappingDimensions()
+            if(timestamp != null) {
+                mappings.put(EVENT_TIMESTAMP, timestamp)
+            }
+
+            val extraDimensions = dimensions?.let { dimensions -> sourceModel.dimensions?.filter { d -> dimensions.contains(d.key) }?.toMap() } ?: mapOf()
+
+            val dimensions = if(time_grains != null) {
+                val eventTimestamp = mappings.get(EVENT_TIMESTAMP)
+                val dimension = sourceModel.dimensions?.get(eventTimestamp)?.copy(timeframes = time_grains)
+                    ?: throw MetriqlException("Unable to find timestamp column $timestamp for metric $name", NOT_FOUND)
+                mapOf(eventTimestamp!! to dimension) + extraDimensions
+            } else extraDimensions
+
+            val label = label ?: meta.metriql?.label
+            val model = sourceModel.copy(
+                name = datasetName,
+                hidden = meta.metriql?.hidden ?: sourceModel.hidden,
+                description = description ?: meta.metriql?.description,
+                label = label ?: name,
+                dimensions = dimensions,
+                measures = mapOf(name to Recipe.RecipeModel.Metric.RecipeMeasure(label = label, aggregation = type, sql = sql, filters = measureFilters)),
+                _path = original_file_path,
+                package_name = package_name
+            )
+
+            return getModelIfApplicable(model)
+        }
+
+        data class Filter(val field: String, val operator: String, val value: Any?) {
+            fun convertPostOperation(model : Recipe.RecipeModel, metricName : String) : Enum<*> {
+                val dim = model.dimensions?.get(field) ?: throw MetriqlException("Unable to find filter $field in $metricName", NOT_FOUND)
+                val typeClass = dim.type?.operatorClass?.java ?: throw MetriqlException("type is required for dimension $field in metric $metricName", NOT_FOUND)
+                return JsonHelper.convert(operator, typeClass)
+            }
+        }
+    }
+
     data class Node(
         val database: String?,
         val schema: String?,
@@ -64,45 +136,6 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 object AnyValue : DbtModelColumnTest()
 
                 data class AcceptedValues(val values: List<String>) : DbtModelColumnTest()
-                data class Relationships(
-                    val to: String,
-                    val model: String,
-                    val field: String,
-                    val column_name: String,
-                    val name: String?,
-                    @JsonAlias("rakam")
-                    val metriql: Recipe.RecipeModel.RecipeRelation?,
-                ) : DbtModelColumnTest() {
-
-                    @JsonIgnore
-                    fun getSourceModelName(packageName: String): String? {
-                        return DbtJinjaRenderer.renderer.renderReference(model, packageName)
-                    }
-
-                    @JsonIgnore
-                    fun getTargetModelName(packageName: String): String {
-                        return DbtJinjaRenderer.renderer.renderReference("{{$to}}", packageName)
-                    }
-
-                    @JsonIgnore
-                    fun getReferenceLabel(packageName: String): String {
-                        return name ?: DbtJinjaRenderer.renderer.getReferenceLabel("{{$to}}", packageName)
-                    }
-
-                    fun toRelation(packageName: String): Recipe.RecipeModel.RecipeRelation? {
-                        if (metriql == null) return null
-                        return Recipe.RecipeModel.RecipeRelation(
-                            sourceColumn = column_name,
-                            targetColumn = field,
-                            to = to,
-                            type = metriql.type,
-                            relationship = metriql.relationship,
-                            hidden = metriql.hidden,
-                            description = metriql.description,
-                            label = metriql.label ?: getReferenceLabel(packageName)
-                        )
-                    }
-                }
             }
 
             @UppercaseEnum
@@ -110,7 +143,6 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 UNIQUE(AnyValue::class),
                 NOT_NULL(AnyValue::class),
                 ACCEPTED_VALUES(AcceptedValues::class),
-                RELATIONSHIPS(Relationships::class),
 
                 @JsonEnumDefaultValue
                 UNKNOWN(AnyValue::class);
@@ -118,7 +150,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 override fun getValueClass() = configClass.java
             }
 
-            fun applyTestToModel(model: Recipe.RecipeModel, packageName: String): Recipe.RecipeModel {
+            fun applyTestToModel(model: Recipe.RecipeModel): Recipe.RecipeModel {
                 return when (kwargs) {
                     is AcceptedValues -> model
                     is AnyValue -> {
@@ -152,8 +184,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
                 tags.contains(DbtModelService.tagName)
             ) return null
 
-            val modelName = metriql.name ?: TextUtil.toSlug("model_${package_name}_$name", true)
-
+            val modelName = TextUtil.toSlug("model_${package_name}_$name", true)
             val target = Model.Target.TargetValue.Table(database, schema, alias ?: name)
 
             val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
@@ -180,7 +211,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             )
 
             val modelWithTests = dependencies.mapNotNull { dbtManifest.nodes[it] }
-                .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model, package_name) ?: model }
+                .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model) ?: model }
 
             return getModelIfApplicable(modelWithTests)
         }
@@ -206,10 +237,9 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
         fun toModel(dbtManifest: DbtManifest): Recipe.RecipeModel? {
             if (resource_type != "source" || meta.metriql == null) return null
 
-            val modelName = meta.metriql?.name ?: TextUtil.toSlug("source_${package_name}_${source_name}_$name", true)
+            val modelName = TextUtil.toSlug("source_${package_name}_${source_name}_$name", true)
 
             val (columnMeasures, columnDimensions) = extractFields(modelName, columns)
-
             val dependencies = dbtManifest.child_map[unique_id] ?: listOf()
             val model = meta.metriql.copy(
                 name = modelName,
@@ -223,7 +253,7 @@ data class DbtManifest(val nodes: Map<String, Node>, val sources: Map<String, So
             )
 
             val finalModel = dependencies.mapNotNull { dbtManifest.nodes[it] }
-                .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model, package_name) ?: model }
+                .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model) ?: model }
 
             return getModelIfApplicable(finalModel)
         }

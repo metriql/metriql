@@ -26,7 +26,8 @@ object JsonUtil {
                 if (e.path.isNotEmpty()) {
                     reference = extractPropertyReference(e.path)
                 }
-                val property = substringBetween(e.localizedMessage, "'", "'")
+
+                val property = substringBetween(e.originalMessage, "'", "'")
 
                 if (reference != null && property != null)
                     Pair(reference + property, "Missing property")

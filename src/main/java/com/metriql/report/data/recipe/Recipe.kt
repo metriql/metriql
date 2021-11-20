@@ -604,7 +604,7 @@ data class Recipe(
                                             filter.relationName,
                                             filter.postOperation
                                         ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.valueType!!, filter.operator!!, filter.value))
+                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.valueType, filter.operator!!, filter.value))
                                     )
                                 )
                             }
@@ -657,7 +657,7 @@ data class Recipe(
                     @JsonTypeIdResolver(ReportFilter.FilterValue.MetricFilter.Filter.OperatorTypeResolver::class)
                     val operator: Enum<*>? = null,
                     val value: Any? = null,
-                ) {
+                    ) {
                     init {
                         if (dimension == null && mappingDimension == null && sql == null) {
                             throw MetriqlException(
@@ -671,9 +671,9 @@ data class Recipe(
                                 BAD_REQUEST
                             )
                         }
-                        if (sql == null && (valueType == null || operator == null)) {
+                        if (sql == null && operator == null) {
                             throw MetriqlException(
-                                "valueType and operator are required when dimension or mappingDimension is set",
+                                "operator is required when dimension or mappingDimension is set",
                                 BAD_REQUEST
                             )
                         }

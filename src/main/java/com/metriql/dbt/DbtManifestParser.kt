@@ -49,7 +49,9 @@ object DbtManifestParser {
         }
         val models = manifest.nodes.mapNotNull { it.value.toModel(dataSource, manifest) }
         val sources = manifest.sources.mapNotNull { it.value.toModel(manifest) }
-        return models + sources
+        val modelsAndSources = models + sources
+        val metrics = manifest.metrics.mapNotNull { it.value.toModel(manifest, modelsAndSources) }
+        return modelsAndSources + metrics
     }
 
     enum class MatchType {
