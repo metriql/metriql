@@ -5,16 +5,12 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.metriql.db.FieldType
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
-import com.metriql.util.MetriqlException
-import com.metriql.util.toCamelCase
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import io.netty.handler.codec.http.HttpResponseStatus
 
 // Depends on ACCEPT_SINGLE_VALUE_AS_ARRAY
 @JsonSerialize(using = OrFilters.FilterReferenceSerializer::class)
@@ -32,42 +28,20 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
                 else -> throw IllegalStateException("One of dimension, measure or mapping is required")
             }
 
-            var (fieldType, metricValue) = when {
-                filter.dimension != null -> {
-                    val type = filter.dimension.getType(context::getModel, modelName)
-                    Pair(type, filter.dimension.toDimension(modelName, type))
-                }
-                filter.measure != null -> {
-                    val type = filter.measure.getType(context, modelName)
-                    Pair(type, filter.measure.toMeasure(modelName))
-                }
+            var metricValue = when {
+                filter.dimension != null ->
+                    filter.dimension.toDimension(modelName, filter.dimension.getType(context::getModel, modelName))
+                filter.measure != null ->
+                    filter.measure.toMeasure(modelName)
                 filter.mapping != null -> {
                     val type = JsonHelper.convert(filter.mapping, Model.MappingDimensions.CommonMappings::class.java)
-                    Pair(type.fieldType, ReportMetric.ReportMappingDimension(type, null))
+                    ReportMetric.ReportMappingDimension(type, null)
                 }
                 else -> {
                     throw IllegalStateException("One of dimension, measure or mapping is required")
                 }
             }
-
-            try {
-                JsonHelper.convert(filter.operator, FieldType.UNKNOWN.operatorClass.java)
-                fieldType = FieldType.UNKNOWN
-            } catch (e: Exception) {
-                null
-            }
-
-            val operatorBean: Enum<*> = try {
-                JsonHelper.convert(filter.operator, fieldType.operatorClass.java)
-            } catch (e: Exception) {
-                val values = fieldType.operatorClass.java.enumConstants.joinToString(", ") { toCamelCase(it.name) }
-                throw MetriqlException(
-                    "Invalid operator `${filter.operator}`, available values for type $fieldType is $values",
-                    HttpResponseStatus.BAD_REQUEST
-                )
-            }
-
-            ReportFilter.FilterValue.MetricFilter.Filter(metricType, metricValue, fieldType, operatorBean, filter.value)
+            ReportFilter.FilterValue.MetricFilter.Filter(metricType, metricValue, filter.operator, filter.value)
         }
 
         return ReportFilter(

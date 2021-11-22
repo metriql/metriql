@@ -1,9 +1,7 @@
 package com.metriql.report.data
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.DatabindContext
 import com.fasterxml.jackson.databind.JavaType
-import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.data.recipe.OrFilters
@@ -14,12 +12,10 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
-import com.metriql.util.toCamelCase
 import com.metriql.warehouse.spi.filter.ANSISQLFilters
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import io.netty.handler.codec.http.HttpResponseStatus
-import java.lang.IllegalStateException
 import kotlin.reflect.KClass
 
 @JSONBSerializable
@@ -47,14 +43,13 @@ data class ReportFilter(
                     val references = OrFilters()
                     value.filters.map {
                         val metricValue = it.metricValue ?: value.metricValue ?: throw IllegalStateException()
-                        val operator = toCamelCase(it.operator.name)
                         val item = when (metricValue) {
                             is ReportMetric.ReportDimension ->
-                                Recipe.FilterReference(dimension = metricValue.toReference(), operator = operator, value = it.value)
+                                Recipe.FilterReference(dimension = metricValue.toReference(), operator = it.operator, value = it.value)
                             is ReportMetric.ReportMeasure ->
-                                Recipe.FilterReference(measure = metricValue.toMetricReference(), operator = operator, value = it.value)
+                                Recipe.FilterReference(measure = metricValue.toMetricReference(), operator = it.operator, value = it.value)
                             is ReportMetric.ReportMappingDimension ->
-                                Recipe.FilterReference(mapping = metricValue.name.name, operator = operator, value = it.value)
+                                Recipe.FilterReference(mapping = metricValue.name.name, operator = it.operator, value = it.value)
                             is ReportMetric.Function -> TODO()
                             is ReportMetric.Unary -> TODO()
                         }
@@ -103,11 +98,7 @@ data class ReportFilter(
                 //  TODO: make it required when MetricFilter.metricValue is removed
                 @PolymorphicTypeStr<MetricType>(externalProperty = "metricType", valuesEnum = MetricType::class)
                 val metricValue: ReportMetric?,
-
-                val valueType: FieldType,
-                @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "valueType", include = JsonTypeInfo.As.EXTERNAL_PROPERTY)
-                @JsonTypeIdResolver(OperatorTypeResolver::class)
-                val operator: Enum<*>,
+                val operator: String,
                 val value: Any?
             ) {
                 class OperatorTypeResolver : JsonHelper.SimpleTypeResolver() {

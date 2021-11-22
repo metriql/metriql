@@ -27,6 +27,7 @@ import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.UppercaseEnum
+import com.metriql.util.getOperation
 import com.metriql.util.serializableName
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -36,6 +37,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
+import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 
 data class Recipe(
     val repository: String,
@@ -312,6 +314,9 @@ data class Recipe(
                                             when (metricValue) {
                                                 is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters can't filter measures")
                                                 is ReportMetric.ReportDimension -> {
+                                                    val dimensionType = model.dimensions.find { dim -> dim.name == metricValue.name }?.fieldType
+                                                        ?: throw MetriqlException("Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.", NOT_FOUND)
+                                                    val (type, operation) = getOperation(dimensionType, it.operator)
                                                     filter.value.filters
                                                         .map {
                                                             Metric.RecipeMeasure.Filter(
@@ -321,13 +326,18 @@ data class Recipe(
                                                                 metricValue.modelName,
                                                                 metricValue.relationName,
                                                                 metricValue.postOperation,
-                                                                it.valueType,
-                                                                it.operator,
+                                                                type,
+                                                                operation,
                                                                 it.value
                                                             )
                                                         }
                                                 }
                                                 is ReportMetric.ReportMappingDimension -> {
+                                                    val name  = model.mappings.get(metricValue.name)
+                                                    val dimensionType = model.dimensions.find { dim -> dim.name == name }?.fieldType
+                                                        ?: throw MetriqlException("Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.", NOT_FOUND)
+                                                    val (type, operator) = getOperation(dimensionType, it.operator)
+
                                                     filter.value.filters
                                                         .map {
                                                             Metric.RecipeMeasure.Filter(
@@ -337,8 +347,8 @@ data class Recipe(
                                                                 null,
                                                                 null,
                                                                 metricValue.postOperation,
-                                                                it.valueType,
-                                                                it.operator,
+                                                                type,
+                                                                operator,
                                                                 it.value
                                                             )
                                                         }
@@ -604,7 +614,7 @@ data class Recipe(
                                             filter.relationName,
                                             filter.postOperation
                                         ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.valueType, filter.operator!!, filter.value))
+                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.operator!!.name, filter.value))
                                     )
                                 )
                             }
@@ -617,7 +627,7 @@ data class Recipe(
                                             filter.mappingDimension,
                                             filter.postOperation
                                         ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.valueType!!, filter.operator!!, filter.value))
+                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.operator!!.name, filter.value))
                                     )
                                 )
                             }

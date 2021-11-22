@@ -65,7 +65,7 @@ abstract class TestSegmentation {
                 ReportMetric.ReportMappingDimension(EVENT_TIMESTAMP, null),
                 listOf(
                     MetricFilter.Filter(
-                        null, null, FieldType.TIMESTAMP, TimestampOperatorType.BETWEEN,
+                        null, null, TimestampOperatorType.BETWEEN.name,
                         mapOf("start" to dateRange.start.toString(), "end" to dateRange.end.toString())
                     )
                 )
@@ -635,7 +635,7 @@ abstract class TestSegmentation {
             MetricFilter(
                 MetricFilter.MetricType.DIMENSION,
                 ReportDimension("testnumber", "_table", null, null),
-                listOf(MetricFilter.Filter(null, null, FieldType.INTEGER, NumberOperatorType.GREATER_THAN, 10))
+                listOf(MetricFilter.Filter(null, null, NumberOperatorType.GREATER_THAN.name, 10))
             )
         )
         val report = SegmentationReportOptions(

@@ -29,6 +29,7 @@ import com.metriql.util.DefaultJinja
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
 import com.metriql.util.ValidationUtil.stripLiteral
+import com.metriql.util.getOperation
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC
@@ -115,6 +116,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                 null
                             } else metricValue.relationName
 
+                            val (dim, _) = generateModelDimension(contextModelName, metricValue.name, metricValue.relationName, context)
+
                             val renderedMetric = renderDimension(
                                 context,
                                 contextModelName,
@@ -134,10 +137,12 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                 joins.add(renderedMetric.join)
                             }
 
+                            val (_, operator) = getOperation(dim.dimension.fieldType, it.operator)
+
                             wheres.add(
                                 filters.generateFilter(
                                     context,
-                                    it.operator as FilterOperator,
+                                    operator as FilterOperator,
                                     renderedMetric.value,
                                     value
                                 )
@@ -272,7 +277,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 when (queryType) {
                     ADHOC, INTERMEDIATE_ACCUMULATE ->
                         if (measure.value.column == null)
-                            "*" else
+                            // when filter is enabled, * fails
+                            "1" else
                             context.getSQLReference(modelMeasure.target, modelMeasure.modelName, measure.value.column)
                     INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }

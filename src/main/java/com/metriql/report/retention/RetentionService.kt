@@ -79,7 +79,7 @@ class RetentionService @Inject constructor(
                         reportFilter.copy(
                             value = reportFilter.value.copy(
                                 filters = reportFilter.value.filters.map {
-                                    if (it.operator == TimestampOperatorType.BETWEEN && it.value is Map<*, *>) {
+                                    if (it.operator.lowercase() == "between" && it.value is Map<*, *>) {
                                         val endDate = LocalDate.parse(it.value["end"].toString())
                                         val maximumEnd = when (report.dateUnit) {
                                             DAY -> endDate.plusDays(14)

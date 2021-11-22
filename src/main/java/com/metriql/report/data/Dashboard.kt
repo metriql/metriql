@@ -19,6 +19,7 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
+import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions
@@ -116,7 +117,7 @@ data class Dashboard(
                     val metricValue = ReportMetric.ReportDimension(value.name, value.modelName, null, null)
 
                     val filter = if (operator != null) {
-                        MetricFilter.Filter(DIMENSION, metricValue, valueType, operator, defaultValue)
+                        MetricFilter.Filter(DIMENSION, metricValue, operator.name, defaultValue)
                     } else {
                         null
                     }
@@ -136,7 +137,7 @@ data class Dashboard(
                     val metricValue = ReportMetric.ReportMappingDimension(value.name, null)
 
                     val filter = if (operator != null) {
-                        MetricFilter.Filter(MAPPING_DIMENSION, metricValue, valueType, operator, defaultValue)
+                        MetricFilter.Filter(MAPPING_DIMENSION, metricValue, operator.name, defaultValue)
                     } else {
                         null
                     }

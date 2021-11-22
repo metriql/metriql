@@ -74,8 +74,14 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         TimestampOperatorType.GREATER_THAN to { dimension: String, value: Any?, context: IQueryGeneratorContext ->
             timestampFilterGenerator(TimestampOperatorType.GREATER_THAN, dimension, value, context)
         },
+        TimestampOperatorType.GREATER_THAN_OR_EQUAL to { dimension: String, value: Any?, context: IQueryGeneratorContext ->
+            timestampFilterGenerator(TimestampOperatorType.GREATER_THAN_OR_EQUAL, dimension, value, context)
+        },
         TimestampOperatorType.LESS_THAN to { dimension: String, value: Any?, context: IQueryGeneratorContext ->
             timestampFilterGenerator(TimestampOperatorType.LESS_THAN, dimension, value, context)
+        },
+        TimestampOperatorType.LESS_THAN_OR_EQUAL to { dimension: String, value: Any?, context: IQueryGeneratorContext ->
+            timestampFilterGenerator(TimestampOperatorType.LESS_THAN_OR_EQUAL, dimension, value, context)
         },
         TimestampOperatorType.BETWEEN to { dimension: String, value: Any?, context: IQueryGeneratorContext ->
             timestampFilterGenerator(TimestampOperatorType.BETWEEN, dimension, value, context)
@@ -142,6 +148,12 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         },
         NumberOperatorType.LESS_THAN to { dimension: String, value: Any?, context ->
             "$dimension < ${parseAnyValue(validateFilterValue(value, Number::class.java), context)}"
+        },
+        NumberOperatorType.LESS_THAN_OR_EQUAL to { dimension: String, value: Any?, context ->
+            "$dimension <= ${parseAnyValue(validateFilterValue(value, Number::class.java), context)}"
+        },
+        NumberOperatorType.GREATER_THAN_OR_EQUAL to { dimension: String, value: Any?, context ->
+            "$dimension >= ${parseAnyValue(validateFilterValue(value, Number::class.java), context)}"
         }
     )
     override val timeOperators: Map<TimeOperatorType, WarehouseFilterValue> = mapOf(
@@ -150,6 +162,12 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         },
         TimeOperatorType.GREATER_THAN to { dimension: String, value: Any?, context ->
             "$dimension > ${parseAnyValue(validateFilterValue(value, LocalTime::class.java), context)}"
+        },
+        TimeOperatorType.LESS_THAN_OR_EQUAL to { dimension: String, value: Any?, context ->
+            "$dimension <= ${parseAnyValue(validateFilterValue(value, LocalTime::class.java), context)}"
+        },
+        TimeOperatorType.GREATER_THAN_OR_EQUAL to { dimension: String, value: Any?, context ->
+            "$dimension >= ${parseAnyValue(validateFilterValue(value, LocalTime::class.java), context)}"
         },
         TimeOperatorType.LESS_THAN to { dimension: String, value: Any?, context ->
             "$dimension < ${parseAnyValue(validateFilterValue(value, LocalTime::class.java), context)}"
@@ -165,6 +183,12 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         DateOperatorType.LESS_THAN to { dimension: String, value: Any?, context ->
             dateFilterGenerator(DateOperatorType.LESS_THAN, dimension, value, context)
         },
+        DateOperatorType.LESS_THAN_OR_EQUAL to { dimension: String, value: Any?, context ->
+            dateFilterGenerator(DateOperatorType.LESS_THAN_OR_EQUAL, dimension, value, context)
+        },
+        DateOperatorType.GREATER_THAN_OR_EQUAL to { dimension: String, value: Any?, context ->
+            dateFilterGenerator(DateOperatorType.GREATER_THAN_OR_EQUAL, dimension, value, context)
+        },
         DateOperatorType.BETWEEN to { dimension: String, value: Any?, context ->
             dateFilterGenerator(DateOperatorType.BETWEEN, dimension, value, context)
         }
@@ -173,7 +197,9 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
     private fun dateFilterGenerator(type: DateOperatorType, dimension: String, value: Any?, context: IQueryGeneratorContext): String {
         val operator = when (type) {
             DateOperatorType.GREATER_THAN -> ">"
+            DateOperatorType.GREATER_THAN_OR_EQUAL -> ">="
             DateOperatorType.LESS_THAN -> "<"
+            DateOperatorType.LESS_THAN_OR_EQUAL -> "<="
             DateOperatorType.EQUALS -> "="
             DateOperatorType.BETWEEN -> "BETWEEN"
         }
@@ -199,7 +225,9 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
     private fun timestampFilterGenerator(type: TimestampOperatorType, dimension: String, value: Any?, context: IQueryGeneratorContext): String {
         val operator = when (type) {
             TimestampOperatorType.GREATER_THAN -> ">"
+            TimestampOperatorType.GREATER_THAN_OR_EQUAL -> ">="
             TimestampOperatorType.LESS_THAN -> "<"
+            TimestampOperatorType.LESS_THAN_OR_EQUAL -> "<="
             TimestampOperatorType.EQUALS -> "="
             TimestampOperatorType.BETWEEN -> ">="
         }

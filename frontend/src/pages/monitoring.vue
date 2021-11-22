@@ -80,7 +80,6 @@ import { computed, onMounted, ref } from 'vue'
 import { MetriqlAdmin } from '../services/MetriqlAdmin'
 import format from 'date-fns/format'
 import LiveStatistics from '/src/services/live-statistics'
-import TableLite from "vue3-table-lite";
 
 use([
   CanvasRenderer,
@@ -112,7 +111,7 @@ const getFilters = function (tableData, property) {
 export default {
   name: 'Monitoring',
   components: {
-    VChart, TableLite
+    VChart
   },
   provide: {
     [THEME_KEY]: 'light'

@@ -16,8 +16,7 @@
     "vite-plugin-md": "^0.6.7",
     "vue": "^3.1.5",
     "vue-echarts": "^6.0.0",
-    "vue-router": "^4.0.8",
-    "vue3-table-lite": "^1.0.6"
+    "vue-router": "^4.0.8"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^1.0.4",

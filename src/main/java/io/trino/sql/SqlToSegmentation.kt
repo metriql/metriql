@@ -356,7 +356,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 METRIC_FILTER,
                 MetricFilter(
                     metricReference.first, metricValue,
-                    listOf(MetricFilter.Filter(metricReference.first, metricValue, type, operatorFunction.invoke(type), value))
+                    listOf(MetricFilter.Filter(metricReference.first, metricValue, operatorFunction.invoke(type).name, value))
                 )
             )
         )
@@ -469,9 +469,9 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             ComparisonExpression.Operator.EQUAL -> JsonHelper.convert("equals", clazz)
             ComparisonExpression.Operator.NOT_EQUAL -> JsonHelper.convert("notEquals", clazz)
             ComparisonExpression.Operator.LESS_THAN -> JsonHelper.convert("lessThan", clazz)
-            ComparisonExpression.Operator.LESS_THAN_OR_EQUAL -> TODO()
             ComparisonExpression.Operator.GREATER_THAN -> JsonHelper.convert("greaterThan", clazz)
-            ComparisonExpression.Operator.GREATER_THAN_OR_EQUAL -> TODO()
+            ComparisonExpression.Operator.LESS_THAN_OR_EQUAL -> JsonHelper.convert("lessThanOrEqual", clazz)
+            ComparisonExpression.Operator.GREATER_THAN_OR_EQUAL -> JsonHelper.convert("greaterThanOrEqual", clazz)
             ComparisonExpression.Operator.IS_DISTINCT_FROM -> TODO()
         }
     }

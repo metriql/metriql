@@ -567,7 +567,7 @@ public final class MetriqlExpressionFormatter {
             StringBuilder result = new StringBuilder();
 
             String name = node.getName().getValue();
-            String nativeTypeName = queryContext.getWarehouseBridge().getMqlTypeMap().get(name);
+            String nativeTypeName = queryContext.getWarehouseBridge().getMqlTypeMap().get(name.toLowerCase());
             if (nativeTypeName == null) {
                 throw new UnsupportedOperationException(String.format("MQL type %s is not supported for the adapter", name));
             }
@@ -578,7 +578,8 @@ public final class MetriqlExpressionFormatter {
                 result.append(node.getArguments().stream()
                         .map(this::process)
                         .collect(joining(", ", "(", ")")));
-                throw new UnsupportedOperationException(String.format("Generic arguments %s is not supported", result.toString()));
+                // TODO: what to to with generic types?
+//                throw new UnsupportedOperationException(String.format("Generic arguments %s is not supported", result.toString()));
             }
 
             return result.toString();
