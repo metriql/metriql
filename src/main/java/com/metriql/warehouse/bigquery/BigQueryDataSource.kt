@@ -68,8 +68,8 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 credentialProjectId = fromStream.projectId
                 bigQuery.setCredentials(fromStream)
             }
-            config.keyFile != null -> {
-                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(config.keyFile))
+            config.keyfile != null -> {
+                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(config.keyfile))
                 credentialProjectId = fromStream.projectId
                 bigQuery.setCredentials(fromStream)
             }
