@@ -31,7 +31,7 @@ data class DbtManifest(
     val sources: Map<String, Source>,
     val generated_at: String?,
     val child_map: Map<String, List<String>>,
-    val metrics: Map<String, Metric>
+    val metrics: Map<String, Metric>?
 ) {
     data class Metric(
         val unique_id: String,

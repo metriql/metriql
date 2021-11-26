@@ -50,7 +50,7 @@ object DbtManifestParser {
         val models = manifest.nodes.mapNotNull { it.value.toModel(dataSource, manifest) }
         val sources = manifest.sources.mapNotNull { it.value.toModel(manifest) }
         val modelsAndSources = models + sources
-        val metrics = manifest.metrics.mapNotNull { it.value.toModel(manifest, modelsAndSources) }
+        val metrics = manifest.metrics?.mapNotNull { it.value.toModel(manifest, modelsAndSources) } ?: listOf()
         return modelsAndSources + metrics
     }
 
