@@ -33,7 +33,8 @@ object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
         val location: String? = null,
         val priority: String? = null,
         val retries: Int? = null,
-        val keyFile: String? = null,
+        @JsonAlias("key_file")
+        val keyfile: String? = null,
         val method: Method? = null,
         val refresh_token: String? = null,
         val client_id: String? = null,
