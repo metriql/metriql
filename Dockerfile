@@ -18,6 +18,10 @@ FROM openjdk:11-jre-slim
 # copy only the artifacts we need from the first stage and discard the rest
 COPY --from=backend /app/target/metriql-*-bundle /
 
+# see https://cloud.google.com/sdk/docs/install#deb
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+
 # install packages required at runtime
 RUN apt-get update && apt-get install python-dev python3-pip google-cloud-sdk -y && pip3 install "pip>=20" && pip3 install metriql-lookml==0.2 metriql-tableau==0.3 metriql-superset==0.5 metriql-metabase==0.5
 
