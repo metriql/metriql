@@ -36,7 +36,7 @@ import { AuthService, AuthType } from '/src/services/auth'
 export default {
   computed: {
     isPasswordless: function() {
-      return AuthService.getAuth() == AuthType.NONE
+      return AuthService.getCurrentAuthType() == AuthType.NONE
     }
   }
 }

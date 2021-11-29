@@ -27,7 +27,7 @@ import { AuthService, AuthType } from '/src/services/auth'
 export default {
   computed: {
     url: function() {
-      const isPasswordless = AuthService.getAuth() == AuthType.NONE
+      const isPasswordless = AuthService.getCurrentAuthType() == AuthType.NONE
       return `jdbc:trino://${this.$BASE.HOST}?username=USERNAME` + (!isPasswordless ? '&password=PASSWORD' : '') + ((this.$BASE.PROTOCOL === 'https:' || !isPasswordless)  ? '&SSL=true' : '')
     }
   }
