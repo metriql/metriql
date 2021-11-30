@@ -27,6 +27,7 @@ import io.trino.client.StatementStats
 import io.trino.server.HttpRequestSessionContext
 import io.trino.spi.ErrorType
 import io.trino.spi.StandardErrorCode
+import io.trino.spi.security.Identity
 import io.trino.sql.analyzer.TypeSignatureTranslator
 import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.tree.Execute
@@ -92,7 +93,10 @@ class StatementService(
                 )
             }
         )
-        return HttpRequestSessionContext(headerMap, Optional.of("Presto"), request.uri, Optional.empty(), groupProviderManager)
+        return HttpRequestSessionContext(
+            headerMap, Optional.of("Presto"), request.uri,
+            Optional.of(Identity.ofUser("default")), groupProviderManager
+        )
     }
 
     @Path("/")
