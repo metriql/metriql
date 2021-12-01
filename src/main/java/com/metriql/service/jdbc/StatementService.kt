@@ -1,5 +1,7 @@
 package com.metriql.service.jdbc
 
+import com.google.common.base.Splitter
+import com.google.common.net.HttpHeaders.X_FORWARDED_PROTO
 import com.metriql.db.QueryResult
 import com.metriql.deployment.Deployment
 import com.metriql.report.ReportService
@@ -208,7 +210,13 @@ class StatementService(
             stats.setRootStage(stageStats.build())
         }
 
-        val queryUri = URI("http://$uri/v1/statement/queued/?id=$id")
+        val protoHeader = request.headers().get(X_FORWARDED_PROTO)
+        val scheme = if (protoHeader != null) {
+            val supportsHttps = Splitter.on(',').split(protoHeader).any { it.lowercase() == "https" }
+            if(supportsHttps) "https" else "http"
+        } else "http"
+
+        val queryUri = URI("$scheme://$uri/v1/statement/queued/?id=$id")
 
         val error = task.result?.error?.let {
             QueryError(
