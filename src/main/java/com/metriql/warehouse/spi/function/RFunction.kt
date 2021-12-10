@@ -82,6 +82,20 @@ enum class RFunction(val description: String?, val returnType: FieldType, val pa
         )
     ),
 
+    LOWER(
+        null, STRING,
+        listOf(
+            "value" to listOf(STRING)
+        )
+    ),
+
+    UPPER(
+        null, STRING,
+        listOf(
+            "value" to listOf(STRING)
+        )
+    ),
+
     VERSION(
         "Returns Trino version",
         STRING,

@@ -70,9 +70,11 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     override val functions = mapOf(
         RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.SUBSTRING to "SUBSTRING({{value[0]}}, {{value[1]}}, {{value[2]}})",
-        RFunction.CEIL to "CEIL({{value[0]}}, )",
+        RFunction.CEIL to "CEIL({{value[0]}})",
         RFunction.FLOOR to "FLOOR({{value[0]}})",
-        RFunction.ROUND to "FLOOR({{value[0]}})",
+        RFunction.ROUND to "ROUND({{value[0]}})",
+        RFunction.UPPER to "UPPER({{value[0]}})",
+        RFunction.LOWER to "LOWER({{value[0]}})",
         RFunction.VERSION to "'${stripLiteral(trinoVersion)}' as _col1",
     )
 
