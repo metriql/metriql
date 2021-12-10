@@ -7,17 +7,17 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.Scheduler
 import com.metriql.util.logging.ContextLogger
 import io.netty.handler.codec.http.HttpResponseStatus
-import java.util.Collections
 import java.util.Timer
 import java.util.TimerTask
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 import javax.inject.Inject
 
 class TaskQueueService @Inject constructor(private val executor: TaskExecutorService) {
-    private val taskTickets = Collections.synchronizedMap(LinkedHashMap<UUID, Task<*, *>>())
+    private val taskTickets = ConcurrentHashMap<UUID, Task<*, *>>()
     private val timer = Timer()
 
     init {
@@ -25,11 +25,18 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
             object : TimerTask() {
                 override fun run() {
                     val currentTimeMillis = System.currentTimeMillis()
-                    taskTickets.forEach {
-                        if (it.value.getLastAccessedAt() == null || (currentTimeMillis - it.value.getLastAccessedAt()!! > ORPHAN_TASK_AGE_MILLIS)) {
-                            if (!it.value.status.isDone) {
+                    val iterator = taskTickets.iterator()
+                    while(iterator.hasNext()) {
+                        val it = iterator.next()
+                        if (!it.value.status.isDone) {
+                            if (it.value.getLastAccessedAt() == null || (currentTimeMillis - it.value.getLastAccessedAt()!! > ORPHAN_TASK_AGE_MILLIS)) {
                                 ContextLogger.log(logger, "Cancelling orphan task: ${it.key}", ProjectAuth.systemUser(0, 0))
                                 it.value.cancel()
+                            }
+                        } else {
+                            val timePassedSinceDone = it.value.getEndedAt()!!.toEpochMilli() - currentTimeMillis
+                            if(timePassedSinceDone > TASK_REMOVAL_DURATION_AFTER_DONE) {
+                                iterator.remove()
                             }
                         }
                     }
@@ -103,15 +110,6 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
         }
 
         taskTickets[taskId] = runnable
-        // if we reached the limit, remove the first item from the task list
-        if (taskTickets.size >= MAXIMUM_ITEMS_IN_TASK_LIST) {
-            val iterator = taskTickets.iterator()
-            val item = iterator.next()
-            if (!item.value.status.isDone) {
-                throw IllegalStateException()
-            }
-            iterator.remove()
-        }
     }
 
     fun <T, K> execute(runnable: Task<T, K>, initialWaitInSeconds: Long): CompletableFuture<Task<T, K>> {
@@ -147,6 +145,6 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
     companion object {
         private val logger = Logger.getLogger(this::class.java.name)
         private const val ORPHAN_TASK_AGE_MILLIS = 1000 * 60 * 1L
-        private const val MAXIMUM_ITEMS_IN_TASK_LIST = 1000
+        private const val TASK_REMOVAL_DURATION_AFTER_DONE = 1000 * 60 * 60L
     }
 }

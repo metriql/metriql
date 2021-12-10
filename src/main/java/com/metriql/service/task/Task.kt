@@ -1,6 +1,5 @@
 package com.metriql.service.task
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.UppercaseEnum
 import java.time.Duration
@@ -97,6 +96,8 @@ abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String
         run()
         return result!!
     }
+
+    fun getEndedAt() = endedAt
 
     open fun cancel() {
         endedAt = Instant.now()
