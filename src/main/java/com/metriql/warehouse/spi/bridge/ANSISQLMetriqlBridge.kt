@@ -75,6 +75,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         RFunction.ROUND to "ROUND({{value[0]}})",
         RFunction.UPPER to "UPPER({{value[0]}})",
         RFunction.LOWER to "LOWER({{value[0]}})",
+        RFunction.DATE_TRUNC to "DATE_TRUNC({{value[0]}}, {{value[1]}})",
         RFunction.VERSION to "'${stripLiteral(trinoVersion)}' as _col1",
     )
 

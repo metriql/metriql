@@ -96,6 +96,14 @@ enum class RFunction(val description: String?, val returnType: FieldType, val pa
         )
     ),
 
+    DATE_TRUNC(
+        null, TIMESTAMP,
+        listOf(
+            "period" to listOf(STRING),
+            "value" to listOf(TIMESTAMP, DATE)
+        )
+    ),
+
     VERSION(
         "Returns Trino version",
         STRING,

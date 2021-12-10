@@ -37,6 +37,7 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
         RFunction.DATE_ADD to "DATE_ADD({{value[0]}}, INTERVAL {{value[2]}} {{value[1]}})",
         RFunction.DATE_DIFF to "DATE_DIFF({{value[0]}}, {{value[1]}}, {{value[2]}})",
         RFunction.HEX_TO_INT to "CAST(CONCAT('0x', {{value[0]}}) AS INT64)",
+        RFunction.DATE_TRUNC to "DATETIME_TRUNC({{value[1]}}, {{value[0]}})",
     )
 
     override val metricRenderHook: WarehouseMetriqlBridge.MetricRenderHook
