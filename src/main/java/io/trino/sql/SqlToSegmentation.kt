@@ -40,6 +40,7 @@ import io.trino.sql.tree.DereferenceExpression
 import io.trino.sql.tree.DoubleLiteral
 import io.trino.sql.tree.Expression
 import io.trino.sql.tree.FunctionCall
+import io.trino.sql.tree.GenericLiteral
 import io.trino.sql.tree.Identifier
 import io.trino.sql.tree.InPredicate
 import io.trino.sql.tree.IsNotNullPredicate
@@ -501,6 +502,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             is TimestampLiteral -> exp.value
             is TimeLiteral -> exp.value
             is CharLiteral -> exp.value
+            is GenericLiteral -> exp.value
             is NullLiteral -> null
             is BooleanLiteral -> exp.value
             is Parameter -> getFilterValue(parameterMap, parameterMap[NodeRef.of(exp)]!!)
