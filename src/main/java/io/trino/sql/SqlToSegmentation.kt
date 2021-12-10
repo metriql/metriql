@@ -34,6 +34,7 @@ import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
 import io.trino.sql.tree.AllColumns
 import io.trino.sql.tree.BetweenPredicate
 import io.trino.sql.tree.BooleanLiteral
+import io.trino.sql.tree.CharLiteral
 import io.trino.sql.tree.ComparisonExpression
 import io.trino.sql.tree.DereferenceExpression
 import io.trino.sql.tree.DoubleLiteral
@@ -50,6 +51,7 @@ import io.trino.sql.tree.LogicalBinaryExpression
 import io.trino.sql.tree.LongLiteral
 import io.trino.sql.tree.Node
 import io.trino.sql.tree.NodeRef
+import io.trino.sql.tree.NullLiteral
 import io.trino.sql.tree.OrderBy
 import io.trino.sql.tree.Parameter
 import io.trino.sql.tree.Relation
@@ -59,6 +61,8 @@ import io.trino.sql.tree.SingleColumn
 import io.trino.sql.tree.SortItem
 import io.trino.sql.tree.StringLiteral
 import io.trino.sql.tree.Table
+import io.trino.sql.tree.TimeLiteral
+import io.trino.sql.tree.TimestampLiteral
 import java.util.Optional
 
 typealias Reference = Pair<MetricType, String>
@@ -494,6 +498,11 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             is LongLiteral -> exp.value
             is DoubleLiteral -> exp.value
             is StringLiteral -> exp.value
+            is TimestampLiteral -> exp.value
+            is TimeLiteral -> exp.value
+            is CharLiteral -> exp.value
+            is NullLiteral -> null
+            is BooleanLiteral -> exp.value
             is Parameter -> getFilterValue(parameterMap, parameterMap[NodeRef.of(exp)]!!)
             else -> {
                 throw MetriqlException("Only scalar values are supported in WHERE. Expression is not supported: $exp ", BAD_REQUEST)
