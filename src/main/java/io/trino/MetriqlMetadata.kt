@@ -8,7 +8,9 @@ import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
 import com.metriql.service.model.IModelService
 import com.metriql.service.model.Model
 import com.metriql.util.JsonHelper
+import com.metriql.util.MetriqlException
 import com.metriql.util.toSnakeCase
+import io.netty.handler.codec.http.HttpResponseStatus
 import io.trino.connector.system.SystemTablesProvider
 import io.trino.spi.connector.ColumnMetadata
 import io.trino.spi.connector.ConnectorPageSource
@@ -20,6 +22,7 @@ import io.trino.spi.connector.RecordCursor
 import io.trino.spi.connector.SchemaTableName
 import io.trino.spi.connector.SystemTable
 import io.trino.spi.predicate.TupleDomain
+import io.trino.spi.type.ArrayType
 import io.trino.spi.type.BigintType
 import io.trino.spi.type.BooleanType
 import io.trino.spi.type.DateType
@@ -163,17 +166,14 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
                 FieldType.DATE -> DateType.DATE
                 FieldType.TIME -> TimeType.TIME_MILLIS
                 FieldType.TIMESTAMP -> TimestampType.TIMESTAMP_MILLIS
-                FieldType.BINARY -> TODO()
-                FieldType.ARRAY_STRING -> TODO()
-                FieldType.ARRAY_INTEGER -> TODO()
-                FieldType.ARRAY_DOUBLE -> TODO()
-                FieldType.ARRAY_LONG -> TODO()
-                FieldType.ARRAY_BOOLEAN -> TODO()
-                FieldType.ARRAY_DATE -> TODO()
-                FieldType.ARRAY_TIME -> TODO()
-                FieldType.ARRAY_TIMESTAMP -> TODO()
-                FieldType.MAP_STRING -> TODO()
                 FieldType.UNKNOWN, null -> UnknownType.UNKNOWN
+                else -> {
+                    if (type.isArray) {
+                        ArrayType(getTrinoType(type.arrayElementType))
+                    } else {
+                        throw MetriqlException("$type type is not supported", HttpResponseStatus.BAD_REQUEST)
+                    }
+                }
             }
         }
 
