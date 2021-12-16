@@ -19,7 +19,6 @@ import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.util.serializableName
-import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import com.metriql.warehouse.spi.function.TimestampPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceType

@@ -24,7 +24,7 @@ interface Warehouse<T : Warehouse.Config> {
         fun warehouseDatabase(): String?
 
         @JsonIgnore
-        fun withUsernamePassword(username : String, password : String): Config {
+        fun withUsernamePassword(username: String, password: String): Config {
             throw UnsupportedOperationException()
         }
     }

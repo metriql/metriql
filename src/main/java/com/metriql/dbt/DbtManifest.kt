@@ -60,13 +60,13 @@ data class DbtManifest(
             val measureFilters = filters?.let { it.map { filter -> Filter(filter.field, operator = filter.convertPostOperation(sourceModel, name), value = filter.value) } }
 
             val mappings = sourceModel.mappings ?: Model.MappingDimensions()
-            if(timestamp != null) {
+            if (timestamp != null) {
                 mappings.put(EVENT_TIMESTAMP, timestamp)
             }
 
             val extraDimensions = dimensions?.let { dimensions -> sourceModel.dimensions?.filter { d -> dimensions.contains(d.key) }?.toMap() } ?: mapOf()
 
-            val dimensions = if(time_grains != null) {
+            val dimensions = if (time_grains != null) {
                 val eventTimestamp = mappings.get(EVENT_TIMESTAMP)
                 val dimension = sourceModel.dimensions?.get(eventTimestamp)?.copy(timeframes = time_grains)
                     ?: throw MetriqlException("Unable to find timestamp column $timestamp for metric $name", NOT_FOUND)
@@ -89,7 +89,7 @@ data class DbtManifest(
         }
 
         data class Filter(val field: String, val operator: String, val value: Any?) {
-            fun convertPostOperation(model : Recipe.RecipeModel, metricName : String) : Enum<*> {
+            fun convertPostOperation(model: Recipe.RecipeModel, metricName: String): Enum<*> {
                 val dim = model.dimensions?.get(field) ?: throw MetriqlException("Unable to find filter $field in $metricName", NOT_FOUND)
                 val typeClass = dim.type?.operatorClass?.java ?: throw MetriqlException("type is required for dimension $field in metric $metricName", NOT_FOUND)
                 return JsonHelper.convert(operator, typeClass)

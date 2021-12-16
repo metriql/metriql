@@ -27,7 +27,7 @@ fun toCamelCase(value: String): String {
     return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, value)
 }
 
-fun getOperation(inferredType: FieldType?, operator : String) : Pair<FieldType, Enum<*>> {
+fun getOperation(inferredType: FieldType?, operator: String): Pair<FieldType, Enum<*>> {
     val fieldType = try {
         JsonHelper.convert(operator, FieldType.UNKNOWN.operatorClass.java)
         FieldType.UNKNOWN
@@ -40,7 +40,7 @@ fun getOperation(inferredType: FieldType?, operator : String) : Pair<FieldType, 
     } catch (e: Exception) {
         val values = fieldType.operatorClass.java.enumConstants.joinToString(", ") { toCamelCase(it.name) }
         throw MetriqlException(
-            "Invalid operator `${operator}`, available values for type $fieldType is $values",
+            "Invalid operator `$operator`, available values for type $fieldType is $values",
             HttpResponseStatus.BAD_REQUEST
         )
     }

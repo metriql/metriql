@@ -190,7 +190,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         private val references: Map<Node, Reference>,
         val dimensions: MutableList<String>,
         val measures: MutableList<String>,
-        parameterMap : Map<NodeRef<Parameter>, Expression>,
+        parameterMap: Map<NodeRef<Parameter>, Expression>,
     ) : MetriqlExpressionFormatter.Formatter(this, context, parameterMap) {
 
         override fun visitFunctionCall(node: FunctionCall, context: Void?): String? {
@@ -369,7 +369,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
     private fun processWhereExpression(
         context: IQueryGeneratorContext,
-        parameterMap : Map<NodeRef<Parameter>, Expression>,
+        parameterMap: Map<NodeRef<Parameter>, Expression>,
         references: Map<Node, Reference>,
         model: Model,
         exp: Expression
@@ -494,7 +494,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getFilterValue(parameterMap : Map<NodeRef<Parameter>, Expression>, exp: Expression): Any? {
+    private fun getFilterValue(parameterMap: Map<NodeRef<Parameter>, Expression>, exp: Expression): Any? {
         return when (exp) {
             is LongLiteral -> exp.value
             is DoubleLiteral -> exp.value

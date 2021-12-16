@@ -333,7 +333,7 @@ data class Recipe(
                                                         }
                                                 }
                                                 is ReportMetric.ReportMappingDimension -> {
-                                                    val name  = model.mappings.get(metricValue.name)
+                                                    val name = model.mappings.get(metricValue.name)
                                                     val dimensionType = model.dimensions.find { dim -> dim.name == name }?.fieldType
                                                         ?: throw MetriqlException("Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.", NOT_FOUND)
                                                     val (type, operator) = getOperation(dimensionType, it.operator)
@@ -667,7 +667,7 @@ data class Recipe(
                     @JsonTypeIdResolver(ReportFilter.FilterValue.MetricFilter.Filter.OperatorTypeResolver::class)
                     val operator: Enum<*>? = null,
                     val value: Any? = null,
-                    ) {
+                ) {
                     init {
                         if (dimension == null && mappingDimension == null && sql == null) {
                             throw MetriqlException(

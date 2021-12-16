@@ -213,7 +213,7 @@ class StatementService(
         val protoHeader = request.headers().get(X_FORWARDED_PROTO)
         val scheme = if (protoHeader != null) {
             val supportsHttps = Splitter.on(',').split(protoHeader).any { it.lowercase() == "https" }
-            if(supportsHttps) "https" else "http"
+            if (supportsHttps) "https" else "http"
         } else "http"
 
         val queryUri = URI("$scheme://$uri/v1/statement/queued/?id=$id")

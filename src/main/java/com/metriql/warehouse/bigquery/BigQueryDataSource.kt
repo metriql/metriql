@@ -91,7 +91,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                     }
                     credentialProjectId = String(exec.inputStream.readAllBytes()).trim()
                     val error = String(exec.errorStream.readAllBytes()).trim()
-                    if(error.isNotEmpty()) {
+                    if (error.isNotEmpty()) {
                         throw MetriqlException(
                             "Unable to get default project from `gcloud`: $error",
                             BAD_REQUEST
@@ -113,7 +113,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     /** A public dataset can be the default project. However, we need to execute jobs on our own project */
     private fun getProjectId(): String {
         return config.project ?: credentialProjectId
-        ?: throw MetriqlException("Unable to find `project_id`, please set the value in credentials", BAD_REQUEST)
+            ?: throw MetriqlException("Unable to find `project_id`, please set the value in credentials", BAD_REQUEST)
     }
 
     override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {

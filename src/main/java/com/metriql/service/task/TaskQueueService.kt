@@ -26,7 +26,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
                 override fun run() {
                     val currentTimeMillis = System.currentTimeMillis()
                     val iterator = taskTickets.iterator()
-                    while(iterator.hasNext()) {
+                    while (iterator.hasNext()) {
                         val it = iterator.next()
                         if (!it.value.status.isDone) {
                             if (it.value.getLastAccessedAt() == null || (currentTimeMillis - it.value.getLastAccessedAt()!! > ORPHAN_TASK_AGE_MILLIS)) {
@@ -35,7 +35,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
                             }
                         } else {
                             val timePassedSinceDone = it.value.getEndedAt()!!.toEpochMilli() - currentTimeMillis
-                            if(timePassedSinceDone > TASK_REMOVAL_DURATION_AFTER_DONE) {
+                            if (timePassedSinceDone > TASK_REMOVAL_DURATION_AFTER_DONE) {
                                 iterator.remove()
                             }
                         }

@@ -10,5 +10,5 @@ interface Deployment {
     fun logStart()
     fun getDataSource(auth: ProjectAuth): DataSource
     fun getAuth(context: UserContext): ProjectAuth
-    fun isAnonymous() : Boolean
+    fun isAnonymous(): Boolean
 }

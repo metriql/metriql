@@ -6,13 +6,13 @@ import com.metriql.report.funnel.FunnelRecipeQuery
 import com.metriql.report.funnel.FunnelReportOptions
 import com.metriql.report.funnel.FunnelService
 import com.metriql.report.mql.MqlReportOptions
+import com.metriql.report.mql.MqlService
 import com.metriql.report.retention.RetentionRecipeQuery
 import com.metriql.report.retention.RetentionReportOptions
 import com.metriql.report.retention.RetentionService
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
-import com.metriql.report.mql.MqlService
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.report.sql.SqlService
 import com.metriql.util.StrValueEnum

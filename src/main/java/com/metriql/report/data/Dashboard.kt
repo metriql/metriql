@@ -19,7 +19,6 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
-import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions

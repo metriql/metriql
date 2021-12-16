@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 typealias ManifestCacheHolder = Optional<Pair<Instant, List<Model>>>
 
-class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration : Duration) : Deployment {
+class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration: Duration) : Deployment {
     private val cache = CacheBuilder.newBuilder().expireAfterWrite(java.time.Duration.ofMillis(cacheExpiration.toMillis()))
         .build<String, Optional<AdapterManifest>>()
     private val manifestCache = ConcurrentHashMap<String, ManifestCacheHolder>()

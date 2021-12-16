@@ -11,11 +11,11 @@ import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType
 import com.metriql.service.model.Model.Measure.AggregationType.AVERAGE
 import com.metriql.service.model.Model.Measure.AggregationType.AVERAGE_DISTINCT
-import com.metriql.service.model.Model.Measure.AggregationType.SQL
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
 import com.metriql.service.model.Model.Measure.AggregationType.MAXIMUM
 import com.metriql.service.model.Model.Measure.AggregationType.MINIMUM
+import com.metriql.service.model.Model.Measure.AggregationType.SQL
 import com.metriql.service.model.Model.Measure.AggregationType.SUM
 import com.metriql.service.model.Model.Measure.AggregationType.SUM_DISTINCT
 import com.metriql.service.model.Model.Relation.RelationType.MANY_TO_MANY
@@ -280,7 +280,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 when (queryType) {
                     ADHOC, INTERMEDIATE_ACCUMULATE ->
                         if (measure.value.column == null)
-                            // when filter is enabled, * fails
+                        // when filter is enabled, * fails
                             "1" else
                             context.getSQLReference(modelMeasure.target, modelMeasure.modelName, measure.value.column)
                     INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
@@ -543,38 +543,38 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             is Model.Relation.RelationValue.ColumnValue -> {
                 val columnTypeRelation = relation.value
                 "${
-                    context.getSQLReference(
-                        modelRelation.sourceModelTarget,
-                        modelRelation.sourceModelName,
-                        columnTypeRelation.sourceColumn
-                    )
+                context.getSQLReference(
+                    modelRelation.sourceModelTarget,
+                    modelRelation.sourceModelName,
+                    columnTypeRelation.sourceColumn
+                )
                 } = ${
-                    context.getSQLReference(
-                        modelRelation.targetModelTarget,
-                        modelRelation.targetModelName,
-                        columnTypeRelation.targetColumn
-                    )
+                context.getSQLReference(
+                    modelRelation.targetModelTarget,
+                    modelRelation.targetModelName,
+                    columnTypeRelation.targetColumn
+                )
                 }"
             }
             is Model.Relation.RelationValue.DimensionValue -> {
                 "${
-                    renderDimension(
-                        context,
-                        modelRelation.sourceModelName,
-                        relation.value.sourceDimension,
-                        null,
-                        null,
-                        MetricPositionType.FILTER
-                    ).value
+                renderDimension(
+                    context,
+                    modelRelation.sourceModelName,
+                    relation.value.sourceDimension,
+                    null,
+                    null,
+                    MetricPositionType.FILTER
+                ).value
                 } = ${
-                    renderDimension(
-                        context,
-                        modelRelation.targetModelName,
-                        relation.value.targetDimension,
-                        null,
-                        null,
-                        MetricPositionType.FILTER
-                    ).value
+                renderDimension(
+                    context,
+                    modelRelation.targetModelName,
+                    relation.value.targetDimension,
+                    null,
+                    null,
+                    MetricPositionType.FILTER
+                ).value
                 }"
             }
         }

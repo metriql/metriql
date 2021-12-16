@@ -37,87 +37,87 @@ class MetriqlAuthRequestParameterFactory(
     override fun create(m: Method): IRequestParameter<ProjectAuth> {
         return IRequestParameter<ProjectAuth> { _, request ->
 
-                val token = request.headers().get(AUTHORIZATION)?.split(" ".toRegex(), 2)
-                val auth = when (token?.get(0)?.lowercase()) {
-                    "bearer" -> {
-                        val parser = Jwts.parser()
-                        val secret = oauthApiSecret ?: throw getAuthException("Oauth")
-                        val key = loadKeyFile(secret)
-                        parser.setSigningKeyResolver(object : SigningKeyResolver {
-                            override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, claims: Claims?): Key? {
-                                val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
-                                return key.getKey(algorithm)
-                            }
-
-                            override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, plaintext: String?): Key? {
-                                val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
-                                return key.getKey(algorithm)
-                            }
-                        })
-
-                        try {
-                            parser.parse(token[1]).body as Map<String, Any?>
-                        } catch (e: Exception) {
-                            null
+            val token = request.headers().get(AUTHORIZATION)?.split(" ".toRegex(), 2)
+            val auth = when (token?.get(0)?.lowercase()) {
+                "bearer" -> {
+                    val parser = Jwts.parser()
+                    val secret = oauthApiSecret ?: throw getAuthException("Oauth")
+                    val key = loadKeyFile(secret)
+                    parser.setSigningKeyResolver(object : SigningKeyResolver {
+                        override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, claims: Claims?): Key? {
+                            val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
+                            return key.getKey(algorithm)
                         }
 
-                        ProjectAuth.singleProject(null)
+                        override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, plaintext: String?): Key? {
+                            val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
+                            return key.getKey(algorithm)
+                        }
+                    })
+
+                    try {
+                        parser.parse(token[1]).body as Map<String, Any?>
+                    } catch (e: Exception) {
+                        null
                     }
-                    "basic" -> {
-                        val userPass = String(Base64.getDecoder().decode(token[1]), StandardCharsets.UTF_8).split(":".toRegex(), 2)
-                        deployment.getAuth(UserContext(userPass[0], userPass[1], request))
-                    }
-                    else -> null
+
+                    ProjectAuth.singleProject(null)
                 }
+                "basic" -> {
+                    val userPass = String(Base64.getDecoder().decode(token[1]), StandardCharsets.UTF_8).split(":".toRegex(), 2)
+                    deployment.getAuth(UserContext(userPass[0], userPass[1], request))
+                }
+                else -> null
+            }
 
-                if (auth == null) {
-                    if(request.headers().get("sec-fetch-mode") == "navigate") {
-                        val redirectUri = ""
-                        val tokenUri = ""
-                        request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
-                        if (!deployment.isAnonymous()) {
-                            request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
-                        }
-                    }
+            if (auth == null) {
+                if (request.headers().get("sec-fetch-mode") == "navigate") {
+                    val redirectUri = ""
+                    val tokenUri = ""
+                    request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")
                     if (!deployment.isAnonymous()) {
-                        throw MetriqlException(UNAUTHORIZED)
-                    } else {
-                        deployment.getAuth(UserContext(null, null, request))
+                        request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
                     }
-                } else {
-                    auth.copy(source = request.headers().get("X-Metriql-Source"), timezone = timezone)
                 }
+                if (!deployment.isAnonymous()) {
+                    throw MetriqlException(UNAUTHORIZED)
+                } else {
+                    deployment.getAuth(UserContext(null, null, request))
+                }
+            } else {
+                auth.copy(source = request.headers().get("X-Metriql-Source"), timezone = timezone)
             }
         }
     }
+}
 
-    private fun getAuthException(type: String): MetriqlException {
-        return MetriqlException("$type is not supported in this environment", UNAUTHORIZED)
+private fun getAuthException(type: String): MetriqlException {
+    return MetriqlException("$type is not supported in this environment", UNAUTHORIZED)
+}
+
+private fun loadKeyFile(value: String): LoadedKey {
+    return try {
+        val cf = CertificateFactory.getInstance("X.509")
+        val cert = cf.generateCertificate(ByteArrayInputStream(value.toByteArray(StandardCharsets.UTF_8)))
+        LoadedKey(cert.publicKey, null)
+    } catch (var4: Exception) {
+        try {
+            val rawKey = Base64.getMimeDecoder().decode(value.toByteArray(StandardCharsets.US_ASCII))
+            LoadedKey(null, rawKey)
+        } catch (var3: IOException) {
+            throw SignatureException("Unknown signing key id")
+        }
     }
+}
 
-    private fun loadKeyFile(value: String): LoadedKey {
-        return try {
-            val cf = CertificateFactory.getInstance("X.509")
-            val cert = cf.generateCertificate(ByteArrayInputStream(value.toByteArray(StandardCharsets.UTF_8)))
-            LoadedKey(cert.publicKey, null)
-        } catch (var4: Exception) {
-            try {
-                val rawKey = Base64.getMimeDecoder().decode(value.toByteArray(StandardCharsets.US_ASCII))
-                LoadedKey(null, rawKey)
-            } catch (var3: IOException) {
-                throw SignatureException("Unknown signing key id")
+class LoadedKey(private val publicKey: Key?, private val hmacKey: ByteArray?) {
+    fun getKey(algorithm: SignatureAlgorithm): Key? {
+        return if (algorithm.isHmac) {
+            if (hmacKey == null) {
+                throw UnsupportedJwtException(String.format("JWT is signed with %s, but no HMAC key is configured", algorithm))
+            } else {
+                SecretKeySpec(hmacKey, algorithm.jcaName)
             }
-        }
+        } else publicKey ?: throw UnsupportedJwtException(String.format("JWT is signed with %s, but no key is configured", algorithm))
     }
-
-    class LoadedKey(private val publicKey: Key?, private val hmacKey: ByteArray?) {
-        fun getKey(algorithm: SignatureAlgorithm): Key? {
-            return if (algorithm.isHmac) {
-                if (hmacKey == null) {
-                    throw UnsupportedJwtException(String.format("JWT is signed with %s, but no HMAC key is configured", algorithm))
-                } else {
-                    SecretKeySpec(hmacKey, algorithm.jcaName)
-                }
-            } else publicKey ?: throw UnsupportedJwtException(String.format("JWT is signed with %s, but no key is configured", algorithm))
-        }
-    }
+}

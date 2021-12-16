@@ -13,7 +13,6 @@ enum class AnyOperatorType : FilterOperator {
     IS_NOT_SET;
 }
 
-
 @UppercaseEnum
 enum class StringOperatorType : FilterOperator {
     EQUALS,

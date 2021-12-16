@@ -9,6 +9,7 @@ import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifestParser
 import com.metriql.dbt.DbtModelConverter
 import com.metriql.dbt.DbtProfiles
+import com.metriql.dbt.DbtYamlParser
 import com.metriql.dbt.ProjectYaml
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.auth.ProjectAuth
@@ -53,7 +54,7 @@ class SingleTenantDeployment(
     override fun isAnonymous() = usernamePassPair == null
 
     override fun getAuth(it: UserContext): ProjectAuth {
-        if(usernamePassPair == null) {
+        if (usernamePassPair == null) {
             return ProjectAuth.singleProject(timezone)
         }
 
@@ -125,7 +126,7 @@ class SingleTenantDeployment(
             } else it
         }
 
-        fun getPreparedModels(dataSource : DataSource, auth : ProjectAuth, recipe : Recipe): List<Model> {
+        fun getPreparedModels(dataSource: DataSource, auth: ProjectAuth, recipe: Recipe): List<Model> {
             val metriqlModels = recipe.models?.map {
                 resolveExtends(recipe.models, it).toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
             } ?: listOf()
@@ -171,7 +172,7 @@ class SingleTenantDeployment(
 
             val models = try {
                 DbtManifestParser.parse(dataSource, content, modelsFilter)
-            } catch (manifestEx: MismatchedInputException) {
+            } catch (manifestEx: DbtYamlParser.ParseException) {
                 // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
                 try {
                     JsonHelper.read(content, object : TypeReference<List<Model>>() {}).map { Recipe.RecipeModel.fromModel(it) }

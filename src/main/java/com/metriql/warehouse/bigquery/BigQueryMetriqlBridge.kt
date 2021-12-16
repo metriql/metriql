@@ -66,9 +66,11 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
 
     override fun quoteIdentifier(identifier: String): String {
-        return super.quoteIdentifier(identifier
-            .replace(".", "__")
-            .replace("::", "___"))
+        return super.quoteIdentifier(
+            identifier
+                .replace(".", "__")
+                .replace("::", "___")
+        )
     }
 
     override fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
