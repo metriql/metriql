@@ -9,6 +9,8 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.util.JsonHelper
 import com.metriql.util.JsonUtil.convertToUserFriendlyError
 import com.metriql.warehouse.spi.DataSource
+import java.util.logging.Level
+import java.util.logging.Logger
 
 object DbtManifestParser {
     val mapper = JsonHelper.getMapper().copy()!!
@@ -47,6 +49,8 @@ object DbtManifestParser {
                 val type = if (typeAndValue.size == 1) null else typeAndValue[0]
             }
         }
+        LOGGER.log(Level.INFO, "Parsing ${manifest.nodes.size} nodes, ${manifest.sources.size} sources and ${manifest.metrics?.size ?: 0} metrics")
+
         val models = manifest.nodes.mapNotNull { it.value.toModel(dataSource, manifest) }
         val sources = manifest.sources.mapNotNull { it.value.toModel(manifest) }
         val modelsAndSources = models + sources
@@ -54,7 +58,5 @@ object DbtManifestParser {
         return modelsAndSources + metrics
     }
 
-    enum class MatchType {
-        path, tag, config
-    }
+    private val LOGGER = Logger.getLogger(this.javaClass.name)
 }
