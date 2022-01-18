@@ -329,12 +329,6 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     override fun sqlReferenceForTarget(
         target: Model.Target,
         aliasName: String,
-        columnName: String
-    ) = "${bridge.quoteIdentifier(aliasName)}.${bridge.quoteIdentifier(columnName)}"
-
-    override fun sqlReferenceForTarget(
-        target: Model.Target,
-        aliasName: String,
         renderSQL: (SQLRenderable) -> String
     ): String {
         return when (target.value) {

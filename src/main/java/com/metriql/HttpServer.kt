@@ -10,10 +10,15 @@ import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.funnel.FunnelService
+import com.metriql.report.mql.MqlReportType
 import com.metriql.report.mql.MqlService
+import com.metriql.report.retention.RetentionReportType
 import com.metriql.report.retention.RetentionService
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.report.segmentation.SegmentationService
+import com.metriql.report.sql.SqlReportType
 import com.metriql.report.sql.SqlService
 import com.metriql.service.QueryHttpService
 import com.metriql.service.auth.ProjectAuth
@@ -120,11 +125,11 @@ object HttpServer {
         // we don't use a dependency injection system to speed up the initial start
         val segmentationService = SegmentationService()
         return mapOf(
-            ReportType.SEGMENTATION to segmentationService,
-            ReportType.FUNNEL to FunnelService(modelService, segmentationService),
-            ReportType.RETENTION to RetentionService(modelService, segmentationService),
-            ReportType.SQL to SqlService(),
-            ReportType.MQL to MqlService(SqlToSegmentation(segmentationService, modelService)),
+            SegmentationReportType to segmentationService,
+            FunnelReportType to FunnelService(modelService, segmentationService),
+            RetentionReportType to RetentionService(modelService, segmentationService),
+            SqlReportType to SqlService(),
+            MqlReportType to MqlService(SqlToSegmentation(segmentationService, modelService)),
         )
     }
 

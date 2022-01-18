@@ -59,6 +59,7 @@ import io.trino.spi.QueryId;
 import io.trino.spi.connector.ConnectorFactory;
 import io.trino.spi.resourcegroups.QueryType;
 import io.trino.spi.resourcegroups.ResourceGroupId;
+import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.BooleanType;
 import io.trino.spi.type.TypeOperators;
 import io.trino.spiller.*;
@@ -169,6 +170,7 @@ public class LocalTrinoQueryRunner {
     private final List<PlanOptimizer> planOptimizers;
     private final ImmutableMap<Class<? extends Statement>, DataDefinitionTask<?>> dataDefinitionTask;
     private final QuerySessionSupplier sessionSupplier;
+    private final SessionPropertyManager sessionPropertyManager;
 
     public LocalTrinoQueryRunner(FeaturesConfig featuresConfig, NodeSpillConfig nodeSpillConfig) {
         this.taskManagerConfig = new TaskManagerConfig().setTaskConcurrency(4);
@@ -195,9 +197,10 @@ public class LocalTrinoQueryRunner {
                 notificationExecutor);
         this.nodePartitioningManager = new NodePartitioningManager(nodeScheduler, blockTypeOperators);
 
+        this.sessionPropertyManager = new SessionPropertyManager(new SystemSessionProperties(new QueryManagerConfig(), taskManagerConfig, new MemoryManagerConfig(), featuresConfig, new NodeMemoryConfig(), new DynamicFilterConfig(), new NodeSchedulerConfig()));
         this.metadata = new MetadataManager(
                 featuresConfig,
-                new SessionPropertyManager(new SystemSessionProperties(new QueryManagerConfig(), taskManagerConfig, new MemoryManagerConfig(), featuresConfig, new NodeMemoryConfig(), new DynamicFilterConfig(), new NodeSchedulerConfig())),
+                sessionPropertyManager,
                 new SchemaPropertyManager(),
                 new TablePropertyManager(),
                 new MaterializedViewPropertyManager(),
@@ -309,7 +312,7 @@ public class LocalTrinoQueryRunner {
                 taskCountEstimator,
                 nodePartitioningManager).get();
 
-        sessionSupplier = new QuerySessionSupplier(transactionManager, accessControl, new SessionPropertyManager(), new SqlEnvironmentConfig());
+        sessionSupplier = new QuerySessionSupplier(transactionManager, accessControl, sessionPropertyManager, new SqlEnvironmentConfig());
 
         dataDefinitionTask = ImmutableMap.<Class<? extends Statement>, DataDefinitionTask<?>>builder()
                 .put(Use.class, new UseTask())
@@ -327,6 +330,10 @@ public class LocalTrinoQueryRunner {
         connectorManager.stop();
         finalizerService.destroy();
         singleStreamSpillerFactory.destroy();
+    }
+
+    public void addSystemProperty(PropertyMetadata propertyMetadata) {
+        sessionPropertyManager.addSystemSessionProperty(propertyMetadata);
     }
 
     public void createCatalog(String catalogName, ConnectorFactory connectorFactory, Map<String, String> properties) {

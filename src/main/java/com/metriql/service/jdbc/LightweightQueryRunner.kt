@@ -2,8 +2,8 @@ package com.metriql.service.jdbc
 
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
-import com.metriql.report.ReportType
 import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IModelService
 import com.metriql.warehouse.metriql.CatalogFile
@@ -11,6 +11,7 @@ import com.metriql.warehouse.metriql.ExternalConnectorFactory
 import com.metriql.warehouse.spi.WarehouseAuth
 import io.trino.LocalTrinoQueryRunner
 import io.trino.MetriqlConnectorFactory
+import io.trino.MetriqlConnectorFactory.Companion.QUERY_TYPE_PROPERTY
 import io.trino.MetriqlMetadata.Companion.getMetriqlType
 import io.trino.execution.warnings.WarningCollector
 import io.trino.server.HttpRequestSessionContext
@@ -25,6 +26,7 @@ const val QUERY_TYPE = "QUERY_TYPE"
 class LightweightQueryRunner(private val modelService: IModelService) {
     val runner: LocalTrinoQueryRunner by lazy {
         var internalRunner = LocalTrinoQueryRunner(FeaturesConfig(), NodeSpillConfig())
+        internalRunner.addSystemProperty(QUERY_TYPE_PROPERTY)
         internalRunner.createCatalog("metriql", MetriqlConnectorFactory(internalRunner.nodeManager, modelService), mapOf())
         // internalRunner.createCatalog("tpch", TpchConnectorFactory(), mapOf("tpch.produce-pages" to "true"))
         internalRunner
@@ -51,7 +53,7 @@ class LightweightQueryRunner(private val modelService: IModelService) {
                 Status.FINISHED -> QueryResult.QueryStats.State.FINISHED
                 Status.FAILED -> QueryResult.QueryStats.State.FINISHED
             }
-            val info = QueryResult.QueryStats.QueryInfo(ReportType.SQL, SqlReportOptions(sql, null, null, null), sql)
+            val info = QueryResult.QueryStats.QueryInfo(SqlReportType, SqlReportOptions(sql, null, null, null), sql)
             return QueryResult.QueryStats(state, info)
         }
 

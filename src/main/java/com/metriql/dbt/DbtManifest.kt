@@ -64,22 +64,37 @@ data class DbtManifest(
                 mappings.put(EVENT_TIMESTAMP, timestamp)
             }
 
-            val extraDimensions = dimensions?.let { dimensions -> sourceModel.dimensions?.filter { d -> dimensions.contains(d.key) }?.toMap() } ?: mapOf()
+            val existingDimensions = sourceModel.dimensions?.map {
+                it.key to if (dimensions?.contains(it.key) == false) {
+                    it.value.copy(hidden = true)
+                } else it.value
+            }?.toMap() ?: mapOf()
 
-            val dimensions = if (time_grains != null) {
+            val modelDimensions = if (time_grains != null) {
                 val eventTimestamp = mappings.get(EVENT_TIMESTAMP)
                 val dimension = sourceModel.dimensions?.get(eventTimestamp)?.copy(timeframes = time_grains)
                     ?: throw MetriqlException("Unable to find timestamp column $timestamp for metric $name", NOT_FOUND)
-                mapOf(eventTimestamp!! to dimension) + extraDimensions
-            } else extraDimensions
+                existingDimensions + mapOf(eventTimestamp!! to dimension)
+            } else existingDimensions
+
+            val relations = dimensions?.let { dimensions ->
+                sourceModel.relations?.map { rel ->
+                    val modelName = rel.value.getModel(package_name, rel.key)
+                    val targetModel = modelsAndSources.find { it.name == modelName }
+                        ?: throw MetriqlException("Unable to find `${rel.key}` metric's relation model `$modelName`", NOT_FOUND)
+                    val availableFields = targetModel.dimensions?.filter { dimensions.contains("${rel.key}.${it.value}") }?.map { it.key }?.toSet()
+                    rel.key to rel.value.copy(fields = availableFields)
+                }?.toMap()
+            } ?: sourceModel.relations
 
             val label = label ?: meta.metriql?.label
             val model = sourceModel.copy(
                 name = datasetName,
+                relations = relations,
                 hidden = meta.metriql?.hidden ?: sourceModel.hidden,
                 description = description ?: meta.metriql?.description,
                 label = label ?: name,
-                dimensions = dimensions,
+                dimensions = modelDimensions,
                 measures = mapOf(name to Recipe.RecipeModel.Metric.RecipeMeasure(label = label, aggregation = type, sql = sql, filters = measureFilters)),
                 _path = original_file_path,
                 package_name = package_name

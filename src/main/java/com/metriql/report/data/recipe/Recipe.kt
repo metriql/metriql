@@ -14,9 +14,11 @@ import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifest
 import com.metriql.dbt.DbtManifest.Companion.extractFields
 import com.metriql.report.ReportType
+import com.metriql.report.ServiceReportOptionJsonDeserializer
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationRecipeQuery
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DimensionName
 import com.metriql.service.model.Model
@@ -25,7 +27,6 @@ import com.metriql.service.model.ModelName
 import com.metriql.service.model.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
-import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.UppercaseEnum
 import com.metriql.util.getOperation
 import com.metriql.util.serializableName
@@ -134,18 +135,18 @@ data class Recipe(
 
         @JsonIgnore
         fun getMaterializes(): List<Model.Materialize> {
-            val aggregates = this.aggregates?.let { mapOf(ReportType.SEGMENTATION to it) } ?: mapOf()
+            val aggregates = this.aggregates?.let { mapOf(SegmentationReportType to it) } ?: mapOf()
             val allMaterializes = ((materializes ?: mapOf()) + aggregates).flatMap { it.value.entries }?.map {
                 Model.Materialize(
                     it.key,
-                    ReportType.SEGMENTATION,
+                    SegmentationReportType,
                     it.value
                 )
             }
 
             allMaterializes.forEach { materialize ->
                 when (materialize.reportType) {
-                    ReportType.SEGMENTATION -> {
+                    SegmentationReportType -> {
                         val eventTimestamp = mappings?.get(EVENT_TIMESTAMP)
                         if (eventTimestamp != null) {
                             val hasEventTimestampDimension = materialize.value.dimensions?.any {
@@ -416,7 +417,7 @@ data class Recipe(
                     }
                 }.toMap()
 
-                val aggregates = model.materializes?.filter { it.reportType == ReportType.SEGMENTATION }?.map { it.name to it.value }?.toMap()
+                val aggregates = model.materializes?.filter { it.reportType == SegmentationReportType }?.associate { it.name to it.value }
                 return RecipeModel(
                     model.name,
                     if (model.hidden === true) true else null,
@@ -710,6 +711,7 @@ data class Recipe(
             val targetColumn: String? = null,
             val hidden: Boolean? = null,
             val to: String? = null,
+            val fields: Set<String>? = null,
             val name: String? = null
         ) {
             fun getModel(packageName: String, relationName: String): ModelName {
@@ -745,7 +747,8 @@ data class Recipe(
                     getModel(packageName, relationName),
                     relType,
                     value,
-                    hidden
+                    hidden,
+                    fields
                 )
             }
         }
@@ -871,7 +874,7 @@ data class Recipe(
         val category: String?,
         val sharedEveryone: Boolean?,
         val type: ReportType,
-        @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class)
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = ServiceReportOptionJsonDeserializer::class)
         val options: ServiceReportOptions
     )
 }

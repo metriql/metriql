@@ -1,0 +1,5 @@
+com.metriql.report.segmentation.SegmentationReportTypeProxy
+com.metriql.report.funnel.FunnelReportTypeProxy
+com.metriql.report.retention.RetentionReportTypeProxy
+com.metriql.report.sql.SqlReportTypeProxy
+com.metriql.report.mql.MqlReportTypeProxy

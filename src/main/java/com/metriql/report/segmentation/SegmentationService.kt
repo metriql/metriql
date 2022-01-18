@@ -2,7 +2,6 @@ package com.metriql.report.segmentation
 
 import com.metriql.db.FieldType
 import com.metriql.report.IAdHocService
-import com.metriql.report.ReportType
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.Companion.extractDateRangeForEventTimestamp
 import com.metriql.report.data.ReportMetric
@@ -149,7 +148,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         val warehouseBridge = dataSource.warehouse.bridge
         val mainModel = context.getModel(reportOptions.modelName)
 
-        val aggregatesForModel = context.getAggregatesForModel(mainModel.target, ReportType.SEGMENTATION)
+        val aggregatesForModel = context.getAggregatesForModel(mainModel.target, SegmentationReportType)
 
         val usedModels = getUsedModels(auth, context, reportOptions)
         val alwaysFilters = usedModels.flatMap { model -> context.getModel(model).alwaysFilters?.map { it.toReportFilter(context, model) } ?: listOf() }

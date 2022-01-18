@@ -3,3 +3,5 @@ requests.http
 target/*
 frontend/.idea
 frontend/dist
+.DS_Store
+.idea/*

@@ -14968,7 +14968,7 @@ Changelog for buremba rakam-bi-backend.
 [248101e47579ec0](https://github.com/buremba/rakam-bi-backend/commit/248101e47579ec0) Burak Emre Kabakcı *2018-08-19 20:28:05*
 
 
-### GitHub #67   
+### GitHub [#67](https://github.com/metriql/metriql/issues/67) Dbt metricw  
 
 **Merge pull request #67 from buremba/feature/listmaterializedview**
 
@@ -14977,7 +14977,7 @@ Changelog for buremba rakam-bi-backend.
 [1cf9aed8a62871b](https://github.com/buremba/rakam-bi-backend/commit/1cf9aed8a62871b) ilker cam *2018-08-27 11:50:35*
 
 
-### GitHub #68   
+### GitHub [#68](https://github.com/metriql/metriql/issues/68) Metriql sso authentication with snowflake    *enhancement*  
 
 **Merge pull request #68 from buremba/feature/userservice**
 

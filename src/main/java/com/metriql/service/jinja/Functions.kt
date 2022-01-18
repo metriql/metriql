@@ -1,12 +1,13 @@
 package com.metriql.service.jinja
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.hubspot.jinjava.el.ext.NamedParameter
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
+import com.metriql.report.RecipeQueryJsonDeserializer
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
-import com.metriql.util.PolymorphicTypeStr
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.RecipeQuery
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -34,7 +35,7 @@ object Functions {
 
     data class ReportPair(
         val type: ReportType,
-        @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class, isNamed = true, name = "recipe")
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = RecipeQueryJsonDeserializer::class)
         val options: RecipeQuery
     )
 }

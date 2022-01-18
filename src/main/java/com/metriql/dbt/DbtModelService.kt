@@ -16,7 +16,6 @@ import com.metriql.service.model.UpdatableModelService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.YamlHelper
-import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
@@ -50,7 +49,7 @@ class DbtModelService @Inject constructor(
 
         val (_, _, modelConfigMapper) = dataSource.dbtSettings()
         val models = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, recipeId) } ?: listOf()
-        val modelService = UpdatableModelService(modelService, { models })
+        val modelService = UpdatableModelService(modelService) { models }
 
         val context = QueryGeneratorContext(
             auth,
@@ -133,7 +132,7 @@ class DbtModelService @Inject constructor(
         val CONFIG_TEMPLATE = this::class.java.getResource("/dbt/model.sql.jinja2").readText()
         const val tagName = "metriql_materialize"
         fun generateModelName(modelName: String, reportType: ReportType, name: String): String {
-            return "${modelName}_${reportType.toSnakeCase}_$name"
+            return "${modelName}_${reportType.slug}_$name"
         }
     }
 }

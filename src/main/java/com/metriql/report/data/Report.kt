@@ -1,7 +1,8 @@
 package com.metriql.report.data
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.metriql.report.ReportType
-import com.metriql.util.PolymorphicTypeStr
+import com.metriql.report.ServiceReportOptionJsonDeserializer
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.time.Instant
 
@@ -15,7 +16,7 @@ data class Report(
     val category: String?,
     val permission: Dashboard.Permission,
     val modelCategory: String?,
-    @PolymorphicTypeStr<ReportType>(externalProperty = "type", valuesEnum = ReportType::class)
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = ServiceReportOptionJsonDeserializer::class)
     val options: ServiceReportOptions
 ) {
     data class ReportUser(val id: Int, val name: String?, val email: String?)

@@ -31,7 +31,7 @@ interface DataSource {
         target: Model.Target,
         aliasName: String,
         columnName: String
-    ): String
+    ): String = "${warehouse.bridge.quoteIdentifier(aliasName)}.${warehouse.bridge.quoteIdentifier(columnName)}"
 
     fun sqlReferenceForTarget(
         target: Model.Target,
@@ -39,7 +39,9 @@ interface DataSource {
         renderable: (SQLRenderable) -> String
     ): String
 
-    fun fillDefaultsToTarget(target: Model.Target): Model.Target
+    fun fillDefaultsToTarget(target: Model.Target): Model.Target {
+        return target
+    }
 
     fun dbtSettings(): DbtSettings {
         throw IllegalStateException("dbt is not supported for this database")

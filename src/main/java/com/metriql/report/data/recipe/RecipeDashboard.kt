@@ -3,6 +3,8 @@ package com.metriql.report.data.recipe
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.metriql.report.RecipeQueryJsonDeserializer
 import com.metriql.report.ReportType
 import com.metriql.report.data.Dashboard
 import com.metriql.report.data.ReportFilter
@@ -10,7 +12,6 @@ import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.Model
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
-import com.metriql.util.PolymorphicTypeStr
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 
@@ -86,12 +87,7 @@ data class RecipeDashboard(
         val width: Int,
         val component: String,
         val type: ReportType,
-        @PolymorphicTypeStr<ReportType>(
-            externalProperty = "type",
-            valuesEnum = ReportType::class,
-            isNamed = true,
-            name = "recipe"
-        )
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = RecipeQueryJsonDeserializer::class)
         @JsonAlias("reportOptions")
         val options: com.metriql.warehouse.spi.services.RecipeQuery,
     )

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.ReportType
+import com.metriql.report.ServiceReportOptionJsonDeserializer
 import com.metriql.report.data.Report.ReportUser
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter.OperatorTypeResolver
@@ -169,7 +170,7 @@ data class Dashboard(
         val w: Int,
         val component: String,
         val reportType: ReportType,
-        @PolymorphicTypeStr<ReportType>(externalProperty = "reportType", valuesEnum = ReportType::class)
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = ServiceReportOptionJsonDeserializer::class)
         val reportOptions: ServiceReportOptions,
         val modelCategory: String?,
     ) {

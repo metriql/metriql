@@ -4,12 +4,16 @@ import com.google.common.base.Splitter
 import com.google.common.net.HttpHeaders.X_FORWARDED_PROTO
 import com.metriql.db.QueryResult
 import com.metriql.deployment.Deployment
+import com.metriql.report.ReportLocator
 import com.metriql.report.ReportService
-import com.metriql.report.ReportType
 import com.metriql.report.mql.MqlReportOptions
+import com.metriql.report.mql.MqlReportType
+import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
+import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.metriql.CatalogFile
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap
@@ -17,6 +21,7 @@ import io.airlift.json.ObjectMapperProvider
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpHeaders.Names.HOST
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.trino.MetriqlConnectorFactory.Companion.QUERY_TYPE_PROPERTY
 import io.trino.MetriqlMetadata.Companion.getTrinoType
 import io.trino.Query.formatType
 import io.trino.Query.toClientTypeSignature
@@ -70,7 +75,6 @@ class StatementService(
 
     companion object {
         val defaultParsingOptions = ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL)
-        val nativeRegex = "[ ]*\\-\\-[ ]*\\@mode\\:([a-zA-Z]+) ".toRegex()
         private val logger = Logger.getLogger(this::class.java.name)
     }
 
@@ -112,13 +116,8 @@ class StatementService(
 
             val auth = auth.copy(userId = sessionContext.identity.user, source = sessionContext.source)
 
-            val mode = nativeRegex.find(sql)?.groupValues?.get(0)
-
-            val reportType = if (mode == "sql") {
-                ReportType.SQL
-            } else {
-                ReportType.MQL
-            }
+            val mode = sessionContext.systemProperties?.get(QUERY_TYPE_PROPERTY.name) ?: QUERY_TYPE_PROPERTY.defaultValue
+            val reportType = ReportLocator.getReportType(mode)
 
             val rawStmt = try {
                 runner.runner.sqlParser.createStatement(sql, defaultParsingOptions)
@@ -132,7 +131,7 @@ class StatementService(
                 runner.runner.sqlParser.createStatement(ps, defaultParsingOptions) to rawStmt.parameters
             } else rawStmt to null
 
-            val task = if (reportType == ReportType.MQL && (statement == null || isMetadataQuery(statement, "metriql"))) {
+            val task = if (reportType == MqlReportType && (statement == null || isMetadataQuery(statement, "metriql"))) {
                 runner.createTask(auth, sessionContext, sql)
             } else {
                 val dataSource = deployment.getDataSource(auth)
@@ -142,11 +141,17 @@ class StatementService(
                     sessionContext.preparedStatements[rawStmt.name.value]!!
                 } else sql
 
+                val options = when (reportType) {
+                    MqlReportType -> MqlReportOptions(finalSql, null, parameters, null)
+                    SqlReportType -> SqlReportOptions(finalSql, null, null, null)
+                    else -> JsonHelper.read(finalSql, reportType.recipeClass.java).toReportOptions(context)
+                }
+
                 reportService.queryTask(
                     auth,
                     reportType,
                     dataSource,
-                    MqlReportOptions(finalSql, null, parameters, null),
+                    options,
                     context = context
                 )
             }

@@ -229,12 +229,6 @@ abstract class JDBCWarehouse(
     override fun sqlReferenceForTarget(
         target: Model.Target,
         aliasName: String,
-        column: String,
-    ): String = "${warehouse.bridge.quoteIdentifier(aliasName)}.${warehouse.bridge.quoteIdentifier(column)}"
-
-    override fun sqlReferenceForTarget(
-        target: Model.Target,
-        aliasName: String,
         renderSQL: (SQLRenderable) -> String,
     ): String {
         return when (target.value) {

@@ -1,7 +1,6 @@
 package com.metriql.report.segmentation
 
 import com.metriql.dbt.DbtModelService
-import com.metriql.report.ReportType
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
@@ -31,7 +30,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
         caches: ((MaterializeTableCache) -> Boolean)? = null,
     ): Pair<SegmentationReportOptions, Model>? {
         val plans = aggregates.mapNotNull {
-            val materializeModelName = DbtModelService.generateModelName(it.first, ReportType.SEGMENTATION, it.second)
+            val materializeModelName = DbtModelService.generateModelName(it.first, SegmentationReportType, it.second)
             val model = getModel(materializeModelName, it.third, query)
 
             when (val planOrErrorMessage = generateQueryIfPossible(query, model, it.third, materializeModelName)) {

@@ -3,6 +3,7 @@ package com.metriql.db
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.report.ReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.util.MetriqlException
 import com.metriql.util.UppercaseEnum
@@ -101,7 +102,7 @@ data class QueryResult @JsonCreator constructor(
         data class QueryInfo(val reportType: ReportType, val query: ServiceReportOptions, val compiledQuery: String) {
             companion object {
                 fun rawSql(query: String): QueryInfo {
-                    return QueryInfo(ReportType.SQL, SqlReportOptions(query, null, null, null), query)
+                    return QueryInfo(SegmentationReportType, SqlReportOptions(query, null, null, null), query)
                 }
             }
         }

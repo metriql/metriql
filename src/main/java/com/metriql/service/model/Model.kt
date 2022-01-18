@@ -264,7 +264,8 @@ data class Model(
         val type: Type,
         @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
         val value: RelationValue,
-        val hidden: Boolean? = null
+        val hidden: Boolean? = null,
+        val fields: Set<String>? = null,
     ) {
         @UppercaseEnum
         enum class Type(private val clazz: KClass<out RelationValue>) : StrValueEnum {

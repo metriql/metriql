@@ -125,10 +125,17 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
 
         private fun addColumnsForModel(columns: MutableList<ColumnMetadata>, model: Model, relation: Model.Relation?) {
             model.dimensions.forEach { dimension ->
-                if (dimension.postOperations != null && !distinct) {
-                    dimension.postOperations.forEach { timeframe -> columns.add(toColumnMetadata(dimension, relation?.name, timeframe)) }
-                } else columns.add(toColumnMetadata(dimension, relation?.name))
+                if (relation?.fields?.contains(dimension.name) != false) {
+                    if (dimension.postOperations != null && !distinct) {
+                        dimension.postOperations.forEach { timeframe ->
+                            if (relation?.fields?.contains(dimension.name) != false) {
+                                columns.add(toColumnMetadata(dimension, relation?.name, timeframe))
+                            }
+                        }
+                    } else columns.add(toColumnMetadata(dimension, relation?.name))
+                }
             }
+
             model.measures.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
         }
 
