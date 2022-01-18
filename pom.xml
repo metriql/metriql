@@ -219,7 +219,7 @@
 
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <artifactId>kotlin-stdlib-jdk7</artifactId>
             <version>${dep.kotlin.version}</version>
             <exclusions>
                 <exclusion>
