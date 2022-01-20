@@ -6,6 +6,7 @@ import com.metriql.db.QueryResult
 import com.metriql.deployment.Deployment
 import com.metriql.report.ReportLocator
 import com.metriql.report.ReportService
+import com.metriql.report.ReportType
 import com.metriql.report.mql.MqlReportOptions
 import com.metriql.report.mql.MqlReportType
 import com.metriql.report.sql.SqlReportOptions
@@ -78,14 +79,16 @@ class StatementService(
         private val logger = Logger.getLogger(this::class.java.name)
     }
 
-    private fun isMetadataQuery(statement: Statement, defaultCatalog: String): Boolean {
+    private fun isMetadataQuery(reportType : ReportType, statement: Statement?, defaultCatalog: String): Boolean {
         val isMetadata = AtomicReference<Boolean?>()
 
-        return if (statement !is Query) {
+        return if (statement != null && statement !is Query) {
             true
         } else {
-            IsMetriqlQueryVisitor(defaultCatalog).process(statement, isMetadata)
-            isMetadata.get()?.let { !it } ?: false
+            if(reportType == MqlReportType && statement != null) {
+                IsMetriqlQueryVisitor(defaultCatalog).process(statement, isMetadata)
+                isMetadata.get()?.let { !it } ?: false
+            } else false
         }
     }
 
@@ -131,7 +134,7 @@ class StatementService(
                 runner.runner.sqlParser.createStatement(ps, defaultParsingOptions) to rawStmt.parameters
             } else rawStmt to null
 
-            val task = if (reportType == MqlReportType && (statement == null || isMetadataQuery(statement, "metriql"))) {
+            val task = if (isMetadataQuery(reportType, statement, "metriql")) {
                 runner.createTask(auth, sessionContext, sql)
             } else {
                 val dataSource = deployment.getDataSource(auth)
