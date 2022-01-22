@@ -17,7 +17,7 @@ This is the core repository of the [metriql](http://metriql.com) project. It inc
 * [BI tools](https://metriql.com/integrations/bi-tools/index)
 * [Embedded Applications](https://metriql.com/integrations/embedded)
 
-## Running Trino in your IDE
+## Running Metriql in your IDE
 
 Run the following commands to pull Metriql and build it locally:
 
