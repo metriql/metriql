@@ -21,7 +21,7 @@
       height="450">
       <el-table-column label="Status" width="100">
         <template #default="scope">
-          <el-tag size="small" :type="states[scope.row.status].type">{{ scope.row.status }}</el-tag>
+          <el-tag size="small" :type="states[scope.row.status.toLowerCase()].type">{{ scope.row.status }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="Started at" width="230">
