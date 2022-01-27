@@ -17,14 +17,35 @@ This is the core repository of the [metriql](http://metriql.com) project. It inc
 * [BI tools](https://metriql.com/integrations/bi-tools/index)
 * [Embedded Applications](https://metriql.com/integrations/embedded)
 
-## Recent Posts
+## Running Metriql in your IDE
+
+Run the following commands to pull Metriql and build it locally:
+
+```
+git clone https://github.com/metriql/metriql.git
+cd metriql
+./mvnw clean install -DskipTests
+cd ./frontend && npm run build
+```
+
+We suggest using Intellij, here are the configuration that you need to run Metriql locally. Here is the required configuration:
+
+```
+Main class: com.metriql.ServiceStarterKt
+Program arguments: serve --jdbc --manifest-json "https://metriql.github.io/metriql-public-demo/manifest.json"
+```
+
+Once you're with the setup, please make sure that:
+
+* [dbt profile setup](https://docs.getdbt.com/dbt-cli/configure-your-profile) is done for Metriql to connect your database.
+* [Additional dependencies](https://github.com/metriql/metriql/blob/master/Dockerfile#L27) are installed locally for Metriql to integrate with downstream tools.
+
+
+## Goodreads
 
 * [Metriql launch post](https://metriql.com/blog/introducing-metriql-open-source-metrics-store)
-* [Common metric types](https://metriql.com/blog/common-metric-types)
 * [OLAP in the modern data stack](https://metriql.com/blog/2021/09/07/olap-in-modern-data-stack)
 * [How we built Metriql Public Demo](https://metriql.com/blog/2021/09/29/how-we-built-our-public-demo)
-* [Best practices to optimize the query costs in BigQuery](https://metriql.com/blog/2021/09/30/best-practices-to-optimize-the-query-costs-in-bigquery/)
-
 
 ## Contributors ✨
 
