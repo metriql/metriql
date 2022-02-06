@@ -74,10 +74,8 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 bigQuery.setCredentials(fromStream)
             }
             else -> {
-                val localKeyFile = System.getenv("GCLOUD_CONFIG_DIR")?.let { File(it, "application_default_credentials.json") } ?: File(
-                    System.getProperty("user.home"),
-                    ".config/gcloud/application_default_credentials.json"
-                )
+                val localKeyFile = System.getenv("GOOGLE_APPLICATION_CREDENTIALS")?.let { File(it) }
+                    ?: throw MetriqlException("Unable to find GCloud credentials, GOOGLE_APPLICATION_CREDENTIALS environment variable must be set", BAD_REQUEST)
 
                 if (config.project == null) {
                     val exec = Runtime.getRuntime().exec("gcloud config get-value project")
@@ -102,7 +100,8 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 if (!localKeyFile.exists()) {
                     throw MetriqlException("$localKeyFile not found connecting the BigQuery.", BAD_REQUEST)
                 }
-                val fromStream = UserCredentials.fromStream(FileInputStream(localKeyFile))
+
+                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(localKeyFile))
                 bigQuery.setCredentials(fromStream)
             }
         }
