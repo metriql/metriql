@@ -129,6 +129,8 @@ class BigQueryQueryTask(
     }
 
     companion object {
+        private val BIGNUMERIC_TYPE = LegacySQLTypeName.valueOf("BIGNUMERIC")
+
         fun getQueryResultFromTableResult(tableSchema: Schema, tableResult: TableResult): QueryResult {
             var index = 0
             val meta = tableSchema
@@ -222,7 +224,7 @@ class BigQueryQueryTask(
                         when (field.type) {
                             LegacySQLTypeName.INTEGER -> listOf(row.longValue.toInt())
                             LegacySQLTypeName.NUMERIC, LegacySQLTypeName.INTEGER -> listOf(row.numericValue)
-                            LegacySQLTypeName.FLOAT -> listOf(row.doubleValue)
+                            LegacySQLTypeName.FLOAT, BIGNUMERIC_TYPE -> listOf(row.doubleValue)
                             LegacySQLTypeName.BOOLEAN -> listOf(row.booleanValue)
                             LegacySQLTypeName.TIME -> listOf(LocalTime.parse(row.stringValue))
                             LegacySQLTypeName.DATE -> listOf(LocalDate.parse(row.stringValue))
