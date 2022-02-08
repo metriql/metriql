@@ -170,7 +170,7 @@ data class Dashboard(
         val w: Int,
         val component: String,
         val reportType: ReportType,
-        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = ServiceReportOptionJsonDeserializer::class)
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
         val reportOptions: ServiceReportOptions,
         val modelCategory: String?,
     ) {

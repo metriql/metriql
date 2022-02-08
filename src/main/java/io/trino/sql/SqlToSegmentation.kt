@@ -42,6 +42,7 @@ import io.trino.sql.tree.Expression
 import io.trino.sql.tree.FunctionCall
 import io.trino.sql.tree.GenericLiteral
 import io.trino.sql.tree.Identifier
+import io.trino.sql.tree.InListExpression
 import io.trino.sql.tree.InPredicate
 import io.trino.sql.tree.IsNotNullPredicate
 import io.trino.sql.tree.IsNullPredicate
@@ -67,14 +68,15 @@ import io.trino.sql.tree.TimestampLiteral
 import java.util.Optional
 
 typealias Reference = Pair<MetricType, String>
-typealias ExpressionAliasProjection = Triple<String, String?, Boolean>
+
+data class ExpressionAliasProjection(val expression : Expression, val projection : String, val alias : String?, val identifier : Boolean)
 
 class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
     private fun getProjectionOfColumn(rewriter: MetriqlSegmentationQueryRewriter, expression: Expression, modelName: String, alias: Optional<Identifier>): ExpressionAliasProjection {
         val alias = alias.orElse(null)?.let { identifier -> identifier.value }
             ?: deferenceExpression(expression, modelName)?.let { exp -> getIdentifierValue(exp) }
         val projection = rewriter.process(expression, null)
-        return Triple(projection, alias, expression is Identifier)
+        return ExpressionAliasProjection(expression, projection, alias, expression is Identifier)
     }
 
     fun convert(
@@ -129,7 +131,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val whereFilters = where.orElse(null)?.let { processWhereExpression(context, parameterMap, references, model, it) } ?: listOf()
         val havingFilters = having.orElse(null)?.let { processWhereExpression(context, parameterMap, references, model, it) } ?: listOf()
 
-        val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, orderBy)
+        val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, projectionColumns, orderBy)
         val query = SegmentationRecipeQuery(
             model.name,
             measures.toSet().map { Recipe.MetricReference.fromName(it) },
@@ -145,12 +147,12 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             "\nORDER BY ${projectionOrders.joinToString(" ")}"
         } else ""
 
-        return if (projectionColumns.any { (it.first != it.second && it.second != null) || !it.third }) {
+        return if (projectionColumns.any { (it.projection != it.alias && it.alias != null) || !it.identifier }) {
             val quotedAlias = context.warehouseBridge.quoteIdentifier(alias[alias.size - 1])
             """SELECT ${
             projectionColumns.joinToString(", ") { col ->
-                val alias = col.second?.let { context.warehouseBridge.quoteIdentifier(it) }
-                if (col.first != col.second) "${col.first}${alias?.let { " AS $it" } ?: ""}" else col.first
+                val alias = col.alias?.let { context.warehouseBridge.quoteIdentifier(it) }
+                if (col.projection != col.alias) "${col.projection}${alias?.let { " AS $it" } ?: ""}" else col.projection
             }
             } FROM (
                 |$renderedQuery
@@ -276,18 +278,14 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getReference(selectItems: List<SelectItem>, exp: Expression): Expression {
+    private fun getReference(selectItems: List<SelectItem>, resolvedSelectItems: List<ExpressionAliasProjection>, exp: Expression, ): Expression {
         return when (exp) {
             is LongLiteral -> {
                 val index = exp.value.toInt() - 1
-                if (selectItems.size <= index) {
-                    throw MetriqlException("Unable to parse GROUP BY ${exp.value}", BAD_REQUEST)
+                if (resolvedSelectItems.size <= index) {
+                    throw MetriqlException("Unable to parse long literal ${exp.value}", BAD_REQUEST)
                 }
-                when (val selectItem = selectItems[index]) {
-                    is SingleColumn -> selectItem.expression
-                    is AllColumns -> throw TODO()
-                    else -> throw IllegalStateException()
-                }
+                resolvedSelectItems[index].expression
             }
             is Identifier -> {
                 val singleSelectItem = selectItems.find {
@@ -303,7 +301,13 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun parseOrders(rewriter: MetriqlSegmentationQueryRewriter, references: Map<Node, Reference>, selectItems: List<SelectItem>, orderBy: Optional<OrderBy>): Pair<List<String?>, Map<Recipe.MetricReference, Recipe.OrderType>?> {
+    private fun parseOrders(
+        rewriter: MetriqlSegmentationQueryRewriter,
+        references: Map<Node, Reference>,
+        selectItems: MutableList<SelectItem>,
+        projectionColumns: List<ExpressionAliasProjection>,
+        orderBy: Optional<OrderBy>
+    ): Pair<List<String?>, Map<Recipe.MetricReference, Recipe.OrderType>?> {
         if (!orderBy.isPresent) {
             return listOf<String>() to null
         }
@@ -316,7 +320,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             if (it.nullOrdering != SortItem.NullOrdering.UNDEFINED) {
                 throw MetriqlException("NULL ORDERING is not supported yet", BAD_REQUEST)
             }
-            val reference = getReference(selectItems, it.sortKey)
+            val reference = getReference(selectItems, projectionColumns, it.sortKey)
             reference to orderType
         }
 
@@ -377,21 +381,22 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
         return when (exp) {
             is IsNullPredicate -> {
-                val metricReference = references[exp.value] ?: TODO()
+                val metricReference = references[exp.value] ?: throw MetriqlException("Unable to resolve ${exp.value}", BAD_REQUEST)
                 getReportFilter(context, model, metricReference, { AnyOperatorType.IS_NOT_SET }, null)
             }
             is IsNotNullPredicate -> {
-                val metricReference = references[exp.value] ?: TODO()
+                val metricReference = references[exp.value] ?: throw MetriqlException("Unable to resolve ${exp.value}", BAD_REQUEST)
                 getReportFilter(context, model, metricReference, { AnyOperatorType.IS_SET }, null)
             }
             is InPredicate -> {
-                val metricReference = references[exp.value] ?: TODO()
+                val metricReference = references[exp.value] ?: throw MetriqlException("Unable to resolve ${exp.value}", BAD_REQUEST)
+                val value = exp.valueList as? InListExpression ?: throw MetriqlException("Unable to resolve ${exp}, value must be a list", BAD_REQUEST)
                 getReportFilter(
                     context, model, metricReference,
                     {
                         TODO()
                     },
-                    null
+                    value
                 )
             }
             is BetweenPredicate -> {

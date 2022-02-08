@@ -35,7 +35,7 @@ object Functions {
 
     data class ReportPair(
         val type: ReportType,
-        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = RecipeQueryJsonDeserializer::class)
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
         val options: RecipeQuery
     )
 }

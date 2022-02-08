@@ -110,7 +110,7 @@ data class Recipe(
     }
 
     data class RecipeModel(
-        val name: String?,
+        val name: String? = null,
         val hidden: Boolean? = null,
         val target: Model.Target.TargetValue.Table? = null,
         val sql: SQLRenderable? = null,
@@ -874,7 +874,7 @@ data class Recipe(
         val category: String?,
         val sharedEveryone: Boolean?,
         val type: ReportType,
-        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = ServiceReportOptionJsonDeserializer::class)
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
         val options: ServiceReportOptions
     )
 }

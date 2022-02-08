@@ -11,6 +11,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.google.common.net.HostAndPort
 import com.metriql.dbt.DbtModelService
 import com.metriql.dbt.FileHandler
+import com.metriql.deployment.Deployment
 import com.metriql.deployment.MultiTenantDeployment
 import com.metriql.deployment.SingleTenantDeployment
 import com.metriql.deployment.SingleTenantDeployment.Companion.getProfileConfigForSingleTenant
@@ -177,7 +178,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         }
     }
 
-    class Serve : Commands(help = "Spins up an HTTP server serving your datasets") {
+    class Serve(val deployment : Deployment? = null) : Commands(help = "Spins up an HTTP server serving your datasets") {
         private val origin by option("--origin", help = "The origin HTTP server for CORS", envvar = "METRIQL_ORIGIN")
         private val enableTrinoInterface by option("--trino", "--jdbc", help = "Enable Trino API", envvar = "METRIQL_ENABLE_JDBC").flag(default = true)
         private val threads by option("--threads", help = "Specify number of threads to use serving requests. The default is [number of processors * 2]", envvar = "THREADS").int()
@@ -226,7 +227,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val timezone = timezone?.let { ZoneId.of(it) }
 
             val arg = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
-            val deployment = if (multiTenantUrl != null) {
+            val deployment = deployment ?: if (multiTenantUrl != null) {
                 MultiTenantDeployment(multiTenantUrl!!, Duration.valueOf(multiTenantCacheDuration))
             } else {
                 SingleTenantDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile)
@@ -254,7 +255,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
     }
 
     companion object {
-        internal val logger = Logger.getLogger(this::class.java.name)
+        val logger: Logger = Logger.getLogger(this::class.java.name)
 
         fun parseUserNamePass(usernamePass: String): Pair<String, String> {
             val arr = usernamePass.split(":".toRegex(), 2)

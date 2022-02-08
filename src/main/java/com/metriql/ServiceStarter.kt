@@ -5,6 +5,12 @@ import java.sql.DriverManager
 import java.sql.SQLException
 
 fun main(args: Array<String>) { // Intercepting redshift and postgresql drivers
+    fixRedshift()
+    Commands()
+        .subcommands(Commands.Generate(), Commands.Serve()).main(args)
+}
+
+fun fixRedshift() {
     // https://stackoverflow.com/questions/31951518/redshift-and-postgres-jdbc-driver-both-intercept-jdbc-postgresql-connection-st
     val drivers = DriverManager.getDrivers()
     while (drivers.hasMoreElements()) {
@@ -20,7 +26,4 @@ fun main(args: Array<String>) { // Intercepting redshift and postgresql drivers
             break
         }
     }
-
-    Commands()
-        .subcommands(Commands.Generate(), Commands.Serve()).main(args)
 }

@@ -87,7 +87,7 @@ data class RecipeDashboard(
         val width: Int,
         val component: String,
         val type: ReportType,
-        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = RecipeQueryJsonDeserializer::class)
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
         @JsonAlias("reportOptions")
         val options: com.metriql.warehouse.spi.services.RecipeQuery,
     )

@@ -49,8 +49,7 @@ class SingleTenantDeployment(
         getPreparedModels(dataSource, singleAuth, parseRecipe(dataSource, manifestJson, modelsFilter))
     }
     private val usernamePassPair = usernamePass?.let { Commands.parseUserNamePass(it) }
-
-    override fun isAnonymous() = usernamePassPair == null
+    override val authType = if(usernamePassPair == null) Deployment.AuthType.NONE else Deployment.AuthType.USERNAME_PASS
 
     override fun getAuth(it: UserContext): ProjectAuth {
         if (usernamePassPair == null) {

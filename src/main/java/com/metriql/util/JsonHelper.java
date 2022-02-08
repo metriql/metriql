@@ -25,7 +25,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Throwables;
+import com.metriql.report.ReportLocator;
+import com.metriql.report.ReportType;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import kotlin.jvm.JvmClassMappingKt;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -233,6 +236,12 @@ public class JsonHelper {
                 context.insertAnnotationIntrospector(new CamelCaseEnumAnnotationIntrospector(encodeEnumAsSnakeCase));
             }
         });
+        SimpleModule reportTypeModule = new SimpleModule();
+        for (ReportType reportType : ReportLocator.INSTANCE.getList()) {
+            reportTypeModule.registerSubtypes(new NamedType(JvmClassMappingKt.getJavaClass(reportType.getConfigClass()), reportType.getSlug()));
+            reportTypeModule.registerSubtypes(new NamedType(JvmClassMappingKt.getJavaClass(reportType.getRecipeClass()), reportType.getSlug()));
+        }
+        mapper.registerModule(reportTypeModule);
 
         mapper.setPropertyNamingStrategy(new PropertyNamingStrategy() {
             @Override

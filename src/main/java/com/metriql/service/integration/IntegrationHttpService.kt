@@ -136,10 +136,10 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
                     } catch (e: Exception) {
                     }
 
-                    returnError(request, "Unable to run command: timeout after 20 seconds", INTERNAL_SERVER_ERROR)
+                    returnError(request, "Unable to run command: timeout after 20 seconds", BAD_REQUEST)
                 }
             } catch (e: Exception) {
-                returnError(request, "Unknown error executing command: $e", INTERNAL_SERVER_ERROR)
+                returnError(request, "Unknown error executing command: $e", BAD_REQUEST)
             }
         }
     }

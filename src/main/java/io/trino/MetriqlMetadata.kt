@@ -124,6 +124,8 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
         }
 
         private fun addColumnsForModel(columns: MutableList<ColumnMetadata>, model: Model, relation: Model.Relation?) {
+            model.measures.filter { relation?.fields?.contains(it.name) != false }.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
+
             model.dimensions.forEach { dimension ->
                 if (relation?.fields?.contains(dimension.name) != false) {
                     if (dimension.postOperations != null && !distinct) {
@@ -135,8 +137,6 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
                     } else columns.add(toColumnMetadata(dimension, relation?.name))
                 }
             }
-
-            model.measures.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
         }
 
         override fun getTableMetadata(): ConnectorTableMetadata {

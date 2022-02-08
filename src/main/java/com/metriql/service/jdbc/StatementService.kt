@@ -79,13 +79,13 @@ class StatementService(
         private val logger = Logger.getLogger(this::class.java.name)
     }
 
-    private fun isMetadataQuery(reportType : ReportType, statement: Statement?, defaultCatalog: String): Boolean {
+    private fun isMetadataQuery(reportType: ReportType, statement: Statement?, defaultCatalog: String): Boolean {
         val isMetadata = AtomicReference<Boolean?>()
 
         return if (statement != null && statement !is Query) {
             true
         } else {
-            if(reportType == MqlReportType && statement != null) {
+            if (reportType == MqlReportType && statement != null) {
                 IsMetriqlQueryVisitor(defaultCatalog).process(statement, isMetadata)
                 isMetadata.get()?.let { !it } ?: false
             } else false

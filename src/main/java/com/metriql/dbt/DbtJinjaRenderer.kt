@@ -38,7 +38,7 @@ class DbtJinjaRenderer {
     }
 
     fun renderModelNameRegex(dataset: ModelName): ModelName {
-        return if (dataset.startsWith("ref(") || dataset.startsWith("source(")) {
+        return if (dataset.startsWith("ref(") || dataset.startsWith("source(") || dataset.startsWith("metric(")) {
             jinjava.render(
                 "{{$dataset}}",
                 mapOf(IS_MATCH to true)
@@ -172,6 +172,23 @@ class DbtJinjaRenderer {
                 }
                 else -> {
                     DbtManifest.getModelName("model", model, packageName!!)
+                }
+            }
+        }
+
+        @JvmStatic
+        fun metric(vararg args: String?): String {
+            val context = JinjavaInterpreter.getCurrent().context
+            val packageName = if (args.size > 1) args[0]!! else context["_package_name"] as String?
+
+            val model = if (args.size == 1) args[0]!! else args[1]!!
+
+            return when {
+                context[IS_MATCH] == true -> {
+                    DbtManifest.getModelNameRegex("metric", model, packageName)
+                }
+                else -> {
+                    DbtManifest.getModelName("metric", model, packageName!!)
                 }
             }
         }

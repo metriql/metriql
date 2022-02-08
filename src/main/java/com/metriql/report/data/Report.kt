@@ -16,7 +16,7 @@ data class Report(
     val category: String?,
     val permission: Dashboard.Permission,
     val modelCategory: String?,
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", defaultImpl = ServiceReportOptionJsonDeserializer::class)
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
     val options: ServiceReportOptions
 ) {
     data class ReportUser(val id: Int, val name: String?, val email: String?)

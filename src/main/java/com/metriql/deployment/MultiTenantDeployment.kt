@@ -28,8 +28,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
 
     private val internalModelService = MultiTenantModelService()
     override fun getModelService() = internalModelService
-
-    override fun isAnonymous() = false
+    override val authType = Deployment.AuthType.USERNAME_PASS
 
     override fun getAuth(context: UserContext): ProjectAuth {
         val user = context.user ?: throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)

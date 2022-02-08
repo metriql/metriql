@@ -3,9 +3,16 @@ package com.metriql.dbt
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AcceptedValues
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AnyValue
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.data.recipe.Recipe.RecipeModel
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Companion.fromDimension
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeMeasure.Filter
 import com.metriql.service.jinja.SQLRenderable
@@ -22,9 +29,10 @@ import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.DataSource
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
+import java.io.IOException
 import kotlin.reflect.KClass
 
-typealias MetricFields = Pair<Map<String, Recipe.RecipeModel.Metric.RecipeMeasure>, Map<String, Recipe.RecipeModel.Metric.RecipeDimension>>
+typealias MetricFields = Pair<Map<String, RecipeModel.Metric.RecipeMeasure>, Map<String, RecipeModel.Metric.RecipeDimension>>
 
 data class DbtManifest(
     val nodes: Map<String, Node>,
@@ -51,7 +59,7 @@ data class DbtManifest(
         val tags: List<String>?,
         val original_file_path: String,
     ) {
-        fun toModel(manifest: DbtManifest?, modelsAndSources: List<Recipe.RecipeModel>): Recipe.RecipeModel? {
+        fun toModel(manifest: DbtManifest?, modelsAndSources: List<RecipeModel>): RecipeModel? {
             val datasetName = "metric_${package_name}_$name"
             val sourceModelName = DbtJinjaRenderer.renderer.renderReference("{{$model}}", package_name)
             val sourceModel = modelsAndSources.find { it.name == sourceModelName }
@@ -95,7 +103,7 @@ data class DbtManifest(
                 description = description ?: meta.metriql?.description,
                 label = label ?: name,
                 dimensions = modelDimensions,
-                measures = mapOf(name to Recipe.RecipeModel.Metric.RecipeMeasure(label = label, aggregation = type, sql = sql, filters = measureFilters)),
+                measures = mapOf(name to RecipeModel.Metric.RecipeMeasure(label = label, aggregation = type, sql = sql, filters = measureFilters)),
                 _path = original_file_path,
                 package_name = package_name
             )
@@ -104,7 +112,7 @@ data class DbtManifest(
         }
 
         data class Filter(val field: String, val operator: String, val value: Any?) {
-            fun convertPostOperation(model: Recipe.RecipeModel, metricName: String): Enum<*> {
+            fun convertPostOperation(model: RecipeModel, metricName: String): Enum<*> {
                 val dim = model.dimensions?.get(field) ?: throw MetriqlException("Unable to find filter $field in $metricName", NOT_FOUND)
                 val typeClass = dim.type?.operatorClass?.java ?: throw MetriqlException("type is required for dimension $field in metric $metricName", NOT_FOUND)
                 return JsonHelper.convert(operator, typeClass)
@@ -133,8 +141,16 @@ data class DbtManifest(
         val column_name: String?,
         val test_metadata: TestMetadata?,
     ) {
-        data class Meta(@JsonAlias("rakam") val metriql: Recipe.RecipeModel?)
+        data class Meta(@JsonAlias("rakam") @JsonSetter(nulls = Nulls.AS_EMPTY) val metriql: RecipeModel?)
         data class Docs(val show: Boolean?)
+
+        class DefaultEmpty(delegate: JsonDeserializer<RecipeModel?>) : JsonDeserializer<RecipeModel?>() {
+           override fun deserialize(jsonParser: JsonParser, deserializationContext: DeserializationContext): RecipeModel {
+                return null!!
+            }
+
+            override fun getNullValue(ctxt: DeserializationContext) =  RecipeModel(null)
+        }
 
         fun meta(): Meta {
             return config.meta ?: meta
@@ -165,7 +181,7 @@ data class DbtManifest(
                 override fun getValueClass() = configClass.java
             }
 
-            fun applyTestToModel(model: Recipe.RecipeModel): Recipe.RecipeModel {
+            fun applyTestToModel(model: RecipeModel): RecipeModel {
                 return when (kwargs) {
                     is AcceptedValues -> model
                     is AnyValue -> {
@@ -190,7 +206,7 @@ data class DbtManifest(
             const val SEED_RESOURCE_TYPE = "seed"
         }
 
-        fun toModel(datasource: DataSource, dbtManifest: DbtManifest): Recipe.RecipeModel? {
+        fun toModel(datasource: DataSource, dbtManifest: DbtManifest): RecipeModel? {
             val metriql = meta().metriql
             if (
                 metriql == null ||
@@ -205,7 +221,7 @@ data class DbtManifest(
             val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
                 val table = datasource.getTable(target.database, target.schema, target.table)
                 val recipeDimensions = createDimensionsFromColumns(table.columns).map { it.name to fromDimension(it) }.toMap()
-                mapOf<String, Recipe.RecipeModel.Metric.RecipeMeasure>() to recipeDimensions
+                mapOf<String, RecipeModel.Metric.RecipeMeasure>() to recipeDimensions
             } else {
                 extractFields(modelName, columns)
             }
@@ -249,7 +265,7 @@ data class DbtManifest(
         val columns: Map<String, DbtColumn>,
         val meta: Node.Meta,
     ) {
-        fun toModel(dbtManifest: DbtManifest): Recipe.RecipeModel? {
+        fun toModel(dbtManifest: DbtManifest): RecipeModel? {
             if (resource_type != "source" || meta.metriql == null) return null
 
             val modelName = TextUtil.toSlug("source_${package_name}_${source_name}_$name", true)
@@ -276,13 +292,13 @@ data class DbtManifest(
 
     data class DbtColumn(val name: String, val description: String?, val data_type: String?, val tags: List<String>, val quote: Boolean?, val meta: DbtColumnMeta) {
         data class DbtColumnMeta(
-            @JsonProperty("metriql.dimension") @JsonAlias("rakam.dimension") val dimension: Recipe.RecipeModel.Metric.RecipeDimension?,
-            @JsonProperty("metriql.measure") @JsonAlias("rakam.measure") val measure: Recipe.RecipeModel.Metric.RecipeMeasure?
+            @JsonProperty("metriql.dimension") @JsonAlias("rakam.dimension") val dimension: RecipeModel.Metric.RecipeDimension?,
+            @JsonProperty("metriql.measure") @JsonAlias("rakam.measure") val measure: RecipeModel.Metric.RecipeMeasure?
         )
     }
 
     companion object {
-        fun getModelIfApplicable(model: Recipe.RecipeModel): Recipe.RecipeModel? {
+        fun getModelIfApplicable(model: RecipeModel): RecipeModel? {
             if (model.measures?.isEmpty() == true && model.dimensions?.isEmpty() == true) {
                 return null
             }
@@ -315,7 +331,7 @@ data class DbtManifest(
 
             val columnDimensions = columns.map {
                 val dimensionName = it.value.meta?.dimension?.name ?: TextUtil.toSlug(it.key, true)
-                val dim = (it.value.meta.dimension ?: Recipe.RecipeModel.Metric.RecipeDimension()).copy(column = it.key, description = it.value.description)
+                val dim = (it.value.meta.dimension ?: RecipeModel.Metric.RecipeDimension()).copy(column = it.key, description = it.value.description)
                 dimensionName to dim
             }.toMap()
 
