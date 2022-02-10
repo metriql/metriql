@@ -138,7 +138,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
         val dimensions = query.dimensions?.map { dimension ->
             val dimReference = dimension.toReference()
             (materializeQuery.dimensions ?: listOf()).mapNotNull { materializeDimRef ->
-                val type = materializeDimRef.getType(context::getModel, sourceModel.name)
+                val type = materializeDimRef.getType(context, sourceModel.name)
                 val materializeDimension = materializeDimRef.toDimension(materializeName, type)
 
                 if (materializeDimRef.name != dimReference.name) {
@@ -196,12 +196,12 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
         val reportOptions = materializeQuery.toQuery(modelName) as SegmentationRecipeQuery
 
         val dimensions = materializeQuery.dimensions?.map {
-            val type = it.getType(context::getModel, sourceModel.name)
+            val type = it.getType(context, sourceModel.name)
             val dimension = it.toDimension(sourceModel.name, type)
             Model.Dimension(
-                it.name.name,
+                it.name,
                 Model.Dimension.Type.COLUMN,
-                Model.Dimension.DimensionValue.Column(context.getDimensionAlias(it.name.name, it.name.relation, dimension.postOperation)),
+                Model.Dimension.DimensionValue.Column(context.getDimensionAlias(it.name, it.relation, dimension.postOperation)),
                 fieldType = if (dimension.postOperation != null) {
                     (dimension.postOperation.value as IPostOperation).valueType
                 } else {

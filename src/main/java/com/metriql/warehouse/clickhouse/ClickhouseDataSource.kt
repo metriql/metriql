@@ -1,5 +1,8 @@
 package com.metriql.warehouse.clickhouse
 
+import com.clickhouse.client.ClickHouseColumn
+import com.clickhouse.client.ClickHouseDataType
+import com.clickhouse.jdbc.JdbcTypeMapping
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
@@ -8,7 +11,6 @@ import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.WarehouseAuth
-import ru.yandex.clickhouse.domain.ClickHouseDataType
 import java.sql.Statement
 import java.sql.Types
 import java.util.Properties
@@ -27,7 +29,7 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
         val properties = Properties()
         val port = if (config.port === 9000) 8123 else config.port
         properties["jdbcUrl"] = "jdbc:clickhouse://${config.host}:$port/${config.database}"
-        properties["driverClassName"] = "ru.yandex.clickhouse.ClickHouseDriver"
+        properties["driverClassName"] = "com.clickhouse.jdbc.ClickHouseDriver"
 
         properties["dataSource.user"] = config.user
         properties["dataSource.password"] = config.password
@@ -70,8 +72,9 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
     override fun getFieldType(sqlType: Int, dbType: String): FieldType? {
         return when (sqlType) {
             Types.ARRAY -> {
-                val arrayType = ClickHouseDataType.resolveDefaultArrayDataType(dbType)
-                when (fromGenericJDBCTypeFieldType(arrayType.jdbcType.vendorTypeNumber)) {
+                val arrayType = ClickHouseDataType.of(dbType)
+                // TODO: get primitive type
+                when (fromGenericJDBCTypeFieldType(JdbcTypeMapping.toJdbcType(arrayType.objectClass))) {
                     FieldType.STRING -> FieldType.ARRAY_STRING
                     FieldType.INTEGER -> FieldType.ARRAY_INTEGER
                     FieldType.DOUBLE -> FieldType.ARRAY_DOUBLE

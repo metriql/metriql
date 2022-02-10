@@ -28,8 +28,8 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
 
         val requiredDimensions = listOf(
             // TODO: connector
-            Recipe.DimensionReference.fromName(":userId"),
-            Recipe.DimensionReference.fromName(":eventTimestamp")
+            Recipe.FieldReference.fromName(":userId"),
+            Recipe.FieldReference.fromName(":eventTimestamp")
         )
 
         val followingEvents = reportOptions.events.joinToString(" UNION ALL ") { event ->

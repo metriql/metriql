@@ -105,9 +105,9 @@
             <version>8.0.26</version>
         </dependency>
         <dependency>
-            <groupId>ru.yandex.clickhouse</groupId>
+            <groupId>com.clickhouse</groupId>
             <artifactId>clickhouse-jdbc</artifactId>
-            <version>0.3.1-patch</version>
+            <version>0.3.2</version>
         </dependency>
         <dependency>
             <groupId>javax.activation</groupId>
@@ -152,6 +152,12 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>mssqlserver</artifactId>
             <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-jsonSchema</artifactId>
+            <version>2.13.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>

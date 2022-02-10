@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.metriql.report.RecipeQueryJsonDeserializer
 import com.metriql.report.ReportType
 import com.metriql.report.data.Dashboard
 import com.metriql.report.data.ReportFilter
@@ -27,8 +26,8 @@ data class RecipeDashboard(
 ) {
     data class RecipeFilterSchema(
         val model: String?,
-        val dimension: Recipe.DimensionReference?,
-        val mappingDimension: Recipe.DimensionReference?,
+        val dimension: Recipe.FieldReference?,
+        val mappingDimension: Recipe.FieldReference?,
         @JsonAlias("operation")
         val timeframe: String?,
         val default: Any?,
@@ -45,7 +44,7 @@ data class RecipeDashboard(
                         "Model is required in `$name` for dimension filter",
                         HttpResponseStatus.BAD_REQUEST
                     )
-                    val dim = dimension.toDimension(modelName, dimension.getType(context::getModel, modelName))
+                    val dim = dimension.toDimension(modelName, dimension.getType(context, modelName))
                     Pair(
                         ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
                         ReportMetric.ReportDimension(dim.name, modelName, null, dim.postOperation)

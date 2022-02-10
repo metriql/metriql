@@ -304,7 +304,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                             is ReportMetric.ReportMeasure -> {
                                 ((dimensions.size ?: 0) + measures.indexOf(orderItem.value)) + 1
                             }
-                            else -> throw IllegalStateException("Only ReportDimension and ReportMeasure are accepted as segmentation order")
+                            else -> throw IllegalStateException("Only dimension and measure are accepted as segmentation order")
                         }
                         "$metricIndex ${if (orderItem.ascending == true) "ASC" else "DESC"}"
                     }.toSet()

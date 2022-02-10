@@ -134,8 +134,8 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, projectionColumns, orderBy)
         val query = SegmentationRecipeQuery(
             model.name,
-            measures.toSet().map { Recipe.MetricReference.fromName(it) },
-            dimensions.toSet().map { Recipe.DimensionReference.fromName(it) },
+            measures.toSet().map { Recipe.FieldReference.fromName(it) },
+            dimensions.toSet().map { Recipe.FieldReference.fromName(it) },
             (whereFilters + havingFilters).mapNotNull { it.toReference() },
             limit = parseLimit(limit.orElse(null)),
             orders = orders
@@ -264,13 +264,13 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             return when (reference.first) {
                 MetricType.DIMENSION -> {
                     dimensions.add(reference.second)
-                    val ref = Recipe.DimensionReference.fromName(value)
-                    val dimension = ref.toDimension(model.name, ref.getType(queryContext::getModel, model.name))
+                    val ref = Recipe.FieldReference.fromName(value)
+                    val dimension = ref.toDimension(model.name, ref.getType(queryContext, model.name))
                     queryContext.getDimensionAlias(dimension.name, dimension.relationName, dimension.postOperation)
                 }
                 MetricType.MEASURE -> {
                     measures.add(reference.second)
-                    val ref = Recipe.MetricReference.fromName(value)
+                    val ref = Recipe.FieldReference.fromName(value)
                     queryContext.getMeasureAlias(ref.name, ref.relation)
                 }
                 else -> TODO()
@@ -307,7 +307,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         selectItems: MutableList<SelectItem>,
         projectionColumns: List<ExpressionAliasProjection>,
         orderBy: Optional<OrderBy>
-    ): Pair<List<String?>, Map<Recipe.MetricReference, Recipe.OrderType>?> {
+    ): Pair<List<String?>, Map<Recipe.FieldReference, Recipe.OrderType>?> {
         if (!orderBy.isPresent) {
             return listOf<String>() to null
         }
@@ -325,7 +325,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
 
         val queryOrders = map.mapNotNull {
-            val metric = references[it.first]?.second?.let { ref -> Recipe.MetricReference.fromName(ref) }
+            val metric = references[it.first]?.second?.let { ref -> Recipe.FieldReference.fromName(ref) }
             if (metric == null) {
                 null
             } else {
@@ -334,7 +334,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
 
         val projectionOrders = map.map {
-            val metric = references[it.first]?.second?.let { ref -> Recipe.MetricReference.fromName(ref) }
+            val metric = references[it.first]?.second?.let { ref -> Recipe.FieldReference.fromName(ref) }
             if (metric == null) {
                 rewriter.process(it.first)
             } else null
@@ -352,11 +352,11 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     ): List<ReportFilter> {
         val (type, metricValue) = when (metricReference.first) {
             MetricType.DIMENSION -> {
-                val fromName = Recipe.DimensionReference.fromName(metricReference.second)
-                val type = fromName.getType({ context.getModel(it) }, model.name)
+                val fromName = Recipe.FieldReference.fromName(metricReference.second)
+                val type = fromName.getType(context, model.name)
                 type to fromName.toDimension(model.name, type)
             }
-            MetricType.MEASURE -> FieldType.DOUBLE to Recipe.MetricReference.fromName(metricReference.second).toMeasure(model.name)
+            MetricType.MEASURE -> FieldType.DOUBLE to Recipe.FieldReference.fromName(metricReference.second).toMeasure(model.name)
             else -> throw IllegalStateException()
         }
 

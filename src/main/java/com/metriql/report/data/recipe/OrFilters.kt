@@ -30,7 +30,7 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
 
             var metricValue = when {
                 filter.dimension != null ->
-                    filter.dimension.toDimension(modelName, filter.dimension.getType(context::getModel, modelName))
+                    filter.dimension.toDimension(modelName, filter.dimension.getType(context, modelName))
                 filter.measure != null ->
                     filter.measure.toMeasure(modelName)
                 filter.mapping != null -> {

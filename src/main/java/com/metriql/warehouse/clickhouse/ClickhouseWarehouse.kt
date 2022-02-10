@@ -1,10 +1,10 @@
 package com.metriql.warehouse.clickhouse
 
+import com.clickhouse.jdbc.ClickHouseDriver
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.clickhouse.ClickhouseWarehouse.ClickhouseConfig
 import com.metriql.warehouse.spi.Warehouse
-import ru.yandex.clickhouse.ClickHouseDriver
 import java.sql.DriverManager
 
 object ClickhouseWarehouse : Warehouse<ClickhouseConfig> {

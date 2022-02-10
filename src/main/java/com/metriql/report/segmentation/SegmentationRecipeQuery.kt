@@ -17,19 +17,19 @@ import io.netty.handler.codec.http.HttpResponseStatus
 data class SegmentationRecipeQuery(
     @JsonAlias("model")
     val dataset: ModelName,
-    val measures: List<Recipe.MetricReference>?,
-    val dimensions: List<Recipe.DimensionReference>?,
+    val measures: List<Recipe.FieldReference>?,
+    val dimensions: List<Recipe.FieldReference>?,
     val filters: List<OrFilters>?,
     val reportOptions: SegmentationReportOptions.ReportOptions? = null,
     val limit: Int? = null,
-    val orders: Map<Recipe.MetricReference, Recipe.OrderType>? = null
+    val orders: Map<Recipe.FieldReference, Recipe.OrderType>? = null
 ) : RecipeQuery {
     override fun toReportOptions(context: IQueryGeneratorContext): SegmentationReportOptions {
         val modelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
         val model = context.getModel(modelName)
         return SegmentationReportOptions(
             modelName,
-            dimensions?.map { it.toDimension(modelName, it.getType(context::getModel, modelName)) },
+            dimensions?.map { it.toDimension(modelName, it.getType(context, modelName)) },
             measures?.map { it.toMeasure(modelName) } ?: listOf(),
             filters?.map { it.toReportFilter(context, modelName) },
             reportOptions,
@@ -41,7 +41,7 @@ data class SegmentationRecipeQuery(
                 val targetModel = context.getModel(fieldModel)
                 when {
                     targetModel.dimensions.any { it.name == order.key.name } -> {
-                        SegmentationReportOptions.Order(DIMENSION, order.key.toDimension(modelName), order.value == Recipe.OrderType.ASC)
+                        SegmentationReportOptions.Order(DIMENSION, order.key.toDimension(modelName, order.key.getType(context, modelName)), order.value == Recipe.OrderType.ASC)
                     }
                     targetModel.measures.any { it.name == order.key.name } -> {
                         SegmentationReportOptions.Order(MEASURE, order.key.toMeasure(modelName), order.value == Recipe.OrderType.ASC)
@@ -59,8 +59,8 @@ data class SegmentationRecipeQuery(
     }
 
     data class SegmentationMaterialize(
-        val measures: List<Recipe.MetricReference>,
-        val dimensions: List<Recipe.DimensionReference>?,
+        val measures: List<Recipe.FieldReference>,
+        val dimensions: List<Recipe.FieldReference>?,
         val filters: List<OrFilters>?
     ) : MaterializeQuery {
         override fun toQuery(modelName: ModelName): RecipeQuery {

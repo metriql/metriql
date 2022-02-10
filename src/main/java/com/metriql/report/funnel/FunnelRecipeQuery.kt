@@ -28,15 +28,15 @@ data class FunnelRecipeQuery(
         }
     }
 
-    data class FunnelDimension(val step: Int, val dimension: Recipe.DimensionReference) {
+    data class FunnelDimension(val step: Int, val dimension: Recipe.FieldReference) {
         @JsonIgnore
         fun toDimension(context: IQueryGeneratorContext, steps: List<RecipeDataset>): FunnelReportOptions.FunnelDimension {
             val postOperation = dimension.timeframe?.let {
-                val type = dimension.getType(context::getModel, steps[step].dataset)
+                val type = dimension.getType(context, steps[step].dataset)
                 ReportMetric.PostOperation.fromFieldType(type, dimension.timeframe)
             }
 
-            return FunnelReportOptions.FunnelDimension(step, dimension.name.name, dimension.name.relation, postOperation)
+            return FunnelReportOptions.FunnelDimension(step, dimension.name, dimension.relation, postOperation)
         }
     }
 

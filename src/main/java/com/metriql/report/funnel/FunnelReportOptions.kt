@@ -38,7 +38,7 @@ data class FunnelReportOptions(
     data class FunnelDimension(val step: Int, val name: DimensionName, val relationName: RelationName?, val postOperation: ReportMetric.PostOperation?) {
         @JsonIgnore
         fun toRecipe(): FunnelRecipeQuery.FunnelDimension {
-            return FunnelRecipeQuery.FunnelDimension(step, Recipe.DimensionReference(Recipe.MetricReference(name, relationName), postOperation?.value?.name))
+            return FunnelRecipeQuery.FunnelDimension(step, Recipe.FieldReference(name, relationName, postOperation?.value?.name))
         }
     }
 

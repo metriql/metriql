@@ -1,11 +1,13 @@
 package com.metriql
 
+import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator
 import com.metriql.db.FieldType
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.IsMetriqlQueryVisitor
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
+import com.metriql.util.JsonHelper
 import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.trino.sql.MetriqlSqlFormatter
@@ -60,6 +62,13 @@ class Test {
         val stmt = sqlParser.createStatement(metriqlSql, ParsingOptions())
         val isMetadata = AtomicReference<Boolean?>()
         IsMetriqlQueryVisitor("metriql").process(stmt, isMetadata)
+    }
+
+    @Test
+    fun printJsonSchema() {
+        val schemaGen = JsonSchemaGenerator(JsonHelper.getMapper())
+        val schema = schemaGen.generateSchema(Recipe.RecipeModel::class.java)
+        println(JsonHelper.encode(schema))
     }
 
     @Test

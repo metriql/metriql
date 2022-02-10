@@ -6,14 +6,12 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.ReportType
-import com.metriql.report.ServiceReportOptionJsonDeserializer
 import com.metriql.report.data.Report.ReportUser
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter.OperatorTypeResolver
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION
-import com.metriql.report.data.recipe.Recipe.DimensionReference
-import com.metriql.report.data.recipe.Recipe.MetricReference
+import com.metriql.report.data.recipe.Recipe.FieldReference
 import com.metriql.report.data.recipe.RecipeDashboard.RecipeFilterSchema
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -95,12 +93,12 @@ data class Dashboard(
         fun toRecipeDefinition(): RecipeFilterSchema {
             return when (value) {
                 is ReportMetric.ReportDimension -> {
-                    val dimension = DimensionReference(MetricReference(value.name), JsonHelper.convert(value.postOperation, String::class.java))
+                    val dimension = FieldReference(value.name, JsonHelper.convert(value.postOperation, String::class.java))
                     RecipeFilterSchema(value.modelName, dimension, null, operation, defaultValue, isRequired)
                 }
                 is ReportMetric.ReportMappingDimension -> {
                     val dimension =
-                        DimensionReference(MetricReference(JsonHelper.convert(value.name, String::class.java)), JsonHelper.convert(value.postOperation, String::class.java))
+                        FieldReference(JsonHelper.convert(value.name, String::class.java), JsonHelper.convert(value.postOperation, String::class.java))
                     RecipeFilterSchema(null, null, dimension, operation, defaultValue, isRequired)
                 }
                 else -> throw IllegalStateException()

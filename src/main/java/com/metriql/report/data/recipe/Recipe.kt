@@ -14,7 +14,6 @@ import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifest
 import com.metriql.dbt.DbtManifest.Companion.extractFields
 import com.metriql.report.ReportType
-import com.metriql.report.ServiceReportOptionJsonDeserializer
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationRecipeQuery
@@ -316,7 +315,10 @@ data class Recipe(
                                                 is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters can't filter measures")
                                                 is ReportMetric.ReportDimension -> {
                                                     val dimensionType = model.dimensions.find { dim -> dim.name == metricValue.name }?.fieldType
-                                                        ?: throw MetriqlException("Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.", NOT_FOUND)
+                                                        ?: throw MetriqlException(
+                                                            "Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.",
+                                                            NOT_FOUND
+                                                        )
                                                     val (type, operation) = getOperation(dimensionType, it.operator)
                                                     filter.value.filters
                                                         .map {
@@ -336,7 +338,10 @@ data class Recipe(
                                                 is ReportMetric.ReportMappingDimension -> {
                                                     val name = model.mappings.get(metricValue.name)
                                                     val dimensionType = model.dimensions.find { dim -> dim.name == name }?.fieldType
-                                                        ?: throw MetriqlException("Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.", NOT_FOUND)
+                                                        ?: throw MetriqlException(
+                                                            "Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.",
+                                                            NOT_FOUND
+                                                        )
                                                     val (type, operator) = getOperation(dimensionType, it.operator)
 
                                                     filter.value.filters
@@ -755,93 +760,60 @@ data class Recipe(
     }
 
     data class FilterReference(
-        val dimension: DimensionReference? = null,
-        val measure: MetricReference? = null,
+        val dimension: FieldReference? = null,
+        val measure: FieldReference? = null,
         val mapping: String? = null,
         val operator: String,
         val value: Any?,
     )
 
-    data class MetricReference(val name: String, val relation: String? = null) {
-
+    data class FieldReference(val name: String, val relation: String? = null, val timeframe: String? = null) {
         @JsonValue
-        override fun toString() = if (relation != null) "$relation.$name" else name
+        override fun toString(): String {
+            val ref = if (relation != null) "$relation.$name" else name
+            return if (timeframe != null) "$ref::$timeframe" else ref
+        }
 
         fun getType(context: IQueryGeneratorContext, modelName: ModelName): FieldType {
             val currentModel = context.getModel(modelName)
 
+            val targetModel = if (relation != null) {
+                val targetModelName = currentModel.relations.find { r -> r.name == relation }?.modelName
+                context.getModel(targetModelName!!)
+            } else currentModel
+
+            val dimensionName = if (isMappingDimension()) {
+                targetModel.mappings[name.substring(1)]
+            } else {
+                name
+            }
+
             val measureModel = if (relation != null) {
                 context.getModel(currentModel.relations.find { it.name == relation }?.modelName!!)
             } else currentModel
-            val measure = measureModel.measures.find { it.name == name }
-                ?: throw MetriqlException("Measure $this not found", BAD_REQUEST)
 
-            return measure?.fieldType ?: FieldType.DOUBLE
-        }
+            val measureType = measureModel.measures.find { it.name == name }?.fieldType
 
-        fun isMappingDimension() = name.startsWith(":")
+            val dimensionType =
+                targetModel.dimensions.find { dimension -> dimension.name == dimensionName }?.fieldType
 
-        fun toMeasure(modelName: ModelName): ReportMetric.ReportMeasure {
-            return ReportMetric.ReportMeasure(modelName, name, relation)
-        }
-
-        fun toDimension(modelName: ModelName): ReportMetric.ReportDimension {
-            return ReportMetric.ReportDimension(name, modelName, relation, null)
-        }
-
-        companion object {
-            private val regex = "(([A-Z0-9a-z_]+)?\\.)?(\\$?[:A-Z0-9a-z_]+)".toRegex()
-
-            fun mappingDimension(name: Model.MappingDimensions.CommonMappings, relation: String?): MetricReference {
-                return MetricReference(":" + name.toSnakeCase, relation)
-            }
-
-            @JvmStatic
-            @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
-            fun fromName(name: String): MetricReference {
-                val groups = regex.find(name)?.groupValues ?: throw MetriqlException(
-                    "Invalid value $name for metric",
-                    BAD_REQUEST
-                )
-                return MetricReference(groups[3], if (groups[2].isEmpty()) null else groups[2])
-            }
-        }
-    }
-
-    data class DimensionReference @JsonCreator constructor(val name: MetricReference, val timeframe: String? = null) {
-        @JsonValue
-        fun toJsonValue(): Any {
-            return if (timeframe != null) {
-                mapOf("name" to name, "timeframe" to timeframe)
-            } else {
-                name.toString()
-            }
+            return measureType ?: dimensionType ?: FieldType.UNKNOWN
         }
 
         @JsonIgnore
-        fun getType(modelFetcher: (String) -> Model, modelName: ModelName): FieldType {
-            val model = modelFetcher.invoke(modelName)
+        fun isMappingDimension() = name.startsWith(":")
 
-            val targetModel = if (name.relation != null) {
-                val targetModelName = model.relations.find { relation -> relation.name == name.relation }?.modelName
-                modelFetcher.invoke(targetModelName!!)
-            } else model
-
-            val dimensionName = if (name.isMappingDimension()) {
-                targetModel.mappings[name.name.substring(1)]
-            } else {
-                name.name
+        fun toMeasure(modelName: ModelName): ReportMetric.ReportMeasure {
+            if (timeframe != null) {
+                throw MetriqlException("`$this`: timeframe can't be used for measure references", BAD_REQUEST)
             }
-
-            val dimension =
-                targetModel.dimensions.find { dimension -> dimension.name == dimensionName } ?: throw MetriqlException("Dimension ${this.toJsonValue()} not found", BAD_REQUEST)
-            return dimension.fieldType ?: FieldType.UNKNOWN
+            return ReportMetric.ReportMeasure(modelName, name, relation)
         }
 
         @JsonIgnore
         fun toDimension(modelName: ModelName, type: FieldType): ReportMetric.ReportDimension {
             return ReportMetric.ReportDimension(
-                name.name, modelName, name.relation,
+                name, modelName, relation,
                 if (timeframe != null)
                     try {
                         ReportMetric.PostOperation.fromFieldType(type, timeframe)
@@ -854,11 +826,21 @@ data class Recipe(
         }
 
         companion object {
+            private val regex = "(([A-Z0-9a-z_]+)?\\.)?(\\$?[:A-Z0-9a-z_]+)".toRegex()
+
+            fun mappingDimension(name: Model.MappingDimensions.CommonMappings, relation: String?): FieldReference {
+                return FieldReference(":" + name.toSnakeCase, relation)
+            }
+
             @JvmStatic
             @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
-            fun fromName(name: String): DimensionReference {
+            fun fromName(name: String): FieldReference {
                 val split = name.split("::")
-                return DimensionReference(MetricReference.fromName(split[0]), split.getOrNull(1))
+                val groups = regex.find(split[0])?.groupValues ?: throw MetriqlException(
+                    "Invalid value $name for metric",
+                    BAD_REQUEST
+                )
+                return FieldReference(groups[3], groups[2].ifEmpty { null }, split.getOrNull(1))
             }
         }
     }

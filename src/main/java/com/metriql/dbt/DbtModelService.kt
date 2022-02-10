@@ -79,7 +79,7 @@ class DbtModelService @Inject constructor(
                 val eventTimestamp = model.mappings?.get(EVENT_TIMESTAMP)
 
                 val (materialized, renderedSql) = if (eventTimestamp != null) {
-                    val eventTimestampDim = materialize.value.dimensions?.find { d -> d.name.name == eventTimestamp && d.name.relation == null }
+                    val eventTimestampDim = materialize.value.dimensions?.find { d -> d.name == eventTimestamp && d.relation == null }
                         ?.toDimension(modelName, FieldType.TIMESTAMP)!!
                     val eventDimensionAlias = context.getDimensionAlias(
                         eventTimestamp,

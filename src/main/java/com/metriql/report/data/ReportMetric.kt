@@ -27,7 +27,7 @@ sealed class ReportMetric {
         val name: Model.MappingDimensions.CommonMappings,
         val postOperation: PostOperation?
     ) : ReportMetric() {
-        override fun toMetricReference() = Recipe.MetricReference.mappingDimension(name, null)
+        override fun toMetricReference() = Recipe.FieldReference.mappingDimension(name, null)
     }
 
     data class Function(val name: SqlFunction, val parameters: List<ReportMetric>) : ReportMetric() {
@@ -35,7 +35,7 @@ sealed class ReportMetric {
             COUNT(true)
         }
 
-        override fun toMetricReference(): Recipe.MetricReference {
+        override fun toMetricReference(): Recipe.FieldReference {
             TODO("not implemented")
         }
     }
@@ -45,7 +45,7 @@ sealed class ReportMetric {
             PLUS("+"), MINUS("-")
         }
 
-        override fun toMetricReference(): Recipe.MetricReference {
+        override fun toMetricReference(): Recipe.FieldReference {
             TODO("not implemented")
         }
     }
@@ -66,10 +66,10 @@ sealed class ReportMetric {
             }
         }
 
-        override fun toMetricReference(): Recipe.MetricReference = Recipe.MetricReference(name, relationName)
+        override fun toMetricReference(): Recipe.FieldReference = Recipe.FieldReference(name, relationName)
 
-        fun toReference(): Recipe.DimensionReference {
-            return Recipe.DimensionReference(Recipe.MetricReference(name, relationName), postOperation?.value?.name?.toLowerCase())
+        fun toReference(): Recipe.FieldReference {
+            return Recipe.FieldReference(name, relationName, postOperation?.value?.name?.lowercase())
         }
     }
 
@@ -84,8 +84,8 @@ sealed class ReportMetric {
             }
         }
 
-        override fun toMetricReference(): Recipe.MetricReference {
-            return Recipe.MetricReference(name, relationName)
+        override fun toMetricReference(): Recipe.FieldReference {
+            return Recipe.FieldReference(name, relationName)
         }
     }
 
@@ -122,5 +122,5 @@ sealed class ReportMetric {
         }
     }
 
-    abstract fun toMetricReference(): Recipe.MetricReference
+    abstract fun toMetricReference(): Recipe.FieldReference
 }

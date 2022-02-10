@@ -26,13 +26,13 @@ data class RecipeDataset(
     val dataset: String,
     val filters: List<OrFilters>?,
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    val dimension: Recipe.DimensionReference?
+    val dimension: Recipe.FieldReference?
 ) {
     @JsonIgnore
     fun toDataset(context: IQueryGeneratorContext): Dataset {
         val modelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
         val filters = filters?.map { it.toReportFilter(context, modelName) } ?: listOf()
-        val dimension = dimension?.toDimension(dataset, dimension.getType(context::getModel, modelName))
+        val dimension = dimension?.toDimension(dataset, dimension.getType(context, modelName))
         return Dataset(modelName, filters, dimension)
     }
 }
