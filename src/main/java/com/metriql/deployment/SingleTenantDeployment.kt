@@ -6,7 +6,6 @@ import com.metriql.Commands
 import com.metriql.UserContext
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifestParser
-import com.metriql.dbt.DbtModelConverter
 import com.metriql.dbt.DbtProfiles
 import com.metriql.dbt.DbtYamlParser
 import com.metriql.dbt.ProjectYaml
@@ -109,10 +108,10 @@ class SingleTenantDeployment(
             return JsonHelper.convert(currentProfile.outputs[currentProfile.target], WarehouseConfig::class.java)
         }
 
-        private fun resolveExtends(allModels: List<Recipe.RecipeModel>, it: Recipe.RecipeModel): Recipe.RecipeModel {
+        private fun resolveExtends(allModels: List<Recipe.RecipeModel>, it: Recipe.RecipeModel, packageName: String): Recipe.RecipeModel {
             return if (it.extends != null) {
-                val ref = DbtModelConverter.parseRef(it.extends)
-                val parentModel = allModels.find { model -> model.name == ref } ?: throw MetriqlException(
+                val ref = DbtJinjaRenderer.renderer.renderModelNameRegex(it.extends).toRegex()
+                val parentModel = allModels.find { model -> ref.matches(model.name!!) } ?: throw MetriqlException(
                     "${it.name}: extends ${it.extends} not found.",
                     HttpResponseStatus.BAD_REQUEST
                 )
@@ -126,7 +125,7 @@ class SingleTenantDeployment(
 
         fun getPreparedModels(dataSource: DataSource, auth: ProjectAuth, recipe: Recipe): List<Model> {
             val metriqlModels = recipe.models?.map {
-                resolveExtends(recipe.models, it).toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
+                resolveExtends(recipe.models, it, recipe.packageName ?: "").toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
             } ?: listOf()
             val context = QueryGeneratorContext(auth, dataSource, UpdatableModelService(null) { metriqlModels }, JinjaRendererService(), null, null, null)
             return RecipeUtil.prepareModelsForInstallation(dataSource, context, metriqlModels)
