@@ -131,9 +131,11 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         }
     )
     override val booleanOperators: Map<BooleanOperatorType, WarehouseFilterValue> = mapOf(
-        BooleanOperatorType.IS to { dimension: String, value: Any?, context ->
-            // Dimension might be an expression
-            "($dimension) IS ${parseAnyValue(validateFilterValue(value, Boolean::class.java), context)}"
+        BooleanOperatorType.EQUALS to { dimension: String, value: Any?, context ->
+            "$dimension = ${parseAnyValue(validateFilterValue(value, Boolean::class.java), context)}"
+        },
+        BooleanOperatorType.NOT_EQUALS to { dimension: String, value: Any?, context ->
+            "$dimension != ${parseAnyValue(validateFilterValue(value, Boolean::class.java), context)}"
         }
     )
     override val numberOperators: Map<NumberOperatorType, WarehouseFilterValue> = mapOf(

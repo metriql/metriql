@@ -7,11 +7,18 @@ import com.metriql.warehouse.spi.filter.WarehouseFilters.Companion.validateFilte
 
 open class MSSQLFilters : BaseMySQLFilters({ MSSQLMetriqlBridge }) {
     override val booleanOperators: Map<BooleanOperatorType, WarehouseFilterValue> = mapOf(
-        BooleanOperatorType.IS to { dimension: String, value: Any?, _ ->
+        BooleanOperatorType.EQUALS to { dimension: String, value: Any?, _ ->
             if (validateFilterValue(value, Boolean::class.java)) {
                 "$dimension = 1"
             } else {
                 "$dimension = 0"
+            }
+        },
+        BooleanOperatorType.NOT_EQUALS to { dimension: String, value: Any?, _ ->
+            if (validateFilterValue(value, Boolean::class.java)) {
+                "$dimension != 1"
+            } else {
+                "$dimension != 0"
             }
         }
     )

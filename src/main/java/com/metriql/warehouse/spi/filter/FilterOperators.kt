@@ -73,5 +73,6 @@ enum class TimestampOperatorType : FilterOperator {
 
 @UppercaseEnum
 enum class BooleanOperatorType : FilterOperator {
-    IS;
+    EQUALS,
+    NOT_EQUALS;
 }

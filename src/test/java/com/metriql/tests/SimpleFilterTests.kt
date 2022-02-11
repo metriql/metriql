@@ -298,7 +298,7 @@ object SimpleFilterTests {
     }
 
     enum class BooleanTest : OperatorTests {
-        IS {
+        EQUALS {
             override fun filter(modelName: ModelName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
@@ -307,7 +307,25 @@ object SimpleFilterTests {
                             MetricFilter.MetricType.DIMENSION,
                             ReportDimension("test_bool", modelName, null, null),
                             listOf(
-                                MetricFilter.Filter(null, null, BooleanOperatorType.IS.name, true)
+                                MetricFilter.Filter(null, null, BooleanOperatorType.EQUALS.name, true)
+                            )
+                        )
+                    )
+                )
+            }
+
+            override val result = listOf(9.0)
+        },
+        NOT_EQUALS {
+            override fun filter(modelName: ModelName): List<ReportFilter> {
+                return listOf(
+                    ReportFilter(
+                        ReportFilter.Type.METRIC_FILTER,
+                        MetricFilter(
+                            MetricFilter.MetricType.DIMENSION,
+                            ReportDimension("test_bool", modelName, null, null),
+                            listOf(
+                                MetricFilter.Filter(null, null, BooleanOperatorType.NOT_EQUALS.name, false)
                             )
                         )
                     )

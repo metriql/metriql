@@ -175,8 +175,18 @@ abstract class TestSimpleFilter {
     }
 
     @Test
-    fun testBooleanFiltersIs() {
-        val test = SimpleFilterTests.BooleanTest.IS
+    fun testBooleanFiltersEquals() {
+        val test = SimpleFilterTests.BooleanTest.EQUALS
+        val generatedFilter = test.filter(table)
+            .map { warehouseBridge.renderFilter(it, table, context()) }
+            .joinToString(" AND ") { "(${it.whereFilter})" }
+        val query = "SELECT ${castToDouble("count(*)")} FROM ${testingServer.getTableReference(table)} WHERE $generatedFilter"
+        assertEquals(test.result, runQuery(query))
+    }
+
+    @Test
+    fun testBooleanFiltersNotEquals() {
+        val test = SimpleFilterTests.BooleanTest.NOT_EQUALS
         val generatedFilter = test.filter(table)
             .map { warehouseBridge.renderFilter(it, table, context()) }
             .joinToString(" AND ") { "(${it.whereFilter})" }

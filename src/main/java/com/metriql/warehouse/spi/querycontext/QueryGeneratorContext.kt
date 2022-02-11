@@ -32,7 +32,7 @@ import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 import java.util.LinkedHashMap
 import java.util.concurrent.ConcurrentHashMap
 
-val TOTAL_ROWS_MEASURE = Model.Measure("\$total_rows", null, null, null, COLUMN, Column(COUNT, null))
+val TOTAL_ROWS_MEASURE = Model.Measure("__total_rows", null, null, null, COLUMN, Column(COUNT, null))
 typealias ReportExecutor = (ProjectAuth, ReportType, RecipeQuery) -> String
 
 interface DependencyFetcher {

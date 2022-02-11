@@ -8,12 +8,6 @@ import com.metriql.warehouse.spi.filter.WarehouseFilters.Companion.validateFilte
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class SnowflakeFilters(override val bridge: () -> WarehouseMetriqlBridge) : ANSISQLFilters(bridge) {
-    override val booleanOperators: Map<BooleanOperatorType, WarehouseFilterValue> = mapOf(
-        BooleanOperatorType.IS to { dimension: String, value: Any?, context ->
-            "$dimension = ${parseAnyValue(validateFilterValue(value, Boolean::class.java), context)}"
-        }
-    )
-
     override fun formatDate(value: String, context: IQueryGeneratorContext): String {
         return if (context.auth.timezone == null) {
             "CAST($value AS DATE)"
