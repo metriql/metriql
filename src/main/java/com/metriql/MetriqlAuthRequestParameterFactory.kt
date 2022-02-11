@@ -30,7 +30,9 @@ import javax.ws.rs.core.HttpHeaders
 data class UserContext(val user: String?, val pass: String?, val request: RakamHttpRequest)
 
 class MetriqlAuthRequestParameterFactory(
-    private val oauthApiSecret: String?, private val deployment: Deployment, private val timezone: ZoneId?
+    private val oauthApiSecret: String?,
+    private val deployment: Deployment,
+    private val timezone: ZoneId?
 ) : IRequestParameterFactory {
     override fun create(m: Method): IRequestParameter<ProjectAuth> {
         return IRequestParameter<ProjectAuth> { _, request ->
@@ -71,8 +73,8 @@ class MetriqlAuthRequestParameterFactory(
             if (auth == null) {
                 if (request.headers().get("sec-fetch-mode") == "navigate") {
                     when (deployment.authType) {
-                         Deployment.AuthType.USERNAME_PASS -> request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
-                         Deployment.AuthType.ACCESS_TOKEN -> {
+                        Deployment.AuthType.USERNAME_PASS -> request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, BasicAuthCredentials.AUTHENTICATE_HEADER)
+                        Deployment.AuthType.ACCESS_TOKEN -> {
                             val redirectUri = ""
                             val tokenUri = ""
                             request.addResponseHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer x_redirect_server=\"$redirectUri\", x_token_server=\"$tokenUri\"")

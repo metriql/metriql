@@ -2,7 +2,6 @@ package com.metriql.report.data
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.metriql.report.ReportType
-import com.metriql.report.ServiceReportOptionJsonDeserializer
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.time.Instant
 

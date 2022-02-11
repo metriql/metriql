@@ -8,10 +8,8 @@ import com.fasterxml.jackson.annotation.Nulls
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AcceptedValues
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AnyValue
-import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.RecipeModel
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Companion.fromDimension
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeMeasure.Filter
@@ -29,7 +27,6 @@ import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.DataSource
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
-import java.io.IOException
 import kotlin.reflect.KClass
 
 typealias MetricFields = Pair<Map<String, RecipeModel.Metric.RecipeMeasure>, Map<String, RecipeModel.Metric.RecipeDimension>>
@@ -145,11 +142,11 @@ data class DbtManifest(
         data class Docs(val show: Boolean?)
 
         class DefaultEmpty(delegate: JsonDeserializer<RecipeModel?>) : JsonDeserializer<RecipeModel?>() {
-           override fun deserialize(jsonParser: JsonParser, deserializationContext: DeserializationContext): RecipeModel {
+            override fun deserialize(jsonParser: JsonParser, deserializationContext: DeserializationContext): RecipeModel {
                 return null!!
             }
 
-            override fun getNullValue(ctxt: DeserializationContext) =  RecipeModel(null)
+            override fun getNullValue(ctxt: DeserializationContext) = RecipeModel(null)
         }
 
         fun meta(): Meta {

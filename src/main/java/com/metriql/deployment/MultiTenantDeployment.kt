@@ -18,11 +18,12 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 typealias ManifestCacheHolder = Optional<Pair<Instant, List<Model>>>
 
 class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration: Duration) : Deployment {
-    private val cache = CacheBuilder.newBuilder().expireAfterWrite(java.time.Duration.ofMillis(cacheExpiration.toMillis()))
+    private val cache = CacheBuilder.newBuilder().expireAfterWrite(cacheExpiration.toMillis(), TimeUnit.MILLISECONDS)
         .build<String, Optional<AdapterManifest>>()
     private val manifestCache = ConcurrentHashMap<String, ManifestCacheHolder>()
 

@@ -2,9 +2,6 @@ package com.metriql.warehouse.snowflake
 
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.filter.ANSISQLFilters
-import com.metriql.warehouse.spi.filter.BooleanOperatorType
-import com.metriql.warehouse.spi.filter.WarehouseFilterValue
-import com.metriql.warehouse.spi.filter.WarehouseFilters.Companion.validateFilterValue
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class SnowflakeFilters(override val bridge: () -> WarehouseMetriqlBridge) : ANSISQLFilters(bridge) {

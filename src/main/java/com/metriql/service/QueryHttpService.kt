@@ -5,7 +5,6 @@ import com.metriql.CURRENT_PATH
 import com.metriql.db.QueryResult
 import com.metriql.deployment.Deployment
 import com.metriql.report.IAdHocService
-import com.metriql.report.RecipeQueryJsonDeserializer
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth

@@ -109,11 +109,17 @@
             <artifactId>clickhouse-jdbc</artifactId>
             <version>0.3.2</version>
         </dependency>
-        <dependency>
-            <groupId>com.clickhouse</groupId>
-            <artifactId>clickhouse-grpc-client</artifactId>
-            <version>0.3.2</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.clickhouse</groupId>-->
+<!--            <artifactId>clickhouse-grpc-client</artifactId>-->
+<!--            <version>0.3.2</version>-->
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>com.google.guava</groupId>-->
+<!--                    <artifactId>guava</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>javax.activation</groupId>
             <artifactId>activation</artifactId>
@@ -686,6 +692,9 @@
                                 <ignoredUnusedDeclaredDependency>org.jetbrains.kotlin:kotlin-reflect
                                 </ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
+                            <ignoredUsedUndeclaredDependencies>
+                                <ignoredUsedUndeclaredDependency>com.clickhouse:clickhouse-grpc-client</ignoredUsedUndeclaredDependency>
+                            </ignoredUsedUndeclaredDependencies>
                         </configuration>
                     </execution>
                     <execution>

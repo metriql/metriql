@@ -3,7 +3,6 @@ package com.metriql.service.jinja
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.hubspot.jinjava.el.ext.NamedParameter
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
-import com.metriql.report.RecipeQueryJsonDeserializer
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JsonHelper

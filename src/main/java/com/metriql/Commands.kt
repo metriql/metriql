@@ -178,7 +178,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
         }
     }
 
-    class Serve(val deployment : Deployment? = null) : Commands(help = "Spins up an HTTP server serving your datasets") {
+    class Serve(val deployment: Deployment? = null) : Commands(help = "Spins up an HTTP server serving your datasets") {
         private val origin by option("--origin", help = "The origin HTTP server for CORS", envvar = "METRIQL_ORIGIN")
         private val enableTrinoInterface by option("--trino", "--jdbc", help = "Enable Trino API", envvar = "METRIQL_ENABLE_JDBC").flag(default = true)
         private val threads by option("--threads", help = "Specify number of threads to use serving requests. The default is [number of processors * 2]", envvar = "THREADS").int()

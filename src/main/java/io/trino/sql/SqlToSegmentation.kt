@@ -1,5 +1,6 @@
 package io.trino.sql
 
+import com.google.common.base.Enums
 import com.google.inject.Inject
 import com.metriql.db.FieldType
 import com.metriql.dbt.DbtJinjaRenderer
@@ -69,7 +70,7 @@ import java.util.Optional
 
 typealias Reference = Pair<MetricType, String>
 
-data class ExpressionAliasProjection(val expression : Expression, val projection : String, val alias : String?, val identifier : Boolean)
+data class ExpressionAliasProjection(val expression: Expression, val projection: String, val alias: String?, val identifier: Boolean)
 
 class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
     private fun getProjectionOfColumn(rewriter: MetriqlSegmentationQueryRewriter, expression: Expression, modelName: String, alias: Optional<Identifier>): ExpressionAliasProjection {
@@ -278,7 +279,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getReference(selectItems: List<SelectItem>, resolvedSelectItems: List<ExpressionAliasProjection>, exp: Expression, ): Expression {
+    private fun getReference(selectItems: List<SelectItem>, resolvedSelectItems: List<ExpressionAliasProjection>, exp: Expression,): Expression {
         return when (exp) {
             is LongLiteral -> {
                 val index = exp.value.toInt() - 1
@@ -390,13 +391,13 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             }
             is InPredicate -> {
                 val metricReference = references[exp.value] ?: throw MetriqlException("Unable to resolve ${exp.value}", BAD_REQUEST)
-                val value = exp.valueList as? InListExpression ?: throw MetriqlException("Unable to resolve ${exp}, value must be a list", BAD_REQUEST)
+                val value = exp.valueList as? InListExpression ?: throw MetriqlException("Unable to resolve $exp, value must be a list", BAD_REQUEST)
                 getReportFilter(
                     context, model, metricReference,
                     {
-                        TODO()
+                        Enums.getIfPresent(it.operatorClass.java, "IN").orNull() ?: throw MetriqlException("IN operator is not available for $it type", BAD_REQUEST)
                     },
-                    value
+                    value.values
                 )
             }
             is BetweenPredicate -> {

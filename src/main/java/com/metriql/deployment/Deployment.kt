@@ -4,10 +4,9 @@ import com.metriql.UserContext
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IModelService
 import com.metriql.warehouse.spi.DataSource
-import io.trino.server.security.BasicAuthCredentials
 
 interface Deployment {
-    val authType : AuthType
+    val authType: AuthType
 
     fun getModelService(): IModelService
     fun logStart()
