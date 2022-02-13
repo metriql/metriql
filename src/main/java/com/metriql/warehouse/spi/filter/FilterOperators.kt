@@ -30,6 +30,7 @@ enum class StringOperatorType : FilterOperator {
 enum class NumberOperatorType : FilterOperator {
     NOT_EQUALS,
     LESS_THAN,
+    IN,
     EQUALS,
     GREATER_THAN,
     GREATER_THAN_OR_EQUAL,

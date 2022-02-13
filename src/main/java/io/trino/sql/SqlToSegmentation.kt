@@ -397,7 +397,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     {
                         Enums.getIfPresent(it.operatorClass.java, "IN").orNull() ?: throw MetriqlException("IN operator is not available for $it type", BAD_REQUEST)
                     },
-                    value.values
+                    value.values.map { ValueExtractorVisitor().process(it) }.toList()
                 )
             }
             is BetweenPredicate -> {

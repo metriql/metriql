@@ -38,7 +38,7 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
             is LocalDate -> "'${ValidationUtil.stripLiteral(value.format(DateTimeFormatter.ISO_DATE))}'"
             is Boolean -> if (value) "TRUE" else "FALSE"
             is Number -> value.toString()
-            is List<*> -> "(${value.joinToString(", ") { if (it == null) "NULL" else "'${ValidationUtil.stripLiteral(it.toString())}'" }})"
+            is List<*> -> "(${value.joinToString(", ") { if (it == null) "NULL" else "${parseAnyValue(it, context, type?.arrayElementType)}" }})"
             else -> "NULL"
         }
 
@@ -150,6 +150,14 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         },
         NumberOperatorType.LESS_THAN to { dimension: String, value: Any?, context ->
             "$dimension < ${parseAnyValue(validateFilterValue(value, Number::class.java), context)}"
+        },
+        NumberOperatorType.IN to { dimension: String, value: Any?, context ->
+            val inValues = validateFilterValue(value, List::class.java)
+            if (inValues.isEmpty()) {
+                "TRUE"
+            } else {
+                "$dimension IN ${parseAnyValue(inValues, context)}"
+            }
         },
         NumberOperatorType.LESS_THAN_OR_EQUAL to { dimension: String, value: Any?, context ->
             "$dimension <= ${parseAnyValue(validateFilterValue(value, Number::class.java), context)}"
