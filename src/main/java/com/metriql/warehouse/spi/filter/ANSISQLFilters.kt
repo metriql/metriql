@@ -271,6 +271,10 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         context: IQueryGeneratorContext,
     ): String {
         val (startDate, endDate) = when (value) {
+            is Number -> {
+                val t = parseAnyValue(LocalDate.of(value.toInt(), 1, 1), context, type)
+                t to t
+            }
             is String -> {
                 val periodValue = `try?` { validateFilterValue(value, RPeriod::class.java) }
                 if (periodValue != null) {

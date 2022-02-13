@@ -40,6 +40,7 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionTyp
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.RenderedFilter
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.FilterOperator
+import com.metriql.warehouse.spi.function.IPostOperation
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -140,7 +141,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                 joins.add(renderedMetric.join)
                             }
 
-                            val (_, operator) = getOperation(dim.dimension.fieldType, it.operator)
+                            val timeframeType = ((it.metricValue as? ReportMetric.ReportDimension)?.postOperation?.value as IPostOperation)?.valueType
+                            val (_, operator) = getOperation(timeframeType ?: dim.dimension.fieldType, it.operator)
 
                             wheres.add(
                                 filters.generateFilter(
