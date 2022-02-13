@@ -5,9 +5,6 @@ import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSetter
 import com.fasterxml.jackson.annotation.Nulls
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AcceptedValues
 import com.metriql.dbt.DbtManifest.Node.TestMetadata.DbtModelColumnTest.AnyValue
 import com.metriql.report.data.recipe.Recipe.RecipeModel
@@ -101,6 +98,7 @@ data class DbtManifest(
                 label = label ?: name,
                 dimensions = modelDimensions,
                 measures = mapOf(name to RecipeModel.Metric.RecipeMeasure(label = label, aggregation = type, sql = sql, filters = measureFilters)),
+                tags = tags ?: sourceModel.tags,
                 _path = original_file_path,
                 package_name = package_name
             )
@@ -129,7 +127,7 @@ data class DbtManifest(
         val original_file_path: String,
         val package_name: String,
         val resource_type: String,
-        val tags: List<String>,
+        val tags: List<String>?,
         val description: String,
         val meta: Meta,
         val docs: Docs,
@@ -140,14 +138,6 @@ data class DbtManifest(
     ) {
         data class Meta(@JsonAlias("rakam") @JsonSetter(nulls = Nulls.AS_EMPTY) val metriql: RecipeModel?)
         data class Docs(val show: Boolean?)
-
-        class DefaultEmpty(delegate: JsonDeserializer<RecipeModel?>) : JsonDeserializer<RecipeModel?>() {
-            override fun deserialize(jsonParser: JsonParser, deserializationContext: DeserializationContext): RecipeModel {
-                return null!!
-            }
-
-            override fun getNullValue(ctxt: DeserializationContext) = RecipeModel(null)
-        }
 
         fun meta(): Meta {
             return config.meta ?: meta
@@ -209,7 +199,7 @@ data class DbtManifest(
                 metriql == null ||
                 (resource_type != MODEL_RESOURCE_TYPE && resource_type != SEED_RESOURCE_TYPE) ||
                 !config.enabled ||
-                tags.contains(DbtModelService.tagName)
+                tags?.contains(DbtModelService.tagName) == true
             ) return null
 
             val modelName = TextUtil.toSlug("model_${package_name}_$name", true)
@@ -234,6 +224,7 @@ data class DbtManifest(
                 target = target,
                 dimensions = (metriql.dimensions ?: mapOf()) + columnDimensions,
                 measures = (metriql.measures ?: mapOf()) + columnMeasures,
+                tags = tags ?: metriql.tags,
                 _path = original_file_path,
                 package_name = package_name
             )
@@ -258,6 +249,7 @@ data class DbtManifest(
         val original_file_path: String,
         val description: String?,
         val column_name: String?,
+        val tags: List<String>?,
         val resource_type: String,
         val columns: Map<String, DbtColumn>,
         val meta: Node.Meta,
@@ -276,6 +268,7 @@ data class DbtManifest(
                 description = meta.metriql.description ?: description,
                 dimensions = (meta.metriql.dimensions ?: mapOf()) + columnDimensions,
                 measures = (meta.metriql.measures ?: mapOf()) + columnMeasures,
+                tags = tags ?: meta.metriql?.tags,
                 _path = original_file_path,
                 package_name = package_name
             )
@@ -328,7 +321,7 @@ data class DbtManifest(
 
             val columnDimensions = columns.map {
                 val dimensionName = it.value.meta?.dimension?.name ?: TextUtil.toSlug(it.key, true)
-                val dim = (it.value.meta.dimension ?: RecipeModel.Metric.RecipeDimension()).copy(column = it.key, description = it.value.description)
+                val dim = (it.value.meta.dimension ?: RecipeModel.Metric.RecipeDimension()).copy(column = it.key, description = it.value.description, tags = it.value.tags)
                 dimensionName to dim
             }.toMap()
 

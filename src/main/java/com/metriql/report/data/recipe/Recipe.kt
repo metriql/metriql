@@ -125,6 +125,7 @@ data class Recipe(
         val measures: Map<String, Metric.RecipeMeasure>? = null,
         val materializes: Map<String, Map<String, SegmentationRecipeQuery.SegmentationMaterialize>>? = null,
         val aggregates: Map<String, SegmentationRecipeQuery.SegmentationMaterialize>? = null,
+        val tags : List<String>? = null,
         @JsonAlias("always_filters")
         val alwaysFilters: List<OrFilters>? = null,
         @JsonIgnore
@@ -234,7 +235,8 @@ data class Recipe(
                         dimension.reportOptions,
                         null,
                         dimension.primary,
-                        null
+                        null,
+                        dimension.tags
                     )
                 }
             }
@@ -440,6 +442,7 @@ data class Recipe(
                     recipeMeasures,
                     null,
                     aggregates,
+                    model.tags,
                     model.alwaysFilters,
                     model.recipePath
                 )
@@ -481,6 +484,7 @@ data class Recipe(
                 getMaterializes(),
                 alwaysFilters,
                 null,
+                tags,
                 recipeId,
                 _path
             )
@@ -501,6 +505,7 @@ data class Recipe(
                 val hidden: Boolean? = null,
                 val primary: Boolean? = null,
                 val window: Boolean? = null,
+                val tags : List<String>? = null,
                 val name: String? = null,
             ) : Metric() {
 
@@ -567,6 +572,7 @@ data class Recipe(
                 val type: FieldType? = FieldType.DOUBLE,
                 val hidden: Boolean? = null,
                 val window: Boolean? = null,
+                val tags : List<String>? = null,
                 val name: String? = null,
             ) : Metric() {
 
@@ -656,7 +662,8 @@ data class Recipe(
                         filters,
                         reportOptions,
                         type,
-                        if (hidden === true) true else null
+                        if (hidden === true) true else null,
+                        tags
                     )
                 }
 

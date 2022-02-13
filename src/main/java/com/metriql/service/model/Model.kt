@@ -55,6 +55,7 @@ data class Model(
     val materializes: List<Materialize>? = null,
     val alwaysFilters: List<OrFilters>? = null,
     val id: Int? = null,
+    val tags : List<String>? = null,
     val recipeId: Int? = null,
     val recipePath: String? = null,
 ) {
@@ -188,7 +189,7 @@ data class Model(
         val fieldType: FieldType? = null,
         val reportOptions: ObjectNode? = null,
         val hidden: Boolean? = null,
-        val drills: List<ReportMetric.ReportDimension>? = null
+        val tags : List<String>? = null
     ) {
         @UppercaseEnum
         enum class Type(private val clazz: KClass<out DimensionValue>) : StrValueEnum {
@@ -217,7 +218,7 @@ data class Model(
         val reportOptions: ObjectNode? = null,
         val fieldType: FieldType? = FieldType.DOUBLE,
         val hidden: Boolean? = null,
-        val drills: List<ReportMetric>? = null
+        val tags : List<String>? = null
     ) {
 
         init {
