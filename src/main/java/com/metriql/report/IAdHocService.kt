@@ -33,7 +33,7 @@ interface IAdHocService<T : ServiceReportOptions> {
     fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<ModelName>
 
     fun generateMaterializeQuery(
-        projectId: Int,
+        projectId: String,
         context: IQueryGeneratorContext,
         modelName: ModelName,
         materializeName: String,

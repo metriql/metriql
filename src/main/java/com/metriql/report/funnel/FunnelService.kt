@@ -17,7 +17,6 @@ import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.funnel.Funnel
 import com.metriql.warehouse.spi.services.funnel.Funnel.ExcludedStep
 import com.metriql.warehouse.spi.services.funnel.Funnel.Step
@@ -56,7 +55,7 @@ class FunnelService @Inject constructor(
             sorting = if (options.dimension?.postOperation != null) "dimension" else "step1",
         )
 
-        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[ServiceType.FUNNEL]
+        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[FunnelReportType.slug]
         val sqlQuery = (queryGenerator as? FunnelQueryGenerator)?.generateSQL(auth, context, funnel, options)
             ?: throw IllegalArgumentException("Warehouse query generator must be FunnelQueryGenerator")
 

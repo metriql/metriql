@@ -42,7 +42,7 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
     private fun getModels(session: ConnectorSession): List<Model> {
         // TODO: Find a way to pass projects
 //        val projectId = session.getProperty("project", Int::class.java)
-        return modelService.list(ProjectAuth.systemUser(-1, session.user))
+        return modelService.list(ProjectAuth.systemUser("", session.user))
     }
 
     override fun listSystemTables(session: ConnectorSession): Set<SystemTable> {

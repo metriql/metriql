@@ -6,11 +6,12 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@element-plus/icons": "0.0.11",
     "axios": "^0.21.1",
     "bulma": "^0.9.3",
     "date-fns": "^2.22.1",
     "echarts": "^5.1.2",
-    "element-plus": "1.1.0-beta.19",
+    "element-plus": "2.0.1",
     "monaco-editor": "^0.25.0",
     "monaco-yaml": "^2.5.1",
     "vite-plugin-md": "^0.6.7",

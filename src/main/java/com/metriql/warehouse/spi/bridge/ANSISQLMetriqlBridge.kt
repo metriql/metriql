@@ -141,7 +141,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                 joins.add(renderedMetric.join)
                             }
 
-                            val timeframeType = ((it.metricValue as? ReportMetric.ReportDimension)?.postOperation?.value as IPostOperation)?.valueType
+                            val timeframeType = ((it.metricValue as? ReportMetric.ReportDimension)?.postOperation?.value as? IPostOperation)?.valueType
                             val (_, operator) = getOperation(timeframeType ?: dim.dimension.fieldType, it.operator)
 
                             wheres.add(

@@ -22,7 +22,7 @@ import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 typealias ErrorMessage = String
 
 class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
-    data class MaterializeTableCache(val projectId: Int, val target: Table)
+    data class MaterializeTableCache(val projectId: String, val target: Table)
 
     fun findOptimumPlan(
         query: SegmentationReportOptions,

@@ -48,8 +48,3 @@ interface ServiceQueryGenerator<T : ServiceQueryDSL, K : ServiceReportOptions, C
         private val defaultJinja = Jinjava()
     }
 }
-
-@UppercaseEnum
-enum class ServiceType {
-    SEGMENTATION, FUNNEL, RETENTION, FLOW
-}

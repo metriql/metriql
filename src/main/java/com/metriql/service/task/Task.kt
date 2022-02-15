@@ -18,7 +18,7 @@ import java.util.logging.Logger
  * @param isBackgroundTask: Is this task a background task, or user initiated?
  * */
 
-abstract class Task<T, K>(val projectId: Int, val user: Any?, val source: String?, private val isBackgroundTask: Boolean) : Runnable {
+abstract class Task<T, K>(val projectId: String, val user: Any?, val source: String?, private val isBackgroundTask: Boolean) : Runnable {
     private var id: UUID? = null
 
     private val startedAt = Instant.now()!!

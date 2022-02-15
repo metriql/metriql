@@ -2,6 +2,10 @@ package com.metriql.warehouse.snowflake
 
 import com.metriql.db.FieldType
 import com.metriql.report.data.ReportMetric
+import com.metriql.report.flow.FlowReportType
+import com.metriql.report.funnel.FunnelReportType
+import com.metriql.report.retention.RetentionReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.model.Model
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
@@ -12,7 +16,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionType.PROJECTION
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
@@ -33,10 +36,10 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
     }
 
     override val queryGenerators = mapOf(
-        ServiceType.SEGMENTATION to ANSISQLSegmentationQueryGenerator(),
-        ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator(template = SnowflakeMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/snowflake/generic.jinja2").readText()),
-        ServiceType.RETENTION to SnowflakeRetentionQueryGenerator(),
-        ServiceType.FLOW to ANSISQLFlowQueryGenerator(),
+        SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator(template = SnowflakeMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/snowflake/generic.jinja2").readText()),
+        RetentionReportType.slug to SnowflakeRetentionQueryGenerator(),
+        FlowReportType.slug to ANSISQLFlowQueryGenerator(),
     )
 
     override val functions = super.functions + mapOf(

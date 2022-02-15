@@ -42,7 +42,7 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
     )
 
     data class QueryIdentifierForRunningTasks(
-        val projectId: Int,
+        val projectId: String,
         val query: String,
         val options: SqlReportOptions.QueryOptions,
     )

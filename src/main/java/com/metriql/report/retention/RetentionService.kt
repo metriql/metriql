@@ -21,7 +21,6 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.function.TimestampPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.retention.Retention
 import com.metriql.warehouse.spi.services.retention.RetentionQueryGenerator
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -138,7 +137,7 @@ class RetentionService @Inject constructor(
             dateUnit = report.dateUnit.serializableName
         )
 
-        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[ServiceType.RETENTION]
+        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[RetentionReportType.slug]
         val sqlQuery = if (queryGenerator is RetentionQueryGenerator) {
             queryGenerator.generateSQL(auth, context, retention, report)
         } else {

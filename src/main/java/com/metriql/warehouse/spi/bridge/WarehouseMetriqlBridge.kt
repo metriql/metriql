@@ -18,7 +18,6 @@ import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.function.WarehouseTimeframes
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
-import com.metriql.warehouse.spi.services.ServiceType
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.trino.jdbc.TrinoDriver
 import kotlin.IllegalArgumentException
@@ -34,7 +33,7 @@ interface WarehouseMetriqlBridge {
     val mqlTypeMap: Map<String, String>
     val filters: WarehouseFilters
     val timeframes: WarehouseTimeframes
-    val queryGenerators: Map<ServiceType, ServiceQueryGenerator<*, *, *>>
+    val queryGenerators: Map<String, ServiceQueryGenerator<*, *, *>>
     val functions: RFunctions
     val supportedDBTTypes: Set<DBTType>
     val supportedJoins: Set<Model.Relation.JoinType>
@@ -169,7 +168,7 @@ interface WarehouseMetriqlBridge {
             ),
             dbtTypes = supportedDBTTypes,
             aliasQuote = quote,
-            services = queryGenerators.map { it.key.serializableName to it.value.supports() }.toMap(),
+            services = queryGenerators.map { it.key to it.value.supports() }.toMap(),
             aggregations = allAggregations
         )
     }

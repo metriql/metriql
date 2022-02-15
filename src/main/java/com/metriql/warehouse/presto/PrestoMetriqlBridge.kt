@@ -1,5 +1,7 @@
 package com.metriql.warehouse.presto
 
+import com.metriql.report.funnel.FunnelReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.model.Model.Measure.AggregationType
 import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.warehouse.spi.DBTType
@@ -9,7 +11,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.INTERMEDIATE_ACCUMULATE
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.INTERMEDIATE_MERGE
 import com.metriql.warehouse.spi.function.RFunction
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 
@@ -17,8 +18,8 @@ object PrestoMetriqlBridge : ANSISQLMetriqlBridge() {
     override val filters = PrestoFilters { PrestoMetriqlBridge }
     override val timeframes = PrestoTimeframes()
     override val queryGenerators = mapOf(
-        ServiceType.SEGMENTATION to ANSISQLSegmentationQueryGenerator(),
-        ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator()
+        SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator()
     )
 
     enum class PrestoReverseAggregation(val aggregation: AggregationType, val distinctAggregation: AggregationType? = null) {

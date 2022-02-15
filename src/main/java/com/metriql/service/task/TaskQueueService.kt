@@ -30,7 +30,7 @@ class TaskQueueService @Inject constructor(private val executor: TaskExecutorSer
                         val it = iterator.next()
                         if (!it.value.status.isDone) {
                             if (it.value.getLastAccessedAt() == null || (currentTimeMillis - it.value.getLastAccessedAt()!! > ORPHAN_TASK_AGE_MILLIS)) {
-                                ContextLogger.log(logger, "Cancelling orphan task: ${it.key}", ProjectAuth.systemUser(0, 0))
+                                ContextLogger.log(logger, "Cancelling orphan task: ${it.key}", ProjectAuth.systemUser("", 0))
                                 it.value.cancel()
                             }
                         } else {

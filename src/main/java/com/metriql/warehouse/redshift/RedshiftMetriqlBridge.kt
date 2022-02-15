@@ -1,12 +1,15 @@
 package com.metriql.warehouse.redshift
 
+import com.metriql.report.flow.FlowReportType
+import com.metriql.report.funnel.FunnelReportType
+import com.metriql.report.retention.RetentionReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.model.Model
 import com.metriql.warehouse.postgresql.BasePostgresqlMetriqlBridge
 import com.metriql.warehouse.postgresql.PostgresqlFilters
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.function.RFunction
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
@@ -16,10 +19,10 @@ object RedshiftMetriqlBridge : BasePostgresqlMetriqlBridge() {
     override val filters = PostgresqlFilters { RedshiftMetriqlBridge }
     override val timeframes = RedshiftTimeframes()
     override val queryGenerators = mapOf(
-        ServiceType.SEGMENTATION to ANSISQLSegmentationQueryGenerator(),
-        ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator(partitionSuffix = "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW"),
-        ServiceType.RETENTION to RedshiftRetentionQueryGenerator(),
-        ServiceType.FLOW to ANSISQLFlowQueryGenerator(),
+        SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator(partitionSuffix = "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW"),
+        RetentionReportType.slug to RedshiftRetentionQueryGenerator(),
+        FlowReportType.slug to ANSISQLFlowQueryGenerator(),
     )
 
     override val functions = super.functions + mapOf(

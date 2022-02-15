@@ -6,7 +6,7 @@ import java.time.ZoneId
 
 data class ProjectAuth(
     val userId: Any,
-    val projectId: Int,
+    val projectId: String,
     val isOwner: Boolean,
     val isSuperuser: Boolean,
     val email: String?,
@@ -19,7 +19,7 @@ data class ProjectAuth(
     fun warehouseAuth() = WarehouseAuth(projectId, userId, timezone, source)
 
     companion object {
-        fun systemUser(projectId: Int, userId: Any = -1, timezone: ZoneId? = null): ProjectAuth {
+        fun systemUser(projectId: String, userId: Any = -1, timezone: ZoneId? = null): ProjectAuth {
             return ProjectAuth(
                 userId,
                 projectId,
@@ -34,7 +34,7 @@ data class ProjectAuth(
         }
 
         fun singleProject(timezone: ZoneId? = null): ProjectAuth {
-            return systemUser(-1, timezone = timezone)
+            return systemUser("", timezone = timezone)
         }
     }
 }

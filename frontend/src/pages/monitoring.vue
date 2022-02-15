@@ -4,7 +4,7 @@
     <div class="columns">
       <div class="column"><h3 style="vertical-align:middle">Active Queries</h3></div>
       <div class="column is-narrow">
-        <el-input type="search" prefix-icon="el-icon-search" placeholder="type to search in queries"
+        <el-input type="search" prefix-icon="el-search" placeholder="type to search in queries"
                   v-model="searchTerm" style="width:250px"></el-input>
       </div>
       <div class="column is-narrow">
@@ -74,7 +74,7 @@
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
-import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components'
+import { GridComponent, LegendComponent, TitleComponent, TooltipComponent, DataZoomComponent } from 'echarts/components'
 import VChart, { THEME_KEY } from 'vue-echarts'
 import { computed, onMounted, ref } from 'vue'
 import { MetriqlAdmin } from '../services/MetriqlAdmin'
@@ -88,12 +88,14 @@ use([
   TitleComponent,
   TooltipComponent,
   LegendComponent,
+  DataZoomComponent
 ])
 
 const states = {
   'queued': {type: 'info'},
   'running': {type: 'warning'},
-  'canceled': {type: 'error'},
+  'canceled': {type: 'danger'},
+  'failed': {type: 'danger'},
   'finished': {type: 'success'},
 }
 
@@ -203,7 +205,7 @@ export default {
           snap: true,
           handle: {
             show: true,
-            color: 'red'
+            // color: 'red'
           }
         }
       },

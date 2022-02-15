@@ -1,6 +1,9 @@
 package com.metriql.util
 
 import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.JavaType
+import kong.unirest.GenericType
 import kong.unirest.ObjectMapper
 import kong.unirest.Unirest
 import java.io.IOException
@@ -21,11 +24,19 @@ object UnirestHelper {
             .socketTimeout(2_800_000)
             /** Setting the object mapper is required to use our own helpers and annotations */
             .objectMapper = object : ObjectMapper {
-            private val jacksonObjectMapper = JsonHelper.getMapper().copy()
+            private val mapper = JsonHelper.getMapper().copy()
 
             override fun <T> readValue(value: String, valueType: Class<T>): T {
                 try {
-                    return jacksonObjectMapper.readValue(value, valueType)
+                    return mapper.readValue(value, valueType)
+                } catch (e: IOException) {
+                    throw RuntimeException(e)
+                }
+            }
+
+            override fun <T : Any?> readValue(value: String, genericType: GenericType<T>): T {
+                try {
+                    return mapper.readValue(value, mapper.constructType(genericType.type))
                 } catch (e: IOException) {
                     throw RuntimeException(e)
                 }
@@ -33,7 +44,7 @@ object UnirestHelper {
 
             override fun writeValue(value: Any): String {
                 try {
-                    return jacksonObjectMapper.writeValueAsString(value)
+                    return mapper.writeValueAsString(value)
                 } catch (e: JsonProcessingException) {
                     throw RuntimeException(e)
                 }

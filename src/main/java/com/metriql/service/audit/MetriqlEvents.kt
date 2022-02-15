@@ -13,7 +13,7 @@ import org.rakam.server.http.RakamHttpRequest
 class MetriqlEvents {
 
     data class Exception(val request: RakamHttpRequest, val e: java.lang.Exception)
-    data class InternalException(val e: Throwable, val userId: Any?, val projectId: Int?)
+    data class InternalException(val e: Throwable, val userId: Any?, val projectId: String?)
     data class UnhandledTaskException(val e: Throwable, val task: Task<*, *>)
 
     sealed class AuditLog(open val auth: ProjectAuth, val type: Int) {

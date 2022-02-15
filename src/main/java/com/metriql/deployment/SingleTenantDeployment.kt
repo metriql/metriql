@@ -57,7 +57,7 @@ class SingleTenantDeployment(
 
         return if (it.user == usernamePassPair.first && it.pass == usernamePassPair.second) {
             ProjectAuth(
-                it.user, -1, isOwner = true,
+                it.user, "", isOwner = true,
                 isSuperuser = true, email = null, permissions = null,
                 attributes = mapOf(), timezone = timezone, source = null
             )

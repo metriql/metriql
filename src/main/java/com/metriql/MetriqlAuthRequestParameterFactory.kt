@@ -27,7 +27,7 @@ import java.util.Base64
 import javax.crypto.spec.SecretKeySpec
 import javax.ws.rs.core.HttpHeaders
 
-data class UserContext(val user: String?, val pass: String?, val request: RakamHttpRequest)
+data class UserContext(val user: String?, val pass: String?, val token : String?, val attributes : Map<String, Any?>?, val request: RakamHttpRequest)
 
 class MetriqlAuthRequestParameterFactory(
     private val oauthApiSecret: String?,
@@ -55,17 +55,17 @@ class MetriqlAuthRequestParameterFactory(
                         }
                     })
 
-                    try {
+                   val attributes = try {
                         parser.parse(token[1]).body as Map<String, Any?>
                     } catch (e: Exception) {
                         null
                     }
 
-                    ProjectAuth.singleProject(null)
+                    deployment.getAuth(UserContext(null, null, token[1], attributes, request))
                 }
                 "basic" -> {
                     val userPass = String(Base64.getDecoder().decode(token[1]), StandardCharsets.UTF_8).split(":".toRegex(), 2)
-                    deployment.getAuth(UserContext(userPass[0], userPass[1], request))
+                    deployment.getAuth(UserContext(userPass[0], userPass[1], null, null, request))
                 }
                 else -> null
             }
@@ -85,7 +85,7 @@ class MetriqlAuthRequestParameterFactory(
                 if (deployment.authType != Deployment.AuthType.NONE) {
                     throw MetriqlException(UNAUTHORIZED)
                 } else {
-                    deployment.getAuth(UserContext(null, null, request))
+                    deployment.getAuth(UserContext(null, null, null, null, request))
                 }
             } else {
                 auth.copy(source = request.headers().get("X-Metriql-Source"), timezone = timezone)

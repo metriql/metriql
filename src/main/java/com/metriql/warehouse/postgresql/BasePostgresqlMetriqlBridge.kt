@@ -2,6 +2,10 @@ package com.metriql.warehouse.postgresql
 
 import com.metriql.db.FieldType.TIMESTAMP
 import com.metriql.report.data.ReportMetric
+import com.metriql.report.flow.FlowReportType
+import com.metriql.report.funnel.FunnelReportType
+import com.metriql.report.retention.RetentionReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.model.Model
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
@@ -9,7 +13,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionType.PROJECTION
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
@@ -47,9 +50,9 @@ object PostgresqlMetriqlBridge : BasePostgresqlMetriqlBridge() {
     override val timeframes = PostgresqlTimeframes()
 
     override val queryGenerators = mapOf(
-        ServiceType.SEGMENTATION to ANSISQLSegmentationQueryGenerator(),
-        ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator(),
-        ServiceType.RETENTION to PostgresqlRetentionQueryGenerator(),
-        ServiceType.FLOW to ANSISQLFlowQueryGenerator(),
+        SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator(),
+        RetentionReportType.slug to PostgresqlRetentionQueryGenerator(),
+        FlowReportType.slug to ANSISQLFlowQueryGenerator(),
     )
 }

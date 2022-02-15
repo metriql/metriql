@@ -10,12 +10,12 @@ interface ICacheService {
     fun setCache(cacheKey: CacheKey, value: Any?, ttl: Duration? = null)
     fun getCache(cacheKey: CacheKey): CacheResult?
 
-    fun invalidate(projectId: Int, entityType: EntityType, entityJsonPath: List<String>, value: String)
-    fun invalidate(projectId: Int, entityType: EntityType)
-    fun invalidate(projectId: Int)
+    fun invalidate(projectId: String, entityType: EntityType, entityJsonPath: List<String>, value: String)
+    fun invalidate(projectId: String, entityType: EntityType)
+    fun invalidate(projectId: String)
 
     data class CacheKey(
-        val projectId: Int,
+        val projectId: String,
         val entityType: EntityType,
         val options: Any?
     ) {

@@ -1,10 +1,11 @@
 package com.metriql.warehouse.mssqlserver
 
+import com.metriql.report.funnel.FunnelReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.Segmentation
@@ -19,7 +20,7 @@ object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
     )
 
     override val queryGenerators = mapOf(
-        ServiceType.SEGMENTATION to object : ANSISQLSegmentationQueryGenerator() {
+        SegmentationReportType.slug to object : ANSISQLSegmentationQueryGenerator() {
             override fun getMap(context: IQueryGeneratorContext, queryDSL: Segmentation): Map<String, Any?> {
                 // MsSQL doesn't support GROUP BY 1,2,3
                 return super.getMap(context, queryDSL) + mapOf("groups" to queryDSL.groups) + if (queryDSL.limit != null) {
@@ -29,7 +30,7 @@ object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
                 }
             }
         },
-        ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator()
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator()
     )
 
     override val supportedDBTTypes = setOf<DBTType>()

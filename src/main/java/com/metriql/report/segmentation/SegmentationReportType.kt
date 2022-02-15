@@ -2,9 +2,8 @@ package com.metriql.report.segmentation
 
 import com.metriql.report.ReportType
 import com.metriql.report.ReportTypeProxy
-import com.metriql.report.sql.SqlReportType
 
-class SegmentationReportTypeProxy : ReportType by SegmentationReportType, ReportTypeProxy(SqlReportType)
+class SegmentationReportTypeProxy : ReportType by SegmentationReportType, ReportTypeProxy(SegmentationReportType)
 
 object SegmentationReportType : ReportType {
     override val slug = "segmentation"

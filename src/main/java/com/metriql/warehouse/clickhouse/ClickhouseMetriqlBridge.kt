@@ -2,6 +2,8 @@ package com.metriql.warehouse.clickhouse
 
 import com.metriql.db.FieldType
 import com.metriql.report.data.ReportMetric
+import com.metriql.report.funnel.FunnelReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.model.Model
 import com.metriql.util.DefaultJinja
 import com.metriql.warehouse.spi.DBTType
@@ -9,7 +11,6 @@ import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.Segmentation
@@ -18,12 +19,12 @@ object ClickhouseMetriqlBridge : ANSISQLMetriqlBridge() {
     override val filters = ClickhouseFilters { ClickhouseMetriqlBridge }
     override val timeframes = ClickhouseTimeframes()
     override val queryGenerators = mapOf(
-        ServiceType.SEGMENTATION to object : ANSISQLSegmentationQueryGenerator() {
+        SegmentationReportType.slug to object : ANSISQLSegmentationQueryGenerator() {
             override fun getMap(context: IQueryGeneratorContext, queryDSL: Segmentation): Map<String, Any?> {
                 return super.getMap(context, queryDSL) + mapOf("groups" to queryDSL.groups, "orderBy" to queryDSL.orderBy)
             }
         },
-        ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator()
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator()
     )
 
     override val functions = super.functions + mapOf(

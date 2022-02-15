@@ -18,7 +18,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.INTERMEDIATE_ACCUMULATE
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.INTERMEDIATE_MERGE
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.segmentation.Segmentation
 import com.metriql.warehouse.spi.services.segmentation.SegmentationQueryGenerator
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -44,7 +43,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
     private val materializeTableExists = newSetFromMap(ConcurrentHashMap<MaterializeTableCache, Boolean>())
 
     override fun generateMaterializeQuery(
-        projectId: Int,
+        projectId: String,
         context: IQueryGeneratorContext,
         modelName: ModelName,
         materalizeName: String,
@@ -116,7 +115,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         useAggregate: Boolean = false,
         forAccumulator: Boolean = false,
     ): Triple<Table?, String, Segmentation> {
-        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[ServiceType.SEGMENTATION]
+        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[SegmentationReportType.slug]
         val serviceQueryGenerator = queryGenerator as? SegmentationQueryGenerator ?: throw IllegalArgumentException("Warehouse query generator must be SegmentationQueryGenerator")
 
         val (materializedTarget, dsl) = createDSL(auth, context.datasource, context, reportOptions, reportFilters, useAggregate, forAccumulator)

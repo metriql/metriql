@@ -35,7 +35,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
         val user = context.user ?: throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
         val cachedAuth = cache.get(user) { Optional.empty() }
         val auth = ProjectAuth(
-            user, -1, isOwner = true,
+            user, "", isOwner = true,
             isSuperuser = true, email = null, permissions = null,
             attributes = mapOf(), timezone = null, source = null
         )

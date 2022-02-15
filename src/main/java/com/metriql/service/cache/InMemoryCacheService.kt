@@ -42,17 +42,16 @@ class InMemoryCacheService(spec: CacheBuilderSpec) : ICacheService {
         }
     }
 
-    override fun invalidate(projectId: Int, entityType: ICacheService.EntityType, entityJsonPath: List<String>, value: String) {
-        val keys = cache.asMap().keys.filter { it.projectId == projectId && it.entityType == entityType && lookup(it.options, entityJsonPath, value) }
+    override fun invalidate(projectId: String, entityType: ICacheService.EntityType, entityJsonPath: List<String>, value: String) {
         cache.invalidateAll()
     }
 
-    override fun invalidate(projectId: Int, entityType: ICacheService.EntityType) {
+    override fun invalidate(projectId: String, entityType: ICacheService.EntityType) {
         val keys = cache.asMap().keys.filter { it.projectId == projectId && it.entityType == entityType }
         cache.invalidateAll(keys)
     }
 
-    override fun invalidate(projectId: Int) {
+    override fun invalidate(projectId: String) {
         val keys = cache.asMap().keys.filter { it.projectId == projectId }
         cache.invalidateAll(keys)
     }

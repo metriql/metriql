@@ -9,7 +9,6 @@ import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.ModelName
 import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.flow.Flow
 import com.metriql.warehouse.spi.services.flow.FlowQueryGenerator
 import javax.inject.Inject
@@ -66,7 +65,7 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
 
         val flow = Flow(allEventsReference = """$firstEvent t UNION ALL $followingEvents""")
 
-        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[ServiceType.FLOW]
+        val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[FlowReportType.slug]
         val sqlQuery = (queryGenerator as? FlowQueryGenerator)?.generateSQL(auth, context, flow, reportOptions)
             ?: throw IllegalArgumentException("Warehouse query generator must be ${FlowQueryGenerator.javaClass.name} but it's ${queryGenerator?.javaClass?.name}")
 

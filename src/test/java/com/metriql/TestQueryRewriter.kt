@@ -286,7 +286,7 @@ class TestQueryRewriter {
 
     private val rewriter: SegmentationQueryReWriter
         get() {
-            val auth = systemUser(1, 1)
+            val auth = systemUser("1", 1)
             val datasource = PostgresqlDataSource(PostgresqlConfig("127.0.0.1", 5432, "rakamtest", "public", "buremba", ""))
             val renderer = JinjaRendererService()
             val modelService = TestModelService(

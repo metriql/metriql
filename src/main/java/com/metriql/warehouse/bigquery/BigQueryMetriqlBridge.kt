@@ -2,6 +2,10 @@ package com.metriql.warehouse.bigquery
 
 import com.metriql.db.FieldType
 import com.metriql.report.data.ReportMetric
+import com.metriql.report.flow.FlowReportType
+import com.metriql.report.funnel.FunnelReportType
+import com.metriql.report.retention.RetentionReportType
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.warehouse.spi.DBTType
@@ -13,7 +17,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionType.PROJECTION
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceType
 import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
@@ -25,10 +28,10 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
     override val quote = '`'
 
     override val queryGenerators = mapOf(
-        ServiceType.SEGMENTATION to ANSISQLSegmentationQueryGenerator(),
-        ServiceType.FUNNEL to ANSISQLFunnelQueryGenerator(template = BigQueryMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/bigquery/generic.jinja2").readText()),
-        ServiceType.RETENTION to BigQueryRetentionQueryGenerator(),
-        ServiceType.FLOW to ANSISQLFlowQueryGenerator(),
+        SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator(template = BigQueryMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/bigquery/generic.jinja2").readText()),
+        RetentionReportType.slug to BigQueryRetentionQueryGenerator(),
+        FlowReportType.slug to ANSISQLFlowQueryGenerator(),
     )
 
     override val mqlTypeMap = super.mqlTypeMap + mapOf(StandardTypes.VARCHAR to "string")
