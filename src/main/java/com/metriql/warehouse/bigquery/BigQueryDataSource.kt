@@ -74,8 +74,15 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                 bigQuery.setCredentials(fromStream)
             }
             else -> {
-                val localKeyFile = System.getenv("GOOGLE_APPLICATION_CREDENTIALS")?.let { File(it) }
-                    ?: throw MetriqlException("Unable to find GCloud credentials, GOOGLE_APPLICATION_CREDENTIALS environment variable must be set", BAD_REQUEST)
+                val defaultServiceAccount = System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+                    ?.let { File(it) }
+                    ?.takeIf { it.exists() }
+                    ?.let { ServiceAccountCredentials.fromStream(FileInputStream(it)) }
+
+                val defaultOAuthAccount = (System.getenv("GCLOUD_CONFIG_DIR")?.let { File(it, "application_default_credentials.json") }
+                    ?: File(System.getProperty("user.home"), ".config/gcloud/application_default_credentials.json"))
+                    .takeIf { it.exists() }
+                    ?.let { UserCredentials.fromStream(FileInputStream(it)) }
 
                 if (config.project == null) {
                     val exec = Runtime.getRuntime().exec("gcloud config get-value project")
@@ -97,12 +104,12 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                     }
                 }
 
-                if (!localKeyFile.exists()) {
-                    throw MetriqlException("$localKeyFile not found connecting the BigQuery.", BAD_REQUEST)
-                }
-
-                val fromStream = ServiceAccountCredentials.fromStream(FileInputStream(localKeyFile))
-                bigQuery.setCredentials(fromStream)
+                val auth = defaultServiceAccount ?: defaultOAuthAccount
+                ?: throw MetriqlException(
+                    "Unable to find GCloud credentials, GOOGLE_APPLICATION_CREDENTIALS must be set " +
+                        "or you should setup OAuth following the guide here: https://docs.getdbt.com/reference/warehouse-profiles/bigquery-profile#oauth-via-gcloud", BAD_REQUEST
+                )
+                bigQuery.setCredentials(auth)
             }
         }
 
@@ -112,7 +119,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     /** A public dataset can be the default project. However, we need to execute jobs on our own project */
     private fun getProjectId(): String {
         return config.project ?: credentialProjectId
-            ?: throw MetriqlException("Unable to find `project_id`, please set the value in credentials", BAD_REQUEST)
+        ?: throw MetriqlException("Unable to find `project_id`, please set the value in credentials", BAD_REQUEST)
     }
 
     override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {
