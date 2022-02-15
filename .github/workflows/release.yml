@@ -11,19 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
         - uses: actions/checkout@master
-        - name: Publish to Registry
-          uses: elgohr/Publish-Docker-Github-Action@master
-          with:
-            name: buremba/metriql
-            username: ${{ secrets.DOCKER_USERNAME }}
-            password: ${{ secrets.DOCKER_PASSWORD }}
-            tags: "latest"
+#         - name: Publish to Registry
+#           uses: elgohr/Publish-Docker-Github-Action@master
+#           with:
+#             name: buremba/metriql
+#             username: ${{ secrets.DOCKER_USERNAME }}
+#             password: ${{ secrets.DOCKER_PASSWORD }}
+#             tags: "latest"
         - name: Update Demo on Heroku
           uses: CamiloGarciaLaRotta/watermelon-http-client@v1.5
           with:
             url: https://kolkrabbi.heroku.com/apps/2748b834-4cc7-409c-819c-f7aa907d8f46/github/push
             method: POST
-            headers: "{'Authorization': 'Bearer ${{ secrets.DEMO_HEROKU_API_TOKEN }}'}"
+            headers: '{"Authorization": "Bearer ${{ secrets.DEMO_HEROKU_API_TOKEN }}"}'
 #    runs-on: ubuntu-latest
 #    steps:
 #      - name: Checkout project
