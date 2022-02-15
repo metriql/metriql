@@ -301,7 +301,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                                 }
                             }
                             is ReportMetric.ReportMeasure -> {
-                                ((dimensions.size ?: 0) + measures.indexOf(orderItem.value)) + 1
+                                (dimensions.size + measures.indexOf(orderItem.value)) + 1
                             }
                             else -> throw IllegalStateException("Only dimension and measure are accepted as segmentation order")
                         }
