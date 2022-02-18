@@ -1,6 +1,7 @@
 package com.metriql.warehouse.bigquery
 
 import com.fasterxml.jackson.core.type.TypeReference
+import com.google.auth.oauth2.ImpersonatedCredentials
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.auth.oauth2.UserCredentials
 import com.google.cloud.bigquery.BigQuery
@@ -109,7 +110,17 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                     "Unable to find GCloud credentials, GOOGLE_APPLICATION_CREDENTIALS must be set " +
                         "or you should setup OAuth following the guide here: https://docs.getdbt.com/reference/warehouse-profiles/bigquery-profile#oauth-via-gcloud", BAD_REQUEST
                 )
-                bigQuery.setCredentials(auth)
+
+                if (config.impersonated_credentials != null) {
+                    val cred = ImpersonatedCredentials.newBuilder()
+                        .setSourceCredentials(auth)
+                        .setTargetPrincipal(config.impersonated_credentials)
+                        .setScopes(SCOPES)
+                    config.timeoutSeconds?.let { cred.setLifetime(it) }
+                    bigQuery.setCredentials(cred.build())
+                } else {
+                    bigQuery.setCredentials(auth)
+                }
             }
         }
 
@@ -357,6 +368,8 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     }
 
     companion object {
+        private val SCOPES = listOf("https://www.googleapis.com/auth/bigquery", "https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/drive")
+
         fun toFieldType(rawType: LegacySQLTypeName, isArray: Boolean = false): FieldType? {
             if (isArray) {
                 return when (rawType) {

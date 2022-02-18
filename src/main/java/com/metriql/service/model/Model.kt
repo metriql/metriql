@@ -9,7 +9,6 @@ import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.ReportType
 import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
 import com.metriql.util.JsonHelper
@@ -55,7 +54,7 @@ data class Model(
     val materializes: List<Materialize>? = null,
     val alwaysFilters: List<OrFilters>? = null,
     val id: Int? = null,
-    val tags : List<String>? = null,
+    val tags: List<String>? = null,
     val recipeId: Int? = null,
     val recipePath: String? = null,
 ) {
@@ -77,8 +76,15 @@ data class Model(
         }
 
         @JsonIgnore
-        fun needsAlias(): Boolean {
-            return value is TargetValue.Table
+        fun needsWith(): Boolean {
+            return when (value) {
+                is TargetValue.Table -> {
+                    false
+                }
+                is TargetValue.Sql -> {
+                    value.sql.contains(' ')
+                }
+            }
         }
 
         sealed class TargetValue {
@@ -189,7 +195,7 @@ data class Model(
         val fieldType: FieldType? = null,
         val reportOptions: ObjectNode? = null,
         val hidden: Boolean? = null,
-        val tags : List<String>? = null
+        val tags: List<String>? = null
     ) {
         @UppercaseEnum
         enum class Type(private val clazz: KClass<out DimensionValue>) : StrValueEnum {
@@ -218,7 +224,7 @@ data class Model(
         val reportOptions: ObjectNode? = null,
         val fieldType: FieldType? = FieldType.DOUBLE,
         val hidden: Boolean? = null,
-        val tags : List<String>? = null
+        val tags: List<String>? = null
     ) {
 
         init {

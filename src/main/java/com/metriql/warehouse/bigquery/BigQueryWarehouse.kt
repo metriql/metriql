@@ -29,7 +29,7 @@ object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
         @JsonAlias("maximum_bytes_billed")
         val maximumBytesBilled: Long? = null,
         @JsonAlias("timeout_seconds")
-        val timeoutSeconds: Long? = null,
+        val timeoutSeconds: Int? = null,
         val location: String? = null,
         val priority: String? = null,
         val retries: Int? = null,
@@ -39,6 +39,7 @@ object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
         val refresh_token: String? = null,
         val client_id: String? = null,
         val client_secret: String? = null,
+        val impersonated_credentials: String? = null,
         val token_uri: String? = null,
     ) : Warehouse.Config {
         enum class Method {

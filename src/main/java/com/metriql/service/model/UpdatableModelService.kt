@@ -15,7 +15,7 @@ class UpdatableModelService(val modelService: IModelService?, private val models
     /*
         Returns the available models within the same recipe
      */
-    override fun list(auth: ProjectAuth): List<Model> {
+    override fun list(auth: ProjectAuth, target : Model.Target?): List<Model> {
         return currentModels
     }
 

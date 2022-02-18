@@ -103,7 +103,8 @@ class SingleTenantDeployment(
             val compiledProfiles = DbtJinjaRenderer.renderer.renderProfiles(content, varMap)
 
             val profiles = YamlHelper.mapper.readValue(compiledProfiles, DbtProfiles::class.java)
-            val currentProfile = profiles[profile ?: dbtProjectFile?.profile ?: "default"] ?: throw IllegalStateException("profile $profile doesn't exist")
+            val profileName = profile ?: dbtProjectFile?.profile ?: "default"
+            val currentProfile = profiles[profileName] ?: throw IllegalStateException("Profile `$profileName` doesn't exist, available profiles are ${profiles.keys.joinToString(", ")}")
 
             return JsonHelper.convert(currentProfile.outputs[currentProfile.target], WarehouseConfig::class.java)
         }

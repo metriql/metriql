@@ -77,7 +77,7 @@ class QueryGeneratorContext(
     }
 
     override fun getAggregatesForModel(target: Model.Target, reportType: ReportType): List<Triple<ModelName, String, SegmentationMaterialize>> {
-        val allModels = modelService.list(auth)
+        val allModels = modelService.list(auth, target = target)
 
         return allModels.filter { it.target == target }
             .flatMap { model ->
@@ -175,7 +175,7 @@ class QueryGeneratorContext(
         }
 
         // If target is SQL only return the view alias.
-        if (columnName == null && !modelTarget.needsAlias()) {
+        if (columnName == null && modelTarget.needsWith()) {
             viewModels[aliasName] = reference
             return warehouseBridge.quoteIdentifier(aliasName)
         }
