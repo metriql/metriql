@@ -193,6 +193,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         val measures = materializeQuery?.measures ?: reportOptions.measures
         val filters = materializeQuery?.filters ?: reportOptions.filters ?: listOf()
         val orders = reportOptions.orders ?: listOf()
+        val alias = context.getOrGenerateAlias(modelName, null)
 
         // 1. Render measures, dimensions and filters.
         // Each of them will generate a projection value and a join relation if available.
@@ -370,14 +371,14 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                 joinRelations + context.referencedRelations
                     .filter { it.key.first == modelName } // Take only relations that are targeted to this model.
                     .values.map {
-                        warehouseBridge.generateJoinStatement(it, context)
+                        warehouseBridge.generateJoinStatement(context, it)
                     }
                 ).reversed().toSet(),
             tableReference = context.getSQLReference(
-                contextModelTarget, modelName, null, if (forAccumulator) null else inQueryDimensionNames,
+                contextModelTarget, alias, modelName, null, if (forAccumulator) null else inQueryDimensionNames,
                 extractDateRangeForEventTimestamp(allFilters)
             ),
-            tableAlias = modelName
+            tableAlias = alias
         )
 
         return aggregateModel?.target?.value as? Table to dsl

@@ -51,6 +51,7 @@ class QueryGeneratorContext(
     val variables: Map<String, Any>? = null,
 ) : IQueryGeneratorContext {
     override val viewModels = LinkedHashMap<ModelName, String>()
+    override val aliases = LinkedHashMap<Pair<ModelName, RelationName?>, String>()
     override val referencedDimensions = ConcurrentHashMap<Pair<ModelName, DimensionName>, ModelDimension>()
     override val referencedMeasures = ConcurrentHashMap<Pair<ModelName, MeasureName>, ModelMeasure>()
     override val referencedRelations = ConcurrentHashMap<Pair<ModelName, RelationName>, ModelRelation>()
@@ -153,7 +154,8 @@ class QueryGeneratorContext(
 
     override fun getSQLReference(
         modelTarget: Model.Target,
-        aliasName: String,
+        aliasName : String,
+        modelName : String,
         columnName: String?,
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,
@@ -169,6 +171,7 @@ class QueryGeneratorContext(
                     aliasName,
                     this,
                     inQueryDimensionNames = inQueryDimensionNames,
+                    targetModelName = modelName,
                     dateRange = dateRange,
                 )
             }

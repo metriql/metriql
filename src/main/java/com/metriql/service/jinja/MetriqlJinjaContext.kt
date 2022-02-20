@@ -35,7 +35,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
 
         fun toString(metricPositionType: WarehouseMetriqlBridge.MetricPositionType): String {
             return when (value) {
-                is Model -> context.getSQLReference(value.target, value.name, null)
+                is Model -> context.getSQLReference(value.target, value.name, value.name, null)
                 is ModelDimension -> {
                     if (renderAlias) {
                         context.getDimensionAlias(value.dimension.name, null, null)
@@ -75,7 +75,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                 }
                 is ModelRelation -> {
                     try {
-                        context.warehouseBridge.generateJoinStatement(value, context)
+                        context.warehouseBridge.generateJoinStatement(context, value)
                     } catch (e: MetriqlException) {
                         throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
                     }

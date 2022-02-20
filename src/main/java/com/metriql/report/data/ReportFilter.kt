@@ -12,6 +12,7 @@ import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
+import com.metriql.util.getOperation
 import com.metriql.warehouse.spi.filter.ANSISQLFilters
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
@@ -130,7 +131,7 @@ data class ReportFilter(
 
     companion object {
         fun extractDateRangeForEventTimestamp(filters: List<ReportFilter>): DateRange? {
-            return filters.mapNotNull {
+            return filters.firstNotNullOfOrNull {
                 if (it.value is FilterValue.MetricFilter &&
                     it.value.metricType == FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION &&
                     it.value.metricValue is ReportMetric.ReportMappingDimension &&
@@ -138,8 +139,9 @@ data class ReportFilter(
                 ) {
                     it.value.filters[0]
                 } else null
-            }.firstOrNull()?.let {
-                ANSISQLFilters.convertTimestampFilterToDates(it.operator as TimestampOperatorType, it.value)
+            }?.let {
+                val (type, operation) = getOperation(FieldType.TIMESTAMP, it.operator)
+                ANSISQLFilters.convertTimestampFilterToDates(operation as TimestampOperatorType, it.value)
             }
         }
     }

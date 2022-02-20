@@ -1,5 +1,6 @@
 package com.metriql.warehouse.spi.bridge
 
+import com.metriql.db.FieldType
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.ReportMetric.ReportMeasure
@@ -166,10 +167,12 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                 postOperation,
                                 MetricPositionType.FILTER
                             )
+                            val (_, operator) = getOperation(metricValue.name.fieldType, it.operator)
+
                             wheres.add(
                                 filters.generateFilter(
                                     context,
-                                    it.operator as FilterOperator,
+                                    operator as FilterOperator,
                                     renderedMetric.value,
                                     it.value
                                 )
@@ -184,10 +187,13 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                 MetricPositionType.FILTER,
                                 ADHOC
                             )
+
+                            val (_, operator) = getOperation(FieldType.DOUBLE, it.operator)
+
                             val havingFilters = filter.value.filters.joinToString(" OR ") { measureFilter ->
                                 filters.generateFilter(
                                     context,
-                                    measureFilter.operator as FilterOperator,
+                                    operator as FilterOperator,
                                     renderedMetric.value,
                                     measureFilter.value
                                 )
@@ -275,6 +281,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
         val filters = (modelMeasure.measure.filters ?: listOf()) + (extraFilters ?: listOf())
         val isFilterInPushdown = measure.type == Model.Measure.Type.SQL && measure.value.agg == null
+        val modelAlias = context.getOrGenerateAlias(contextModelName, relationName)
 
         val rawValue = when (measure.value) {
             // Exclude aggregation if filter is present. Aggregation function will be added later
@@ -283,8 +290,9 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                     ADHOC, INTERMEDIATE_ACCUMULATE ->
                         if (measure.value.column == null)
                         // when filter is enabled, * fails
-                            "1" else
-                            context.getSQLReference(modelMeasure.target, modelMeasure.modelName, measure.value.column)
+                            "1" else {
+                            context.getSQLReference(modelMeasure.target, modelAlias, modelMeasure.modelName, measure.value.column)
+                        }
                     INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
@@ -319,7 +327,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         }
 
         val baseJoinRelations = if (modelRelation != null) {
-            generateJoinStatement(modelRelation, context)
+            generateJoinStatement(context, modelRelation)
         } else null
 
         // A filter might use a dimension from a relation. New joins may be added.
@@ -445,6 +453,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     ): String {
         val modelTargetSQL = context.getSQLReference(
             modelTarget,
+            context.getOrGenerateAlias(modelName, null),
             modelName,
             null,
             dimensions.map { it.name },
@@ -455,7 +464,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             dimensions
                 .joinToString(", ") { dimension ->
                     val value = when (dimension.value) {
-                        is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelTarget, modelName, dimension.value.column)
+                        is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelTarget, context.getOrGenerateAlias(modelName, null), modelName, dimension.value.column)
                         is Model.Dimension.DimensionValue.Sql -> context.renderSQL(dimension.value.sql, modelName)
                     }
                     "$value AS ${quoteIdentifier(context.getDimensionAlias(dimension.name, null, null))}"
@@ -491,14 +500,16 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         relationName: RelationName?,
         postOperation: ReportMetric.PostOperation?,
         metricPositionType: MetricPositionType,
+        modelAlias : String?
     ): WarehouseMetriqlBridge.RenderedField {
         val (modelDimension, modelRelation) = generateModelDimension(contextModelName, dimensionName, relationName, context)
 
         val dimension = modelDimension.dimension
         val isWindow = dimension.value is Model.Dimension.DimensionValue.Sql && dimension.value.window == true
 
+        val modelAlias = modelAlias ?: context.getOrGenerateAlias(contextModelName, relationName)
         val rawValue = when (dimension.value) {
-            is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelDimension.target, modelDimension.modelName, dimension.value.column)
+            is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelDimension.target, modelAlias, modelDimension.modelName, dimension.value.column)
             is Model.Dimension.DimensionValue.Sql -> context.renderSQL(dimension.value.sql, modelDimension.modelName, renderAlias = dimension.value.window != null)
         }
 
@@ -515,7 +526,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             value
         }
 
-        val joinRelations = if (modelRelation != null) generateJoinStatement(modelRelation, context) else null
+        val joinRelations = if (modelRelation != null) generateJoinStatement(context, modelRelation) else null
 
         val alias = context.getDimensionAlias(dimensionName, relationName, postOperation)
         val dimensionValue = when (metricPositionType) {
@@ -527,8 +538,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     }
 
     override fun generateJoinStatement(
-        modelRelation: ModelRelation,
         context: IQueryGeneratorContext,
+        modelRelation: ModelRelation,
     ): String {
         val relation = modelRelation.relation
         val joinType = when (relation.joinType) {
@@ -537,7 +548,10 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             Model.Relation.JoinType.RIGHT_JOIN -> "RIGHT JOIN"
             Model.Relation.JoinType.FULL_JOIN -> "FULL JOIN"
         }
-        val joinModel = context.getSQLReference(modelRelation.targetModelTarget, modelRelation.targetModelName, null)
+        val targetAlias = context.getOrGenerateAlias(modelRelation.sourceModelName, modelRelation.relation.name)
+        val sourceAlias = context.getOrGenerateAlias(modelRelation.sourceModelName, null)
+
+        val joinModel = context.getSQLReference(modelRelation.targetModelTarget, targetAlias, modelRelation.targetModelName, null)
         val joinExpression = when (relation.value) {
             is Model.Relation.RelationValue.SqlValue -> {
                 context.renderSQL(relation.value.sql, modelRelation.sourceModelName, targetModelName = modelRelation.targetModelName)
@@ -547,12 +561,14 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 "${
                 context.getSQLReference(
                     modelRelation.sourceModelTarget,
+                    sourceAlias,
                     modelRelation.sourceModelName,
                     columnTypeRelation.sourceColumn
                 )
                 } = ${
                 context.getSQLReference(
                     modelRelation.targetModelTarget,
+                    targetAlias,
                     modelRelation.targetModelName,
                     columnTypeRelation.targetColumn
                 )
@@ -575,7 +591,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                     relation.value.targetDimension,
                     null,
                     null,
-                    MetricPositionType.FILTER
+                    MetricPositionType.FILTER,
+                    modelAlias = targetAlias
                 ).value
                 }"
             }

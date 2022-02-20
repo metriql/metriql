@@ -85,7 +85,8 @@ interface WarehouseMetriqlBridge {
         dimensionName: DimensionName,
         relationName: RelationName?,
         postOperation: ReportMetric.PostOperation?,
-        metricPositionType: MetricPositionType
+        metricPositionType: MetricPositionType,
+        modelAlias : String? = null
     ): RenderedField
 
     data class RenderedFilter(val joins: List<String>, val whereFilter: String?, val havingFilter: String?)
@@ -121,8 +122,8 @@ interface WarehouseMetriqlBridge {
     * Other warehouse implementations may override this generic join statement generator
     */
     fun generateJoinStatement(
+        context: IQueryGeneratorContext,
         modelRelation: ModelRelation,
-        context: IQueryGeneratorContext
     ): String
 
     // While using a metric or dimension in query we have to include alias (name or label) for the metric

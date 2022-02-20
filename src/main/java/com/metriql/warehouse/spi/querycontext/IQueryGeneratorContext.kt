@@ -38,6 +38,7 @@ interface IQueryGeneratorContext {
     val referencedRelations: Map<Pair<ModelName, RelationName>, ModelRelation>
 
     val viewModels: LinkedHashMap<ModelName, String>
+    val aliases: LinkedHashMap<Pair<ModelName, RelationName?>, String>
     val comments: MutableList<String>
     val warehouseBridge: WarehouseMetriqlBridge get() = datasource.warehouse.bridge
 
@@ -58,6 +59,7 @@ interface IQueryGeneratorContext {
     fun getSQLReference(
         modelTarget: Model.Target,
         aliasName: String,
+        modelName: String,
         columnName: String?,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null
@@ -78,5 +80,9 @@ interface IQueryGeneratorContext {
     fun getUserAttributes(): UserAttributeValues {
         val fetcher = userAttributeFetcher ?: throw MetriqlException("User attribute feature is not available in the context", HttpResponseStatus.BAD_REQUEST)
         return fetcher.invoke(auth)
+    }
+
+    fun getOrGenerateAlias(modelName: String, relationName: String?) : String {
+        return aliases.computeIfAbsent(Pair(modelName, relationName)) { "t${aliases.size+1}"}
     }
 }
