@@ -111,10 +111,10 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                         "or you should setup OAuth following the guide here: https://docs.getdbt.com/reference/warehouse-profiles/bigquery-profile#oauth-via-gcloud", BAD_REQUEST
                 )
 
-                if (config.impersonated_credentials != null) {
+                if (config.impersonate_service_account != null) {
                     val cred = ImpersonatedCredentials.newBuilder()
                         .setSourceCredentials(auth)
-                        .setTargetPrincipal(config.impersonated_credentials)
+                        .setTargetPrincipal(config.impersonate_service_account)
                         .setScopes(SCOPES)
                     config.timeoutSeconds?.let { cred.setLifetime(it) }
                     bigQuery.setCredentials(cred.build())
