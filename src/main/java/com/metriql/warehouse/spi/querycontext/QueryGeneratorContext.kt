@@ -171,7 +171,7 @@ class QueryGeneratorContext(
                     aliasName,
                     this,
                     inQueryDimensionNames = inQueryDimensionNames,
-                    targetModelName = modelName,
+                    sourceModelName = modelName,
                     dateRange = dateRange,
                 )
             }
@@ -199,10 +199,11 @@ class QueryGeneratorContext(
             auth,
             datasource,
             sqlRenderable,
-            modelName,
+            modelName?.let { getOrGenerateAlias(it, null) },
             this,
             inQueryDimensionNames,
             dateRange,
+            sourceModelName = modelName,
             targetModelName = targetModelName,
             renderAlias = renderAlias
         )

@@ -28,10 +28,11 @@ class JinjaRendererService @Inject constructor() {
         auth: ProjectAuth,
         dataSource: DataSource,
         sqlRenderable: SQLRenderable,
-        modelName: ModelName?,
+        aliasName: ModelName?,
         context: IQueryGeneratorContext,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,
+        sourceModelName: ModelName? = null,
         targetModelName: ModelName? = null,
         variables: Map<String, Any> = mapOf(),
         renderAlias: Boolean = false,
@@ -47,20 +48,20 @@ class JinjaRendererService @Inject constructor() {
         * We have to include the dimension names with the same modelname to in_query context so that `firebase_event_in_app_purchase` SQL model
         * will get rendered including that dimension
         * */
-        val additionalDimensionsAndColumns = if (modelName != null) {
-            context.referencedDimensions.filter { it.key.first == modelName }.map { it.key.second }
+        val additionalDimensionsAndColumns = if (sourceModelName != null) {
+            context.referencedDimensions.filter { it.key.first == sourceModelName }.map { it.key.second }
         } else {
             listOf()
         }
 
         val base = mapOf(
-            "TABLE" to if (modelName != null) dataSource.warehouse.bridge.quoteIdentifier(modelName) else null,
+            "TABLE" to if (aliasName != null) dataSource.warehouse.bridge.quoteIdentifier(aliasName) else null,
             "TARGET" to if (targetModelName != null) dataSource.warehouse.bridge.quoteIdentifier(targetModelName) else null,
             "aq" to context.warehouseBridge.quote,
             "model" to MetriqlJinjaContext.ModelContext(context, renderAlias),
-            "relation" to MetriqlJinjaContext.RelationContext(modelName, context, renderAlias),
-            "dimension" to (modelName?.let { MetriqlJinjaContext.DimensionContext(it, null, context, renderAlias) }),
-            "measure" to (modelName?.let { MetriqlJinjaContext.MeasureContext(it, null, context, renderAlias) }),
+            "relation" to MetriqlJinjaContext.RelationContext(sourceModelName, context, renderAlias),
+            "dimension" to (sourceModelName?.let { MetriqlJinjaContext.DimensionContext(it, null, context, renderAlias) }),
+            "measure" to (sourceModelName?.let { MetriqlJinjaContext.MeasureContext(it, null, context, renderAlias) }),
             "user" to MetriqlJinjaContext.UserAttributeContext(context),
             "variables" to variables,
             "_auth" to auth,
@@ -79,7 +80,7 @@ class JinjaRendererService @Inject constructor() {
         return try {
             jinja.render(sqlRenderable, hook?.invoke(bindings) ?: bindings)
         } catch (e: Throwable) {
-            throw MetriqlException("Error while rendering jinja expression `$sqlRenderable` for model `$modelName`: ${e.message}", HttpResponseStatus.BAD_REQUEST)
+            throw MetriqlException("Error while rendering jinja expression `$sqlRenderable` for model `$sourceModelName`: ${e.message}", HttpResponseStatus.BAD_REQUEST)
         }
     }
 

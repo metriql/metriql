@@ -39,7 +39,7 @@ object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
         val refresh_token: String? = null,
         val client_id: String? = null,
         val client_secret: String? = null,
-        val impersonated_credentials: String? = null,
+        val impersonate_service_account: String? = null,
         val token_uri: String? = null,
     ) : Warehouse.Config {
         enum class Method {
