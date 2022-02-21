@@ -116,7 +116,9 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
                         .setSourceCredentials(auth)
                         .setTargetPrincipal(config.impersonate_service_account)
                         .setScopes(SCOPES)
-                    config.timeoutSeconds?.let { cred.setLifetime(it) }
+                    if(config.timeoutSeconds != null && config.timeoutSeconds > 0) {
+                        cred.lifetime = config.timeoutSeconds
+                    }
                     bigQuery.setCredentials(cred.build())
                 } else {
                     bigQuery.setCredentials(auth)
