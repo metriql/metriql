@@ -28,7 +28,7 @@ class JinjaRendererService @Inject constructor() {
         auth: ProjectAuth,
         dataSource: DataSource,
         sqlRenderable: SQLRenderable,
-        aliasName: ModelName?,
+        aliasName: String?,
         context: IQueryGeneratorContext,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,

@@ -25,26 +25,26 @@ data class SegmentationRecipeQuery(
     val orders: Map<Recipe.FieldReference, Recipe.OrderType>? = null
 ) : RecipeQuery {
     override fun toReportOptions(context: IQueryGeneratorContext): SegmentationReportOptions {
-        val modelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
-        val model = context.getModel(modelName)
+        val regexModelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
+        val model = context.getModel(regexModelName)
         return SegmentationReportOptions(
-            modelName,
-            dimensions?.map { it.toDimension(modelName, it.getType(context, modelName)) },
-            measures?.map { it.toMeasure(modelName) } ?: listOf(),
-            filters?.map { it.toReportFilter(context, modelName) },
+            model.name,
+            dimensions?.map { it.toDimension(model.name, it.getType(context, model.name)) },
+            measures?.map { it.toMeasure(model.name) } ?: listOf(),
+            filters?.map { it.toReportFilter(context, model.name) },
             reportOptions,
             limit = limit,
             orders = orders?.entries?.map { order ->
                 val fieldModel = if (order.key.relation != null) {
                     model.relations.find { it.name == order.key.relation }!!.modelName
-                } else modelName
+                } else model.name
                 val targetModel = context.getModel(fieldModel)
                 when {
                     targetModel.dimensions.any { it.name == order.key.name } -> {
-                        SegmentationReportOptions.Order(DIMENSION, order.key.toDimension(modelName, order.key.getType(context, modelName)), order.value == Recipe.OrderType.ASC)
+                        SegmentationReportOptions.Order(DIMENSION, order.key.toDimension(model.name, order.key.getType(context, model.name)), order.value == Recipe.OrderType.ASC)
                     }
                     targetModel.measures.any { it.name == order.key.name } -> {
-                        SegmentationReportOptions.Order(MEASURE, order.key.toMeasure(modelName), order.value == Recipe.OrderType.ASC)
+                        SegmentationReportOptions.Order(MEASURE, order.key.toMeasure(model.name), order.value == Recipe.OrderType.ASC)
                     }
                     else -> {
                         throw MetriqlException("Ordering field ${order.key} not found in $fieldModel", HttpResponseStatus.BAD_REQUEST)
