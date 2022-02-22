@@ -232,9 +232,7 @@ abstract class JDBCWarehouse(
         renderSQL: (SQLRenderable) -> String,
     ): String {
         return when (target.value) {
-            is Model.Target.TargetValue.Sql -> {
-                renderSQL(target.value.sql)
-            }
+            is Model.Target.TargetValue.Sql -> renderSQL(target.value.sql)
             is Model.Target.TargetValue.Table -> {
                 val (databaseName, schemaName, table) = target.value
 
@@ -246,6 +244,7 @@ abstract class JDBCWarehouse(
                     targetBuilder.add(warehouse.bridge.quoteIdentifier(schemaName))
                 }
                 targetBuilder.add(warehouse.bridge.quoteIdentifier(table))
+
                 val targetSQL = targetBuilder.joinToString(".")
                 "$targetSQL AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
             }
