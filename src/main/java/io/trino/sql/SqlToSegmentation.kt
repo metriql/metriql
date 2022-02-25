@@ -35,6 +35,7 @@ import io.trino.sql.MetriqlExpressionFormatter.formatIdentifier
 import io.trino.sql.tree.AllColumns
 import io.trino.sql.tree.BetweenPredicate
 import io.trino.sql.tree.BooleanLiteral
+import io.trino.sql.tree.Cast
 import io.trino.sql.tree.CharLiteral
 import io.trino.sql.tree.ComparisonExpression
 import io.trino.sql.tree.DereferenceExpression
@@ -512,6 +513,9 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             is NullLiteral -> null
             is BooleanLiteral -> exp.value
             is Parameter -> getFilterValue(parameterMap, parameterMap[NodeRef.of(exp)]!!)
+            is Cast -> {
+                getFilterValue(parameterMap, exp.expression)
+            }
             else -> {
                 throw MetriqlException("Only scalar values are supported in WHERE. Expression is not supported: $exp ", BAD_REQUEST)
             }
