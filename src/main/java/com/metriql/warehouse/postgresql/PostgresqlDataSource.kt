@@ -104,6 +104,6 @@ open class PostgresqlDataSource(override val config: PostgresqlWarehouse.Postgre
     }
 
     companion object {
-        val DEFAULT_SCHEMA = "public"
+        const val DEFAULT_SCHEMA = "public"
     }
 }

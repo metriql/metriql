@@ -17,6 +17,7 @@ import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DbtSettings.Companion.generateSchemaForModel
 import com.metriql.warehouse.spi.function.IPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
+import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 
 typealias ErrorMessage = String
@@ -212,13 +213,14 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
 
         val measures = reportOptions.measures?.map { it ->
             val measure = sourceModel.measures.find { m -> m.name == it.name } ?: throw MetriqlException("Measure ${it.name} in ${sourceModel.name} not found", NOT_FOUND)
+            val aggregation = measure.value.agg ?: throw MetriqlException("`aggregation` is required for intermediate state of the measure ${it.name}", BAD_REQUEST)
             Model.Measure(
                 it.name,
                 null,
                 null,
                 null,
                 Model.Measure.Type.COLUMN,
-                Model.Measure.MeasureValue.Column(measure.value.agg!!, context.getMeasureAlias(it.name, it.relation))
+                Model.Measure.MeasureValue.Column(aggregation, context.getMeasureAlias(it.name, it.relation))
             )
         }
 
