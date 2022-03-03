@@ -3,6 +3,7 @@ package io.trino
 import com.fasterxml.jackson.core.type.TypeReference
 import com.google.common.collect.ImmutableList
 import com.metriql.db.FieldType
+import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
 import com.metriql.service.model.IModelService
@@ -54,8 +55,8 @@ class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
         val models = getModels(session)
         val modelCategory = getCategoryFromSchema(tableName.schemaName)
         val propertiesForModel = extractModelNameFromPropertiesTable(tableName.tableName)
-        val name = propertiesForModel ?: tableName.tableName
-        val model = models.find { it.category?.lowercase() == modelCategory && it.name == name } ?: return Optional.empty()
+        val regexName = DbtJinjaRenderer.renderer.renderModelNameRegex(propertiesForModel ?: tableName.tableName).toRegex()
+        val model = models.find { it.category?.lowercase() == modelCategory && it.name.matches(regexName) } ?: return Optional.empty()
 
         return if (propertiesForModel != null) {
             Optional.of(TablePropertiesTable(model))
