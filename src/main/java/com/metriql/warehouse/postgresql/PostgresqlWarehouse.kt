@@ -11,7 +11,7 @@ object PostgresqlWarehouse : Warehouse<PostgresqlWarehouse.PostgresqlConfig> {
         DriverManager.registerDriver(org.postgresql.Driver())
     }
 
-    override val names = Warehouse.Name("postgresql", "postgres")
+    override val names = setOf("postgresql", "postgres")
     override val configClass = PostgresqlConfig::class.java
 
     override fun getDataSource(config: PostgresqlConfig) = PostgresqlDataSource(config)

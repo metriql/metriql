@@ -11,7 +11,7 @@ object SnowflakeWarehouse : Warehouse<SnowflakeWarehouse.SnowflakeConfig> {
         DriverManager.registerDriver(SnowflakeDriver())
     }
 
-    override val names = Warehouse.Name("snowflake", "snowflake")
+    override val names = setOf("snowflake")
     override val configClass = SnowflakeConfig::class.java
     override fun getDataSource(config: SnowflakeConfig) = SnowflakeDataSource(config)
     override val bridge = SnowflakeMetriqlBridge

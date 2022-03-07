@@ -19,7 +19,7 @@ object WarehouseLocator {
 
     @JvmStatic
     fun getWarehouse(slug: String): Warehouse<Warehouse.Config> {
-        val service = services.find { it.names.metriql == slug || it.names.dbt == slug }
+        val service = services.find { it.names.contains(slug) }
         val warehouse = service ?: throw MetriqlException("Unknown warehouse: $slug", HttpResponseStatus.BAD_REQUEST)
         return warehouse as Warehouse<Warehouse.Config>
     }

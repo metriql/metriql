@@ -9,7 +9,7 @@ object RedshiftWarehouse : Warehouse<PostgresqlWarehouse.PostgresqlConfig> {
         DriverManager.registerDriver(com.amazon.redshift.jdbc42.Driver())
     }
 
-    override val names = Warehouse.Name("redshift", "redshift")
+    override val names = setOf("redshift", "redshift")
     override val configClass = PostgresqlWarehouse.PostgresqlConfig::class.java
 
     override fun getDataSource(config: PostgresqlWarehouse.PostgresqlConfig) = RedshiftDataSource(config)

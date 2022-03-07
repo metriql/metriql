@@ -12,7 +12,7 @@ object MSSQLWarehouse : Warehouse<MSSQLWarehouse.MSSQLServerConfig> {
         DriverManager.registerDriver(SQLServerDriver())
     }
 
-    override val names = Warehouse.Name("mssqlServer", "sqlserver")
+    override val names = setOf("mssqlServer", "sqlserver")
     override val configClass = MSSQLServerConfig::class.java
 
     override fun getDataSource(config: MSSQLServerConfig) = MSSQLDataSource(config)

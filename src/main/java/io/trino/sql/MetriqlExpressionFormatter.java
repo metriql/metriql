@@ -289,7 +289,7 @@ public final class MetriqlExpressionFormatter {
             }
 
             if (functionTemplate == null) {
-                String dbName = queryContext.getDatasource().getWarehouse().getNames().component1();
+                String dbName = queryContext.getDatasource().getWarehouse().getNames().iterator().next();
                 throw new IllegalArgumentException(String.format("Function %s not supported in %s", node.getName().getSuffix(), dbName));
             }
             HashMap<String, Object> templateParams = new HashMap<>();

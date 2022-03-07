@@ -11,7 +11,7 @@ object PrestoWarehouse : Warehouse<PrestoWarehouse.PrestoConfig> {
         DriverManager.registerDriver(TrinoDriver())
     }
 
-    override val names = Warehouse.Name("presto", "presto")
+    override val names = setOf("trino", "presto")
     override val configClass = PrestoConfig::class.java
     override fun getDataSource(config: PrestoConfig) = PrestoDataSource(config)
 

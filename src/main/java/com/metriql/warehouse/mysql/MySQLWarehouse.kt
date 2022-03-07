@@ -5,7 +5,7 @@ import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.spi.Warehouse
 
 object MySQLWarehouse : Warehouse<MySQLWarehouse.MysqlConfig> {
-    override val names = Warehouse.Name("mysql", null)
+    override val names = setOf("mysql")
     override val configClass = MysqlConfig::class.java
 
     override fun getDataSource(config: MysqlConfig) = MySQLDataSource(config)

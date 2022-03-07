@@ -12,7 +12,7 @@ object ClickhouseWarehouse : Warehouse<ClickhouseConfig> {
         DriverManager.registerDriver(ClickHouseDriver())
     }
 
-    override val names = Warehouse.Name("clickhouse", "clickhouse")
+    override val names = setOf("clickhouse")
     override val configClass = ClickhouseConfig::class.java
 
     override fun getDataSource(config: ClickhouseConfig) = ClickhouseDataSource(config)

@@ -5,7 +5,7 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 
 interface Warehouse<T : Warehouse.Config> {
     val bridge: WarehouseMetriqlBridge
-    val names: Name
+    val names: Set<String>
     val configClass: Class<in T>
 
     fun getDataSource(config: T): DataSource
@@ -28,6 +28,4 @@ interface Warehouse<T : Warehouse.Config> {
             throw UnsupportedOperationException()
         }
     }
-
-    data class Name(val metriql: String, val dbt: String?)
 }

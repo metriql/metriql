@@ -12,7 +12,7 @@ object AzureWarehouse : Warehouse<MSSQLWarehouse.MSSQLServerConfig> {
         DriverManager.registerDriver(SQLServerDriver())
     }
 
-    override val names = Warehouse.Name("azureSql", "null")
+    override val names = setOf("azureSql")
 
     override val configClass = MSSQLWarehouse.MSSQLServerConfig::class.java
 

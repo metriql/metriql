@@ -12,7 +12,7 @@ import com.metriql.util.JsonHelper
 import com.metriql.warehouse.spi.Warehouse
 
 object BigQueryWarehouse : Warehouse<BigQueryWarehouse.BigQueryConfig> {
-    override val names = Warehouse.Name("bigQuery", "bigquery")
+    override val names = setOf("bigQuery", "bigquery")
 
     override val bridge = BigQueryMetriqlBridge
 
