@@ -11,9 +11,10 @@ import com.metriql.dbt.DbtYamlParser
 import com.metriql.dbt.ProjectYaml
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.auth.ProjectAuth.Companion.PASSWORD_CREDENTIAL
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
-import com.metriql.service.model.UpdatableModelService
+import com.metriql.service.model.UpdatableDatasetService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.RecipeUtil
@@ -43,7 +44,7 @@ class SingleTenantDeployment(
 ) : Deployment {
     private val profileConfig = getProfileConfigForSingleTenant(projectDir, profilesContent, profilesDir, vars, profile)
     private val singleAuth = ProjectAuth.singleProject()
-    private val modelService = UpdatableModelService(null) {
+    private val modelService = UpdatableDatasetService(null) {
         val dataSource = getDataSource(singleAuth)
         getPreparedModels(dataSource, singleAuth, parseRecipe(dataSource, manifestJson, modelsFilter))
     }
@@ -51,15 +52,12 @@ class SingleTenantDeployment(
     override val authType = if (usernamePassPair == null) Deployment.AuthType.NONE else Deployment.AuthType.USERNAME_PASS
 
     override fun getAuth(it: UserContext): ProjectAuth {
-        if (usernamePassPair == null) {
-            return ProjectAuth.singleProject(timezone)
-        }
-
-        return if (it.user == usernamePassPair.first && it.pass == usernamePassPair.second) {
-            ProjectAuth(
-                it.user, "", isOwner = true,
-                isSuperuser = true, email = null, permissions = null,
-                attributes = mapOf(), timezone = timezone, source = null
+        val validCredentials = usernamePassPair != null && it.user == usernamePassPair.first && it.pass == usernamePassPair.second
+        return if (validCredentials || usernamePassPair == null) {
+            return ProjectAuth(
+                it.user ?: throw MetriqlException("User is required", HttpResponseStatus.UNAUTHORIZED), "",
+                isOwner = true, isSuperuser = true, email = null, permissions = null, attributes = mapOf(),
+                timezone = timezone, source = null, credentials = it.pass?.let { pass -> mapOf(PASSWORD_CREDENTIAL to pass) }
             )
         } else throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
     }
@@ -71,11 +69,11 @@ class SingleTenantDeployment(
     }
 
     override fun getDataSource(auth: ProjectAuth): DataSource {
-        val config = if (passCredentialsToDatasource) {
-            profileConfig.value.withUsernamePassword(null!!, null!!)
+        val config = if (passCredentialsToDatasource && auth != singleAuth) {
+            profileConfig.copy(value = profileConfig.value.withUsernamePassword(auth.userId.toString(), auth.credentials?.get(PASSWORD_CREDENTIAL).toString()))
         } else profileConfig
 
-        return WarehouseLocator.getDataSource(profileConfig)
+        return WarehouseLocator.getDataSource(config)
     }
 
     companion object {
@@ -104,7 +102,8 @@ class SingleTenantDeployment(
 
             val profiles = YamlHelper.mapper.readValue(compiledProfiles, DbtProfiles::class.java)
             val profileName = profile ?: dbtProjectFile?.profile ?: "default"
-            val currentProfile = profiles[profileName] ?: throw IllegalStateException("Profile `$profileName` doesn't exist, available profiles are ${profiles.keys.joinToString(", ")}")
+            val currentProfile =
+                profiles[profileName] ?: throw IllegalStateException("Profile `$profileName` doesn't exist, available profiles are ${profiles.keys.joinToString(", ")}")
 
             return JsonHelper.convert(currentProfile.outputs[currentProfile.target], WarehouseConfig::class.java)
         }
@@ -128,7 +127,7 @@ class SingleTenantDeployment(
             val metriqlModels = recipe.models?.map {
                 resolveExtends(recipe.models, it, recipe.packageName ?: "").toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
             } ?: listOf()
-            val context = QueryGeneratorContext(auth, dataSource, UpdatableModelService(null) { metriqlModels }, JinjaRendererService(), null, null, null)
+            val context = QueryGeneratorContext(auth, dataSource, UpdatableDatasetService(null) { metriqlModels }, JinjaRendererService(), null, null, null)
             return RecipeUtil.prepareModelsForInstallation(dataSource, context, metriqlModels)
         }
 

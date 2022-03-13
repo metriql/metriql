@@ -4,7 +4,7 @@ import com.google.common.cache.CacheBuilderSpec
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.db.TestingServer
-import com.metriql.interfaces.TestModelService
+import com.metriql.interfaces.TestDatasetService
 import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
@@ -54,7 +54,7 @@ abstract class TestSegmentation {
     )
     private val rendererService = JinjaRendererService()
 
-    private val modelService = TestModelService(getModels())
+    private val modelService = TestDatasetService(getModels())
     private val service: SegmentationService get() = SegmentationService()
 
     private fun generateReportFilter(dateRange: DateRange): ReportFilter {

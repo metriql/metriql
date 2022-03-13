@@ -3,7 +3,7 @@ package com.metriql.tests
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.db.TestingServer
-import com.metriql.interfaces.TestModelService
+import com.metriql.interfaces.TestDatasetService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
@@ -33,7 +33,7 @@ abstract class TestSimpleFilter {
     private fun context(): QueryGeneratorContext {
         return QueryGeneratorContext(
             ProjectAuth.singleProject(timezone = ZoneId.of("UTC")), dataSource,
-            TestModelService(
+            TestDatasetService(
                 listOf(
                     Model(
                         "filter_tests", false,

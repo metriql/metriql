@@ -14,6 +14,7 @@ data class ProjectAuth(
     val attributes: Map<String, Any?>?,
     val timezone: ZoneId?,
     val source: String?,
+    val credentials : Map<String, String>? = null
 ) {
     @JsonIgnore
     fun warehouseAuth() = WarehouseAuth(projectId, userId, timezone, source)
@@ -36,5 +37,7 @@ data class ProjectAuth(
         fun singleProject(timezone: ZoneId? = null): ProjectAuth {
             return systemUser("", timezone = timezone)
         }
+
+        const val PASSWORD_CREDENTIAL = "password"
     }
 }

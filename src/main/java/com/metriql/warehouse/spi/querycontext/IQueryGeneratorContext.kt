@@ -10,7 +10,7 @@ import com.metriql.service.auth.UserAttributeValues
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DimensionName
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.MeasureName
 import com.metriql.service.model.Model
 import com.metriql.service.model.ModelDimension
@@ -31,7 +31,7 @@ interface IQueryGeneratorContext {
     val reportExecutor: ReportExecutor?
     val userAttributeFetcher: UserAttributeFetcher?
     val dependencyFetcher: DependencyFetcher?
-    val modelService: IModelService
+    val modelService: IDatasetService
     val renderer: JinjaRendererService
     val referencedDimensions: Map<Pair<ModelName, DimensionName>, ModelDimension>
     val referencedMeasures: Map<Pair<ModelName, MeasureName>, ModelMeasure>

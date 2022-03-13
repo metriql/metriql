@@ -10,9 +10,9 @@ import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.UpdatableModelService
+import com.metriql.service.model.UpdatableDatasetService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.YamlHelper
@@ -25,7 +25,7 @@ import javax.inject.Inject
 
 class DbtModelService @Inject constructor(
     private val renderer: JinjaRendererService,
-    private val modelService: IModelService?,
+    private val modelService: IDatasetService?,
     private val dependencyFetcher: DependencyFetcher
 ) {
     private val jinja = Jinjava()
@@ -49,7 +49,7 @@ class DbtModelService @Inject constructor(
 
         val (_, _, modelConfigMapper) = dataSource.dbtSettings()
         val models = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, recipeId) } ?: listOf()
-        val modelService = UpdatableModelService(modelService) { models }
+        val modelService = UpdatableDatasetService(modelService) { models }
 
         val context = QueryGeneratorContext(
             auth,

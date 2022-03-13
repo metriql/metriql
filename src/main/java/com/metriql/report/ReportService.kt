@@ -8,7 +8,7 @@ import com.metriql.service.audit.MetriqlEvents
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.task.Task
 import com.metriql.warehouse.WarehouseQueryTask.Companion.DEFAULT_LIMIT
 import com.metriql.warehouse.spi.DataSource
@@ -19,7 +19,7 @@ import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.util.UUID
 
 open class ReportService(
-    protected val modelService: IModelService,
+    protected val modelService: IDatasetService,
     protected val rendererService: JinjaRendererService,
     protected val queryTaskGenerator: SqlQueryTaskGenerator,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>,

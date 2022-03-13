@@ -13,7 +13,7 @@ import com.metriql.report.mql.MqlService
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
@@ -73,7 +73,7 @@ typealias Reference = Pair<MetricType, String>
 
 data class ExpressionAliasProjection(val expression: Expression, val projection: String, val alias: String?, val identifier: Boolean)
 
-class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IModelService) {
+class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IDatasetService) {
     private fun getProjectionOfColumn(rewriter: MetriqlSegmentationQueryRewriter, expression: Expression, modelName: String, alias: Optional<Identifier>): ExpressionAliasProjection {
         val alias = alias.orElse(null)?.let { identifier -> identifier.value }
             ?: deferenceExpression(expression, modelName)?.let { exp -> getIdentifierValue(exp) }

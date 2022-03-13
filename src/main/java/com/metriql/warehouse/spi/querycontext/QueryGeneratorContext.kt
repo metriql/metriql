@@ -10,7 +10,7 @@ import com.metriql.service.auth.UserAttributeFetcher
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DimensionName
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.MeasureName
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Measure.AggregationType.COUNT
@@ -42,7 +42,7 @@ interface DependencyFetcher {
 class QueryGeneratorContext(
     override val auth: ProjectAuth,
     override val datasource: DataSource,
-    override val modelService: IModelService,
+    override val modelService: IDatasetService,
     override val renderer: JinjaRendererService,
     override val reportExecutor: ReportExecutor?,
     override val userAttributeFetcher: UserAttributeFetcher?,
@@ -72,7 +72,7 @@ class QueryGeneratorContext(
 
     override fun getModel(modelName: ModelName): Model {
         return models.computeIfAbsent(modelName) {
-            modelService.getModel(auth, modelName)
+            modelService.getDataset(auth, modelName)
                 ?: throw MetriqlException("Model '$modelName' not found", NOT_FOUND)
         }
     }

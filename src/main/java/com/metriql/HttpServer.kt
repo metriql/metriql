@@ -31,8 +31,11 @@ import com.metriql.service.jdbc.NodeInfoService
 import com.metriql.service.jdbc.QueryService
 import com.metriql.service.jdbc.StatementService
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.ModelName
+import com.metriql.service.suggestion.InMemorySuggestionCacheService
+import com.metriql.service.suggestion.SuggestionCacheService
+import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
 import com.metriql.service.task.TaskQueueService
@@ -57,6 +60,8 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
+    private val cacheConfig: CacheBuilderSpec = CacheBuilderSpec.parse("")
+
     private fun getServices(deployment: Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
         val postRun = mutableListOf<() -> Unit>()
@@ -83,19 +88,28 @@ object HttpServer {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
-        val cacheConfig = CacheBuilderSpec.parse("")
         val cacheService = InMemoryCacheService(cacheConfig)
         val services = getReportServices(deployment.getModelService())
 
+        val queryTaskGenerator = SqlQueryTaskGenerator(cacheService)
         val reportService = ReportService(
-            deployment.getModelService(), JinjaRendererService(), SqlQueryTaskGenerator(cacheService), services, this::getAttributes,
+            deployment.getModelService(), JinjaRendererService(), queryTaskGenerator, services, this::getAttributes,
             object : DependencyFetcher {
                 override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
                     return Recipe.Dependencies()
                 }
             }
         )
-        return QueryHttpService(deployment, reportService, taskQueueService, services)
+
+        val suggestionService = SuggestionService(
+            InMemorySuggestionCacheService(cacheConfig),
+            deployment,
+            services[SegmentationReportType] as SegmentationService,
+            reportService,
+            queryTaskGenerator,
+            taskQueueService
+        )
+        return QueryHttpService(deployment, reportService, taskQueueService, suggestionService, services)
     }
 
     private fun jdbcServices(queryService: QueryHttpService, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
@@ -121,7 +135,7 @@ object HttpServer {
         }
     }
 
-    private fun getReportServices(modelService: IModelService): Map<ReportType, IAdHocService<out ServiceReportOptions>> {
+    private fun getReportServices(modelService: IDatasetService): Map<ReportType, IAdHocService<out ServiceReportOptions>> {
         // we don't use a dependency injection system to speed up the initial start
         val segmentationService = SegmentationService()
         return mapOf(

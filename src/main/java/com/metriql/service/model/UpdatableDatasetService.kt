@@ -2,7 +2,7 @@ package com.metriql.service.model
 
 import com.metriql.service.auth.ProjectAuth
 
-class UpdatableModelService(val modelService: IModelService?, private val modelsFetcher: () -> List<Model>) : IModelService {
+class UpdatableDatasetService(val modelService: IDatasetService?, private val modelsFetcher: () -> List<Model>) : IDatasetService {
 
     @Volatile
     var currentModels = modelsFetcher.invoke()
@@ -22,8 +22,8 @@ class UpdatableModelService(val modelService: IModelService?, private val models
     /*
         Looks up the current model list first and fallbacks to the modelService if it's set
      */
-    override fun getModel(auth: ProjectAuth, modelName: ModelName): Model? {
+    override fun getDataset(auth: ProjectAuth, modelName: ModelName): Model? {
         val regex = modelName.toRegex()
-        return list(auth).find { regex.matches(it.name) } ?: modelService?.getModel(auth, modelName)
+        return list(auth).find { regex.matches(it.name) } ?: modelService?.getDataset(auth, modelName)
     }
 }

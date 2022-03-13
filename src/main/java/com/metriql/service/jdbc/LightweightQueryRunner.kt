@@ -5,7 +5,7 @@ import com.metriql.report.QueryTask
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.report.sql.SqlReportType
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.metriql.ExternalConnectorFactory
 import com.metriql.warehouse.spi.WarehouseAuth
@@ -23,7 +23,7 @@ import java.util.logging.Logger
 
 const val QUERY_TYPE = "QUERY_TYPE"
 
-class LightweightQueryRunner(private val modelService: IModelService) {
+class LightweightQueryRunner(private val modelService: IDatasetService) {
     val runner: LocalTrinoQueryRunner by lazy {
         var internalRunner = LocalTrinoQueryRunner(FeaturesConfig(), NodeSpillConfig())
         internalRunner.addSystemProperty(QUERY_TYPE_PROPERTY)

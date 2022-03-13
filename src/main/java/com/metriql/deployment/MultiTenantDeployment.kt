@@ -5,7 +5,7 @@ import com.metriql.Commands
 import com.metriql.UserContext
 import com.metriql.deployment.SingleTenantDeployment.Companion.parseRecipe
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
@@ -27,7 +27,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
         .build<String, Optional<AdapterManifest>>()
     private val manifestCache = ConcurrentHashMap<String, ManifestCacheHolder>()
 
-    private val internalModelService = MultiTenantModelService()
+    private val internalModelService = MultiTenantDatasetService()
     override fun getModelService() = internalModelService
     override val authType = Deployment.AuthType.USERNAME_PASS
 
@@ -82,13 +82,13 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
 
     override fun getDataSource(auth: ProjectAuth) = cache.getIfPresent(auth.userId as String)!!.get().dataSource
 
-    inner class MultiTenantModelService : IModelService {
+    inner class MultiTenantDatasetService : IDatasetService {
 
         override fun list(auth: ProjectAuth, target : Model.Target?): List<Model> {
             return cache.getIfPresent(auth.userId as String)!!.get().models
         }
 
-        override fun getModel(auth: ProjectAuth, modelName: ModelName): Model? {
+        override fun getDataset(auth: ProjectAuth, modelName: ModelName): Model? {
             val regex = modelName.toRegex()
             return list(auth).find { regex.matches(it.name) }
         }

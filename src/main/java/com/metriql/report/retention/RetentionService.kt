@@ -13,7 +13,7 @@ import com.metriql.report.retention.RetentionReportOptions.DateUnit.WEEK
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.service.model.ModelName
@@ -30,7 +30,7 @@ import java.util.Arrays
 import javax.inject.Inject
 
 class RetentionService @Inject constructor(
-    private val modelService: IModelService,
+    private val modelService: IDatasetService,
     private val segmentationService: SegmentationService,
 ) : IAdHocService<RetentionReportOptions> {
 
@@ -41,7 +41,7 @@ class RetentionService @Inject constructor(
         reportFilters: List<ReportFilter>,
     ): IAdHocService.RenderedQuery {
         fun stepForRetentionStep(aStep: Dataset, isFirst: Boolean): Retention.Step {
-            val mappings = modelService.getModel(auth, aStep.modelName)?.mappings
+            val mappings = modelService.getDataset(auth, aStep.modelName)?.mappings
             val connectorDimensionName = report.connector ?: (
                 mappings?.get(USER_ID)
                     ?: throw MetriqlException("userId dimension is required for using connectors", HttpResponseStatus.BAD_REQUEST)

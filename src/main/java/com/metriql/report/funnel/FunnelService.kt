@@ -10,7 +10,7 @@ import com.metriql.report.data.getUsedModels
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.service.model.ModelName
@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import javax.inject.Inject
 
 class FunnelService @Inject constructor(
-    private val modelService: IModelService,
+    private val modelService: IDatasetService,
     private val segmentationService: SegmentationService,
 ) : IAdHocService<FunnelReportOptions> {
 
@@ -72,7 +72,7 @@ class FunnelService @Inject constructor(
         reportFilters: List<ReportFilter> = listOf(),
         isExcludeStep: Boolean,
     ): Step {
-        val mappings by lazy { modelService.getModel(auth, step.modelName)?.mappings }
+        val mappings by lazy { modelService.getDataset(auth, step.modelName)?.mappings }
         val connectorDimensionName = options.connector ?: (
             mappings?.get(USER_ID)
                 ?: throw MetriqlException("`userId` mapping dimension is required for `${step.modelName}` model", HttpResponseStatus.BAD_REQUEST)

@@ -6,7 +6,7 @@ import com.metriql.db.FieldType
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
-import com.metriql.service.model.IModelService
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -38,7 +38,7 @@ import io.trino.spi.type.VarcharType
 import io.trino.type.UnknownType
 import java.util.Optional
 
-class MetriqlMetadata(val modelService: IModelService) : SystemTablesProvider {
+class MetriqlMetadata(val modelService: IDatasetService) : SystemTablesProvider {
 
     private fun getModels(session: ConnectorSession): List<Model> {
         // TODO: Find a way to pass projects

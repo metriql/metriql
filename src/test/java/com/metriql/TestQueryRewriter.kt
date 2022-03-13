@@ -1,7 +1,7 @@
 package com.metriql
 
 import com.metriql.Helper.assertJsonEquals
-import com.metriql.interfaces.TestModelService
+import com.metriql.interfaces.TestDatasetService
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQueryReWriter
 import com.metriql.report.segmentation.SegmentationRecipeQuery
@@ -289,7 +289,7 @@ class TestQueryRewriter {
             val auth = systemUser("1", 1)
             val datasource = PostgresqlDataSource(PostgresqlConfig("127.0.0.1", 5432, "rakamtest", "public", "buremba", ""))
             val renderer = JinjaRendererService()
-            val modelService = TestModelService(
+            val modelService = TestDatasetService(
                 listOf(
                     JsonHelper.read(
                         """{

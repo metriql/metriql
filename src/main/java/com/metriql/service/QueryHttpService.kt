@@ -9,11 +9,14 @@ import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.Model
+import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
+import com.metriql.util.MetriqlException
 import com.metriql.util.SuccessMessage
 import com.metriql.warehouse.spi.services.RecipeQuery
 import com.metriql.warehouse.spi.services.ServiceReportOptions
+import io.netty.handler.codec.http.HttpResponseStatus
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
 import org.rakam.server.http.annotations.Api
@@ -34,6 +37,7 @@ open class QueryHttpService(
     val deployment: Deployment,
     val reportService: ReportService,
     val taskQueueService: TaskQueueService,
+    val suggestionService: SuggestionService,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>
 ) : HttpService() {
     private val startTime: Instant = Instant.now()
@@ -44,6 +48,27 @@ open class QueryHttpService(
     @Path("/metadata")
     fun metadata(@Named("userContext") auth: ProjectAuth): List<Model> {
         return deployment.getModelService().list(auth)
+    }
+
+    @ApiOperation(value = "Get datasets")
+    @GET
+    @Path("/metadata/datasets")
+    fun metadataDatasetNames(@Named("userContext") auth: ProjectAuth): Set<String> {
+        return deployment.getModelService().listDatasetNames(auth)
+    }
+
+    @ApiOperation(value = "Get datasets")
+    @GET
+    @Path("/suggest")
+    fun suggest(@Named("userContext") auth: ProjectAuth,  @BodyParam query: SuggestionService.SuggestionQuery,): CompletableFuture<List<String>> {
+        return suggestionService.search(auth, query.value, query.filter)
+    }
+
+    @ApiOperation(value = "Get datasets")
+    @GET
+    @Path("/metadata/dataset")
+    fun metadataDataset(@Named("userContext") auth: ProjectAuth, @QueryParam("name") name: String): Model {
+        return deployment.getModelService().getDataset(auth, name) ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
     }
 
     @ApiOperation(value = "Get ticker info")
