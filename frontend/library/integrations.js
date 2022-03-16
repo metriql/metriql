@@ -17,12 +17,6 @@ import modeLogo from '/src/assets/images/integrations/mode.png'
 import thoughtSpotLogo from '/src/assets/images/integrations/thoughtspot.jpeg'
 
 export default [{
-  label: 'Rakam',
-  docs: defineAsyncComponent({loader: () => import('/src/assets/docs/rakam.md'), loadingComponent: ElSkeleton}),
-  logo: rakamLogo,
-  category: 'BI Tools',
-  publicDocs: 'https://docs.rakam.io/docs'
-},{
   label: 'Tableau',
   docs: defineAsyncComponent({loader: () => import('/src/assets/docs/tableau.vue'), loadingComponent: ElSkeleton}),
   logo: tableauLogo,
