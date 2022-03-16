@@ -1,0 +1,29 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  publish_maven:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v2
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+      - name: Setup Java JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 8
+          distribution: 'adopt'
+          server-id: github
+      - name: Configure Git user
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+      - name: Publish JAR
+        run: ./mvnw -B -DskipTests -Darguments=-DskipTests release:prepare release:perform
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
