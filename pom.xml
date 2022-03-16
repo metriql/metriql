@@ -4,13 +4,13 @@
 
     <groupId>com.metriql</groupId>
     <artifactId>metriql</artifactId>
-    <version>0.4</version>
+    <version>0.5-SNAPSHOT</version>
 
     <scm>
         <connection>scm:git:https://github.com/metriql/metriql.git</connection>
         <developerConnection>scm:git:https://github.com/metriql/metriql.git</developerConnection>
         <url>https://github.com/metriql/metriql</url>
-        <tag>metriql-0.4</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
