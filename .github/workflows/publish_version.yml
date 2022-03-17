@@ -1,4 +1,4 @@
-name: Publish Maven
+name: Publish New Version
 
 on:
   workflow_dispatch:
