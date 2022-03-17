@@ -149,9 +149,10 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             "\nORDER BY ${projectionOrders.joinToString(" ")}"
         } else ""
 
-        return if (projectionColumns.any { (it.projection != it.alias && it.alias != null) || !it.identifier }) {
+        val projectionNeeded = projectionColumns.any { (it.projection != it.alias && it.alias != null) || !it.identifier }
+        return if (projectionNeeded || select.isDistinct) {
             val quotedAlias = context.warehouseBridge.quoteIdentifier(alias[alias.size - 1])
-            """SELECT ${
+            """SELECT ${if (select.isDistinct) "DISTINCT " else ""}${
             projectionColumns.joinToString(", ") { col ->
                 val alias = col.alias?.let { context.warehouseBridge.quoteIdentifier(it) }
                 if (col.projection != col.alias) "${col.projection}${alias?.let { " AS $it" } ?: ""}" else col.projection
