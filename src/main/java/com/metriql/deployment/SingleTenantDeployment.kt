@@ -55,7 +55,7 @@ class SingleTenantDeployment(
         val validCredentials = usernamePassPair != null && it.user == usernamePassPair.first && it.pass == usernamePassPair.second
         return if (validCredentials || usernamePassPair == null) {
             return ProjectAuth(
-                it.user ?: throw MetriqlException("User is required", HttpResponseStatus.UNAUTHORIZED), "",
+                it.user ?: "(unknown user)", "",
                 isOwner = true, isSuperuser = true, email = null, permissions = null, attributes = mapOf(),
                 timezone = timezone, source = null, credentials = it.pass?.let { pass -> mapOf(PASSWORD_CREDENTIAL to pass) }
             )
