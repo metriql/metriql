@@ -7,7 +7,7 @@ import com.google.cloud.bigquery.DatasetId
 import com.google.cloud.bigquery.DatasetInfo
 import com.google.cloud.bigquery.QueryJobConfiguration
 import com.google.cloud.bigquery.StandardSQLTypeName
-import com.metriql.db.TestingServer
+import com.metriql.tests.TestingServer
 import com.metriql.util.JsonHelper
 import com.metriql.warehouse.bigquery.BigQueryWarehouse
 import com.mockrunner.mock.jdbc.MockResultSet

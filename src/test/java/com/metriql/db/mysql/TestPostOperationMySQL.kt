@@ -1,6 +1,6 @@
 package com.metriql.db.mysql
 
-import com.metriql.postoperation.TestPostOperation
+import com.metriql.tests.TestPostOperation
 import com.metriql.warehouse.mysql.MySQLDataSource
 import java.time.format.DateTimeFormatter
 

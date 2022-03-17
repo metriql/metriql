@@ -1,6 +1,6 @@
 package com.metriql.db.postgresql
 
-import com.metriql.db.TestingServer
+import com.metriql.tests.TestingServer
 import com.metriql.util.ValidationUtil.quoteIdentifier
 import com.metriql.util.`try?`
 import com.metriql.warehouse.postgresql.PostgresqlDataSource

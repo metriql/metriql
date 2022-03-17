@@ -1,6 +1,6 @@
 package com.metriql.db.mssqlserver
 
-import com.metriql.db.TestingServer
+import com.metriql.tests.TestingServer
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.mssqlserver.MSSQLDataSource
 import com.metriql.warehouse.mssqlserver.MSSQLWarehouse

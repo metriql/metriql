@@ -1,7 +1,6 @@
-package com.metriql.postoperation
+package com.metriql.tests
 
 import com.metriql.db.QueryResult
-import com.metriql.db.TestingServer
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge

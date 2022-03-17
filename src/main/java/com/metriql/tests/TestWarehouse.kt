@@ -1,7 +1,6 @@
 package com.metriql.tests
 
 import com.metriql.db.FieldType
-import com.metriql.db.TestingServer
 import com.metriql.service.model.Model
 import com.metriql.warehouse.spi.DataSource
 import org.testng.annotations.Test

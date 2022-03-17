@@ -1,6 +1,6 @@
 package com.metriql.db.mssqlserver
 
-import com.metriql.postoperation.TestPostOperation
+import com.metriql.tests.TestPostOperation
 import com.metriql.warehouse.mssqlserver.MSSQLDataSource
 import java.time.format.DateTimeFormatter
 

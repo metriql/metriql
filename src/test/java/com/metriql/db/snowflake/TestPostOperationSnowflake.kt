@@ -1,6 +1,6 @@
 package com.metriql.db.snowflake
 
-import com.metriql.postoperation.TestPostOperation
+import com.metriql.tests.TestPostOperation
 import com.metriql.warehouse.snowflake.SnowflakeDataSource
 import java.time.format.DateTimeFormatter
 

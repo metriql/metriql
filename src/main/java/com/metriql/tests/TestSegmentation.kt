@@ -3,8 +3,6 @@ package com.metriql.tests
 import com.google.common.cache.CacheBuilderSpec
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
-import com.metriql.db.TestingServer
-import com.metriql.interfaces.TestDatasetService
 import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter

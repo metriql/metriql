@@ -1,7 +1,7 @@
 package com.metriql
 
 import com.metriql.Helper.assertJsonEquals
-import com.metriql.interfaces.TestDatasetService
+import com.metriql.tests.TestDatasetService
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQueryReWriter
 import com.metriql.report.segmentation.SegmentationRecipeQuery

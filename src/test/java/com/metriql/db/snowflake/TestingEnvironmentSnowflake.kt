@@ -1,6 +1,6 @@
 package com.metriql.db.snowflake
 
-import com.metriql.db.TestingServer
+import com.metriql.tests.TestingServer
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlExceptions
 import com.metriql.warehouse.snowflake.SnowflakeWarehouse.SnowflakeConfig

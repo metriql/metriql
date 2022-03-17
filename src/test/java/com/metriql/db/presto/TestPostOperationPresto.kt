@@ -1,6 +1,6 @@
 package com.metriql.db.presto
 
-import com.metriql.postoperation.TestPostOperation
+import com.metriql.tests.TestPostOperation
 import com.metriql.warehouse.presto.PrestoDataSource
 import java.time.format.DateTimeFormatter
 

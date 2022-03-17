@@ -1,4 +1,4 @@
-package com.metriql.db
+package com.metriql.tests
 
 import com.metriql.warehouse.spi.Warehouse
 import java.sql.ResultSet

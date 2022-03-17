@@ -1,6 +1,6 @@
 package com.metriql.db.postgresql
 
-import com.metriql.postoperation.TestPostOperation
+import com.metriql.tests.TestPostOperation
 import com.metriql.warehouse.postgresql.PostgresqlDataSource
 import java.time.format.DateTimeFormatter
 

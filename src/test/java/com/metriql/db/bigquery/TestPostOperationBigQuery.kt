@@ -1,6 +1,6 @@
 package com.metriql.db.bigquery
 
-import com.metriql.postoperation.TestPostOperation
+import com.metriql.tests.TestPostOperation
 import com.metriql.warehouse.bigquery.BigQueryDataSource
 import com.metriql.warehouse.spi.function.TimestampPostOperation
 import org.testng.annotations.Test

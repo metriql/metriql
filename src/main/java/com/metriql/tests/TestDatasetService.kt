@@ -1,4 +1,4 @@
-package com.metriql.interfaces
+package com.metriql.tests
 
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService

@@ -2,8 +2,6 @@ package com.metriql.tests
 
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
-import com.metriql.db.TestingServer
-import com.metriql.interfaces.TestDatasetService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model

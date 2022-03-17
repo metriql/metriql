@@ -1,7 +1,7 @@
 package com.metriql.db.mysql
 
 import com.metriql.HostPortProvider
-import com.metriql.db.TestingServer
+import com.metriql.tests.TestingServer
 import com.metriql.util.MetriqlExceptions
 import com.metriql.util.ValidationUtil
 import com.metriql.warehouse.mysql.MySQLWarehouse
