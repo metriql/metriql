@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.metriql.CURRENT_PATH
 import com.metriql.deployment.Deployment
 import com.metriql.service.auth.ProjectAuth
+import com.metriql.util.HttpUtil.sendError
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import io.netty.handler.codec.http.HttpHeaders
@@ -16,6 +17,7 @@ import org.rakam.server.http.annotations.QueryParam
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.logging.Level
 import java.util.logging.Logger
 import javax.inject.Named
 import javax.ws.rs.GET
@@ -98,8 +100,10 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
 
     private fun runCommand(request: RakamHttpRequest, commands: List<String>, stdin: ByteArray? = null, fileName: String? = null) {
         executor.execute {
+            val commandToRun = commands.joinToString(" ")
+
             try {
-                logger.info("Executing command `${commands.joinToString(" ")}`")
+                logger.info("Executing command `$commandToRun`")
                 val process = ProcessBuilder().command(commands).start()
 
                 if (stdin != null) {
@@ -112,12 +116,12 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
                 val exitVal = try {
                     process.waitFor(240, TimeUnit.SECONDS)
                 } catch (e: Exception) {
-                    returnError(request, "Unable to execute: ${e.message}", INTERNAL_SERVER_ERROR)
+                    sendError(request, INTERNAL_SERVER_ERROR, "Unable to execute: ${e.message}")
                     return@execute
                 }
 
                 if (exitVal) {
-                    val result = process.inputStream.bufferedReader().readText()
+                    val result = process.inputStream.readAllBytes()
                     val error = process.errorStream.bufferedReader().readText()
 
                     if (error.isEmpty()) {
@@ -128,7 +132,7 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
                         }
                         request.response(result).end()
                     } else {
-                        returnError(request, error, BAD_REQUEST)
+                        sendError(request, BAD_REQUEST, error)
                     }
                 } else {
                     try {
@@ -136,10 +140,11 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
                     } catch (e: Exception) {
                     }
 
-                    returnError(request, "Unable to run command: timeout after 20 seconds", BAD_REQUEST)
+                    sendError(request, BAD_REQUEST, "Unable to run command: timeout after 20 seconds")
                 }
             } catch (e: Exception) {
-                returnError(request, "Unknown error executing command: $e", BAD_REQUEST)
+                logger.log(Level.SEVERE, "Unable to run command: $commandToRun", e)
+                sendError(request, BAD_REQUEST, "Unknown error executing command: $e")
             }
         }
     }

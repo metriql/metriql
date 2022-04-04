@@ -153,7 +153,7 @@ class SingleTenantDeployment(
                     val file = File(manifestLocation).absoluteFile
                     if (!file.exists()) {
                         throw IllegalArgumentException(
-                            "manifest.json file (specified in --manifest-json option) could not found, please compile dbt models before running metriql, path is: $file",
+                            "manifest.json file (specified in --manifest-json option) could not found, please compile dbt models before running Metriql, path is: $file",
                         )
                     } else {
                         file.readBytes()

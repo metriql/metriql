@@ -27,7 +27,7 @@ import java.util.Base64
 import javax.crypto.spec.SecretKeySpec
 import javax.ws.rs.core.HttpHeaders
 
-data class UserContext(val user: String?, val pass: String?, val token : String?, val attributes : Map<String, Any?>?, val request: RakamHttpRequest)
+data class UserContext(val user: String?, val pass: String?, val token: String?, val attributes: Map<String, Any?>?, val request: RakamHttpRequest)
 
 class MetriqlAuthRequestParameterFactory(
     private val oauthApiSecret: String?,
@@ -41,24 +41,25 @@ class MetriqlAuthRequestParameterFactory(
             val auth = when (token?.get(0)?.lowercase()) {
                 "bearer" -> {
                     val parser = Jwts.parser()
-                    val secret = oauthApiSecret ?: throw getAuthException("Oauth")
-                    val key = loadKeyFile(secret)
-                    parser.setSigningKeyResolver(object : SigningKeyResolver {
-                        override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, claims: Claims?): Key? {
-                            val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
-                            return key.getKey(algorithm)
-                        }
+                    val attributes = oauthApiSecret?.let {
+                        val key = loadKeyFile(it)
+                        parser.setSigningKeyResolver(object : SigningKeyResolver {
+                            override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, claims: Claims?): Key? {
+                                val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
+                                return key.getKey(algorithm)
+                            }
 
-                        override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, plaintext: String?): Key? {
-                            val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
-                            return key.getKey(algorithm)
-                        }
-                    })
+                            override fun resolveSigningKey(header: JwsHeader<out JwsHeader<*>>?, plaintext: String?): Key? {
+                                val algorithm = SignatureAlgorithm.forName(header!!.algorithm)
+                                return key.getKey(algorithm)
+                            }
+                        })
 
-                   val attributes = try {
-                        parser.parse(token[1]).body as Map<String, Any?>
-                    } catch (e: Exception) {
-                        null
+                        try {
+                            parser.parse(token[1]).body as Map<String, Any?>
+                        } catch (e: Exception) {
+                            null
+                        }
                     }
 
                     deployment.getAuth(UserContext(null, null, token[1], attributes, request))

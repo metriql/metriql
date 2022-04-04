@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { AuthService } from '/src/services/auth'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {AuthService} from '/src/services/auth'
 import router from '../router'
 
 let protocol = import.meta.env.VITE_BACKEND_PROTOCOL
@@ -21,13 +21,27 @@ request.interceptors.request.use(request => {
   if (auth != null && commonHeaders['Authorization'] == null) {
     commonHeaders['Authorization'] = auth
   }
-  if(BASE_URL != null) {
+  if (BASE_URL != null) {
     // commonHeaders['Origin'] = BASE_URL
   }
   return request
 }, error => Promise.reject(error))
 
-request.interceptors.response.use(response => response, function (error) {
+function createDomFromErrors(errors) {
+  const p = document.createElement('p')
+
+  errors.map(error => {
+    const span = document.createElement('span')
+    span.innerText = error.title
+    return span
+  }).forEach(span => {
+    p.appendChild(span)
+  })
+
+  return p
+}
+
+request.interceptors.response.use(response => response, async function (error) {
   let responseExist = error.response
   let status = responseExist ? error.response.status : 0
   let messageBox = {
@@ -57,16 +71,13 @@ request.interceptors.response.use(response => response, function (error) {
   } else if (status >= 400 && status <= 504) {
     let message
     if (status !== 404) {
-      const p = document.createElement('p')
+      let p
       if (error.response.data && error.response.data.errors) {
-        error.response.data.errors.map(error => {
-          const span = document.createElement('span')
-          span.innerText = error.title
-          return span
-        }).forEach(span => {
-          p.appendChild(span)
-        })
+        p = createDomFromErrors(error.response.data.errors)
+      } else if (error.response.data instanceof Blob && error.response.data.type == 'application/json') {
+        p =  createDomFromErrors(JSON.parse(await (new Response(error.response.data)).text()).errors)
       } else {
+        const p = document.createElement('p')
         p.innerText = 'An error occurred while connecting the server, please reach our the Administrator'
       }
 

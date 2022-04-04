@@ -117,10 +117,11 @@ object HttpUtil {
 
     @JvmStatic
     fun sendError(request: RakamHttpRequest, status: HttpResponseStatus, message: String? = null) {
+        request.addResponseHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json")
         HttpServer.returnError(request, message ?: status.reasonPhrase(), status)
     }
 
-    fun sendNotModified(request: RakamHttpRequest, file: File) {
+    private fun sendNotModified(request: RakamHttpRequest, file: File) {
         val response: FullHttpResponse = DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_MODIFIED)
         setContentTypeHeader(response, file)
         val dateFormatter = SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US)
