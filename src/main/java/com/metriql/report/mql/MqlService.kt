@@ -18,6 +18,8 @@ import io.trino.sql.parser.SqlParser
 import io.trino.sql.tree.Expression
 import io.trino.sql.tree.NodeRef
 import io.trino.sql.tree.Parameter
+import java.util.logging.Level
+import java.util.logging.Logger
 
 class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : IAdHocService<MqlReportOptions> {
     override fun renderQuery(
@@ -34,6 +36,7 @@ class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : 
         } catch (e: MetriqlException) {
             throw e
         } catch (e: Exception) {
+            logger.log(Level.WARNING, "Unable to parse MQL query", e)
             throw MetriqlException("Unable to parse query: $e", HttpResponseStatus.BAD_REQUEST)
         }
 
@@ -47,5 +50,6 @@ class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : 
 
     companion object {
         val parser = SqlParser()
+        private val logger = Logger.getLogger(this::class.java.name)
     }
 }

@@ -36,7 +36,7 @@ data class ReportFilter(
 
     fun toReference(): OrFilters? {
         return when (value) {
-            is FilterValue.Sql -> throw IllegalStateException()
+            is FilterValue.Sql -> throw UnsupportedOperationException()
             is FilterValue.MetricFilter -> {
                 if (value.filters.isEmpty()) {
                     null
