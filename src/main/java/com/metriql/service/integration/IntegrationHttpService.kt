@@ -14,6 +14,7 @@ import org.rakam.server.http.HttpServer.returnError
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
 import org.rakam.server.http.annotations.QueryParam
+import java.lang.RuntimeException
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -132,6 +133,7 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
                         }
                         request.response(result).end()
                     } else {
+                        logger.log(Level.WARNING, "Unable to run command", RuntimeException("$commandToRun\n$error"))
                         sendError(request, BAD_REQUEST, error)
                     }
                 } else {
@@ -143,7 +145,7 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
                     sendError(request, BAD_REQUEST, "Unable to run command: timeout after 20 seconds")
                 }
             } catch (e: Exception) {
-                logger.log(Level.SEVERE, "Unable to run command: $commandToRun", e)
+                logger.log(Level.SEVERE, "Unable to run command", RuntimeException(commandToRun, e))
                 sendError(request, BAD_REQUEST, "Unknown error executing command: $e")
             }
         }
