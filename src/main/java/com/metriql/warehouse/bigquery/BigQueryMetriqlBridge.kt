@@ -34,7 +34,11 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
         FlowReportType.slug to ANSISQLFlowQueryGenerator(),
     )
 
-    override val mqlTypeMap = super.mqlTypeMap + mapOf(StandardTypes.VARCHAR to "string")
+    override val mqlTypeMap = super.mqlTypeMap + mapOf(
+        StandardTypes.VARCHAR to "string",
+        StandardTypes.TIMESTAMP to "datetime",
+        StandardTypes.DOUBLE to "float64"
+    )
 
     override val functions = super.functions + mapOf(
         RFunction.DATE_ADD to "DATE_ADD({{value[0]}}, INTERVAL {{value[2]}} {{value[1]}})",

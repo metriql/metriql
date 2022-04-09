@@ -55,6 +55,8 @@ interface WarehouseFilters {
         return op.invoke(metric, value, context)
     }
 
+    fun parseRawValue(rawValue: String, type: FieldType?, context: IQueryGeneratorContext): String
+
     /**
      * Validated value will than be passed to this function. Converting the value to string that warehouse can understand.
      * @param value: Any value  supported by the warehouse

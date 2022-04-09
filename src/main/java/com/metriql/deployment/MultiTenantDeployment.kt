@@ -84,7 +84,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
 
     inner class MultiTenantDatasetService : IDatasetService {
 
-        override fun list(auth: ProjectAuth, target : Model.Target?): List<Model> {
+        override fun list(auth: ProjectAuth, target: Model.Target?): List<Model> {
             return cache.getIfPresent(auth.userId as String)!!.get().models
         }
 

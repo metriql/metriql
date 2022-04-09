@@ -4,7 +4,8 @@ import com.metriql.db.FieldType
 import com.metriql.report.IAdHocService
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.Companion.extractDateRangeForEventTimestamp
-import com.metriql.report.data.ReportMetric
+import com.metriql.report.data.ReportMetric.ReportDimension
+import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.report.segmentation.SegmentationQueryReWriter.MaterializeTableCache
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.Model
@@ -291,7 +292,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                 orders.isNotEmpty() -> {
                     orders.map { orderItem ->
                         val metricIndex = when (orderItem.value) {
-                            is ReportMetric.ReportDimension -> {
+                            is ReportDimension -> {
                                 val index = dimensions.indexOf(orderItem.value)
                                 if (index == -1) {
                                     // the order by is not visible in the query
@@ -301,7 +302,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                                     index + 1
                                 }
                             }
-                            is ReportMetric.ReportMeasure -> {
+                            is ReportMeasure -> {
                                 (dimensions.size + measures.indexOf(orderItem.value)) + 1
                             }
                             else -> throw IllegalStateException("Only dimension and measure are accepted as segmentation order")
@@ -315,7 +316,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             orderBy = if (forAccumulator) null else if (orders.isNotEmpty()) {
                 orders.map { orderItem ->
                     val metricIndex = when (orderItem.value) {
-                        is ReportMetric.ReportDimension -> {
+                        is ReportDimension -> {
                             warehouseBridge.renderDimension(
                                 context,
                                 modelName,
@@ -325,7 +326,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                                 WarehouseMetriqlBridge.MetricPositionType.FILTER
                             ).value
                         }
-                        is ReportMetric.ReportMeasure -> {
+                        is ReportMeasure -> {
                             warehouseBridge.renderMeasure(
                                 context,
                                 orderItem.value.modelName,
@@ -384,7 +385,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         return aggregateModel?.target?.value as? Table to dsl
     }
 
-    private fun getColumnNames(context: IQueryGeneratorContext, mainModel: Model, dimensions: List<ReportMetric.ReportDimension>, measures: List<ReportMetric.ReportMeasure>): List<String> {
+    private fun getColumnNames(context: IQueryGeneratorContext, mainModel: Model, dimensions: List<ReportDimension>, measures: List<ReportMeasure>): List<String> {
         val dimensionNames = dimensions.map {
             val modelName = if (it.relationName == null) it.modelName else {
                 mainModel.relations.find { relation -> relation.name == it.relationName }!!.modelName

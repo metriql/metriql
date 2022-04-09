@@ -26,7 +26,9 @@ class InMemorySuggestionCacheService(spec: CacheBuilderSpec) : SuggestionCacheSe
     }
 
     data class CacheKey(
-        val projectId: String, val modelName: String, val dimension: String
+        val projectId: String,
+        val modelName: String,
+        val dimension: String
     ) {
         override fun toString(): String {
             return JsonHelper.encode(this)
@@ -34,6 +36,7 @@ class InMemorySuggestionCacheService(spec: CacheBuilderSpec) : SuggestionCacheSe
     }
 
     data class CacheValue(
-        val values: List<String>, val lastUpdated: Instant
+        val values: List<String>,
+        val lastUpdated: Instant
     )
 }

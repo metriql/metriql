@@ -6,18 +6,14 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class SnowflakeFilters(override val bridge: () -> WarehouseMetriqlBridge) : ANSISQLFilters(bridge) {
     override fun formatDate(value: String, context: IQueryGeneratorContext): String {
-        return if (context.auth.timezone == null) {
-            "CAST($value AS DATE)"
-        } else {
+        return if (context.auth.timezone != null) {
             "CONVERT_TIMEZONE('${context.auth.timezone}', CAST($value AS DATE))"
-        }
+        } else super.formatDate(value, context)
     }
 
     override fun formatTimestamp(value: String, context: IQueryGeneratorContext): String {
-        return if (context.auth.timezone == null) {
-            "CAST($value AS TIMESTAMP)"
-        } else {
+        return if (context.auth.timezone != null) {
             "CONVERT_TIMEZONE('${context.auth.timezone}', CAST($value AS TIMESTAMP))"
-        }
+        } else super.formatTimestamp(value, context)
     }
 }

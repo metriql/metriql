@@ -56,6 +56,8 @@ enum class FieldType(val operatorClass: KClass<out Enum<*>>) {
 
     companion object {
         private val values = values()
+
+        val NUMERIC_TYPES = listOf(DOUBLE, INTEGER, LONG)
     }
 }
 

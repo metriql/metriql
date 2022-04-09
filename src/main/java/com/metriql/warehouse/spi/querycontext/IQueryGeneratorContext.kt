@@ -82,7 +82,7 @@ interface IQueryGeneratorContext {
         return fetcher.invoke(auth)
     }
 
-    fun getOrGenerateAlias(modelName: String, relationName: String?) : String {
-        return aliases.computeIfAbsent(Pair(modelName, relationName)) { "t${aliases.size+1}"}
+    fun getOrGenerateAlias(modelName: String, relationName: String?): String {
+        return aliases.computeIfAbsent(Pair(modelName, relationName)) { "t${aliases.size + 1}" }
     }
 }

@@ -10,7 +10,6 @@ import com.metriql.util.MetriqlException
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR
-import org.rakam.server.http.HttpServer.returnError
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
 import org.rakam.server.http.annotations.QueryParam

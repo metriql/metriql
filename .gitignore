@@ -5,3 +5,4 @@ frontend/.idea
 frontend/dist
 .DS_Store
 .idea/*
+.okhttpcache/*

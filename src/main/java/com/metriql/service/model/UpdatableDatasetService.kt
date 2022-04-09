@@ -15,7 +15,7 @@ class UpdatableDatasetService(val modelService: IDatasetService?, private val mo
     /*
         Returns the available models within the same recipe
      */
-    override fun list(auth: ProjectAuth, target : Model.Target?): List<Model> {
+    override fun list(auth: ProjectAuth, target: Model.Target?): List<Model> {
         return currentModels
     }
 

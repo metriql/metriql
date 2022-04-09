@@ -6,7 +6,6 @@ import com.metriql.db.JSONBSerializable
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
-import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
 

@@ -154,8 +154,8 @@ class QueryGeneratorContext(
 
     override fun getSQLReference(
         modelTarget: Model.Target,
-        aliasName : String,
-        modelName : String,
+        aliasName: String,
+        modelName: String,
         columnName: String?,
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,

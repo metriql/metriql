@@ -50,7 +50,10 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
                 properties["dataSource.private_key_passphrase"] = config.private_key_passphrase
             }
             else -> {
-                throw MetriqlException("No authentication method is set for Snowflake datasource, either `password` or `private_key_path` must be set", HttpResponseStatus.BAD_REQUEST)
+                throw MetriqlException(
+                    "No authentication method is set for Snowflake datasource, either `password` or `private_key_path` must be set",
+                    HttpResponseStatus.BAD_REQUEST
+                )
             }
         }
         properties["dataSource.schema"] = config.schema

@@ -52,7 +52,6 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
     override val quote = '"'
     override fun quoteIdentifier(identifier: String) = ValidationUtil.quoteIdentifier(identifier, quote)
-
     override val metricRenderHook = object : WarehouseMetriqlBridge.MetricRenderHook {}
 
     override val mqlTypeMap = mapOf(
@@ -464,7 +463,12 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             dimensions
                 .joinToString(", ") { dimension ->
                     val value = when (dimension.value) {
-                        is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelTarget, context.getOrGenerateAlias(modelName, null), modelName, dimension.value.column)
+                        is Model.Dimension.DimensionValue.Column -> context.getSQLReference(
+                            modelTarget,
+                            context.getOrGenerateAlias(modelName, null),
+                            modelName,
+                            dimension.value.column
+                        )
                         is Model.Dimension.DimensionValue.Sql -> context.renderSQL(dimension.value.sql, modelName)
                     }
                     "$value AS ${quoteIdentifier(context.getDimensionAlias(dimension.name, null, null))}"
@@ -500,7 +504,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         relationName: RelationName?,
         postOperation: ReportMetric.PostOperation?,
         metricPositionType: MetricPositionType,
-        modelAlias : String?
+        modelAlias: String?
     ): WarehouseMetriqlBridge.RenderedField {
         val (modelDimension, modelRelation) = generateModelDimension(contextModelName, dimensionName, relationName, context)
 

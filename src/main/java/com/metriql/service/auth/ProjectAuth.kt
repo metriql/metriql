@@ -14,7 +14,7 @@ data class ProjectAuth(
     val attributes: Map<String, Any?>?,
     val timezone: ZoneId?,
     val source: String?,
-    val credentials : Map<String, String>? = null
+    val credentials: Map<String, String>? = null
 ) {
     @JsonIgnore
     fun warehouseAuth() = WarehouseAuth(projectId, userId, timezone, source)

@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC;
 import static io.trino.sql.MetriqlSqlFormatter.formatSql;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;

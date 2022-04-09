@@ -25,6 +25,13 @@ enum class RFunction(val description: String?, val returnType: FieldType, val pa
         )
     ),
 
+    FROM_UNIXTIME(
+        "Returns timestamp from the epoch in seconds", TIMESTAMP,
+        listOf(
+            "from" to FieldType.NUMERIC_TYPES
+        )
+    ),
+
     DATE_ADD(
         "Adds the given period to the timestamp", TIMESTAMP,
         listOf(

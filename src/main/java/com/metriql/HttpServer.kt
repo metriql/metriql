@@ -34,7 +34,6 @@ import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.ModelName
 import com.metriql.service.suggestion.InMemorySuggestionCacheService
-import com.metriql.service.suggestion.SuggestionCacheService
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService

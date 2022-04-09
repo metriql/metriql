@@ -1,5 +1,6 @@
 package com.metriql.warehouse.spi.bridge
 
+import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.DimensionName
@@ -20,14 +21,8 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.trino.jdbc.TrinoDriver
-import kotlin.IllegalArgumentException
-import kotlin.jvm.Throws
 
 typealias RFunctions = Map<RFunction, String>
-
-fun getRequiredFunction(functions: RFunctions, function: RFunction): String {
-    return functions[function] ?: throw MetriqlException("$function function is not implemented", BAD_REQUEST)
-}
 
 interface WarehouseMetriqlBridge {
     val mqlTypeMap: Map<String, String>
@@ -86,7 +81,7 @@ interface WarehouseMetriqlBridge {
         relationName: RelationName?,
         postOperation: ReportMetric.PostOperation?,
         metricPositionType: MetricPositionType,
-        modelAlias : String? = null
+        modelAlias: String? = null
     ): RenderedField
 
     data class RenderedFilter(val joins: List<String>, val whereFilter: String?, val havingFilter: String?)
@@ -206,4 +201,9 @@ interface WarehouseMetriqlBridge {
     }
 
     fun generateQuery(viewModels: Map<ModelName, String>, rawQuery: String, comments: List<String> = listOf()): String
+
+    fun compileFunction(function: RFunction, arguments: List<Any>): String {
+        val template = functions[function] ?: throw MetriqlException("$function function is not implemented", BAD_REQUEST)
+        return DbtJinjaRenderer.renderer.jinjava.render(template, mapOf("value" to arguments))
+    }
 }

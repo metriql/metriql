@@ -60,7 +60,7 @@ open class QueryHttpService(
     @ApiOperation(value = "Get datasets")
     @GET
     @Path("/suggest")
-    fun suggest(@Named("userContext") auth: ProjectAuth,  @BodyParam query: SuggestionService.SuggestionQuery): CompletableFuture<List<String>> {
+    fun suggest(@Named("userContext") auth: ProjectAuth, @BodyParam query: SuggestionService.SuggestionQuery): CompletableFuture<List<String>> {
         return suggestionService.search(auth, query.value, query.filter)
     }
 

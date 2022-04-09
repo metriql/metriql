@@ -19,6 +19,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
+import io.trino.spi.type.StandardTypes
 
 object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
     private val identifierRegex = "^[A-Za-z0-9_]+\$".toRegex()
@@ -35,9 +36,15 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         }
     }
 
+    override val mqlTypeMap = super.mqlTypeMap + mapOf(
+        StandardTypes.TIMESTAMP to "TIMESTAMP_TZ"
+    )
+
     override val queryGenerators = mapOf(
         SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
-        FunnelReportType.slug to ANSISQLFunnelQueryGenerator(template = SnowflakeMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/snowflake/generic.jinja2").readText()),
+        FunnelReportType.slug to ANSISQLFunnelQueryGenerator(
+            template = SnowflakeMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/snowflake/generic.jinja2").readText()
+        ),
         RetentionReportType.slug to SnowflakeRetentionQueryGenerator(),
         FlowReportType.slug to ANSISQLFlowQueryGenerator(),
     )

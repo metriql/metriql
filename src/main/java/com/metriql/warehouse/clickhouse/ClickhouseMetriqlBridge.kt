@@ -14,6 +14,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.Segmentation
+import io.trino.spi.type.StandardTypes
 
 object ClickhouseMetriqlBridge : ANSISQLMetriqlBridge() {
     override val filters = ClickhouseFilters { ClickhouseMetriqlBridge }
@@ -25,6 +26,10 @@ object ClickhouseMetriqlBridge : ANSISQLMetriqlBridge() {
             }
         },
         FunnelReportType.slug to ANSISQLFunnelQueryGenerator()
+    )
+
+    override val mqlTypeMap = super.mqlTypeMap + mapOf(
+        StandardTypes.TIME to "varchar"
     )
 
     override val functions = super.functions + mapOf(

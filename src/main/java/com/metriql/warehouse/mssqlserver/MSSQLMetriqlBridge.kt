@@ -9,6 +9,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.Segmentation
+import io.trino.spi.type.StandardTypes
 
 object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
     override val filters = MSSQLFilters()
@@ -31,6 +32,10 @@ object MSSQLMetriqlBridge : ANSISQLMetriqlBridge() {
             }
         },
         FunnelReportType.slug to ANSISQLFunnelQueryGenerator()
+    )
+
+    override val mqlTypeMap = super.mqlTypeMap + mapOf(
+        StandardTypes.TIMESTAMP to "datetime",
     )
 
     override val supportedDBTTypes = setOf<DBTType>()

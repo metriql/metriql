@@ -160,7 +160,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
         return if (projectionNeeded || select.isDistinct || filterNeeded) {
             val quotedAlias = context.warehouseBridge.quoteIdentifier(alias[alias.size - 1])
-            val projections = if(projectionNeeded) projectionColumns.joinToString(", ") { col ->
+            val projections = if (projectionNeeded) projectionColumns.joinToString(", ") { col ->
                 val alias = col.alias?.let { context.warehouseBridge.quoteIdentifier(it) }
                 if (col.projection != col.alias) "${col.projection}${alias?.let { " AS $it" } ?: ""}" else col.projection
             } else "*"

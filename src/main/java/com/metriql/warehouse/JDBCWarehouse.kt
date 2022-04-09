@@ -196,6 +196,7 @@ abstract class JDBCWarehouse(
         openConnection().use { connection ->
             val preparedStatement = connection.prepareStatement(sql)
             preparedStatement.maxRows = 0
+            preparedStatement.execute()
             val metaData = preparedStatement.metaData
             val columns = (1..metaData.columnCount)
                 .map {

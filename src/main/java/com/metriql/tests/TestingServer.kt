@@ -1,12 +1,37 @@
 package com.metriql.tests
 
+import com.metriql.db.QueryResult
+import com.metriql.service.auth.ProjectAuth
+import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.Warehouse
-import java.sql.ResultSet
+import java.time.ZoneId
+import kotlin.test.fail
 
-abstract class TestingServer<T, C> {
-    abstract val config: Warehouse.Config
-    abstract fun getTableReference(tableName: String): String
-    abstract fun createConnection(): C
-    abstract fun init()
-    abstract fun resultSetFor(query: String): ResultSet
+interface TestingServer<C> {
+    val config: Warehouse.Config
+    val dataSource: DataSource
+    fun getQueryRunner(): C
+    fun init() {}
+
+    val bridge get() = dataSource.warehouse.bridge
+
+    fun runQueryFirstRow(query: String): List<Any?>? {
+        val task = dataSource.createQueryTask(
+            ProjectAuth.singleProject(ZoneId.of("UTC")).warehouseAuth(),
+            QueryResult.QueryStats.QueryInfo.rawSql(query),
+            null,
+            null,
+            null,
+            false
+        ).runAndWaitForResult()
+        if (task.error != null) {
+            fail("Error running query: $query \n ${task.error}")
+        }
+
+        return if (task.result?.isEmpty() == true) {
+            null
+        } else {
+            task.result?.get(0)
+        }
+    }
 }

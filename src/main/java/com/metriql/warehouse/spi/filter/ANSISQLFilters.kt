@@ -9,7 +9,6 @@ import com.metriql.util.ValidationUtil
 import com.metriql.util.`try?`
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
-import com.metriql.warehouse.spi.bridge.getRequiredFunction
 import com.metriql.warehouse.spi.filter.WarehouseFilters.Companion.validateFilterValue
 import com.metriql.warehouse.spi.function.DatePostOperation
 import com.metriql.warehouse.spi.function.RFunction
@@ -17,6 +16,7 @@ import com.metriql.warehouse.spi.function.TimestampPostOperation
 import com.metriql.warehouse.spi.function.getRequiredPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.trino.spi.type.StandardTypes
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -45,7 +45,7 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         return parseRawValue(rawValue, type, context)
     }
 
-    private fun parseRawValue(rawValue: String, type: FieldType?, context: IQueryGeneratorContext): String {
+    override fun parseRawValue(rawValue: String, type: FieldType?, context: IQueryGeneratorContext): String {
         return when (type) {
             FieldType.TIMESTAMP -> formatTimestamp(rawValue, context)
             FieldType.DATE -> formatDate(rawValue, context)
@@ -54,9 +54,9 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
         }
     }
 
-    open fun formatTimestamp(value: String, context: IQueryGeneratorContext) = "CAST($value AS TIMESTAMP)"
-    open fun formatDate(value: String, context: IQueryGeneratorContext) = "CAST($value AS DATE)"
-    open fun formatTime(value: String, context: IQueryGeneratorContext) = "CAST($value AS TIME)"
+    open fun formatTimestamp(value: String, context: IQueryGeneratorContext) = "CAST($value AS ${context.warehouseBridge.mqlTypeMap[StandardTypes.TIMESTAMP]})"
+    open fun formatDate(value: String, context: IQueryGeneratorContext) = "CAST($value AS ${context.warehouseBridge.mqlTypeMap[StandardTypes.DATE]})"
+    open fun formatTime(value: String, context: IQueryGeneratorContext) = "CAST($value AS ${context.warehouseBridge.mqlTypeMap[StandardTypes.TIME]})"
 
     override val anyOperators: Map<AnyOperatorType, WarehouseFilterValue> = mapOf(
         AnyOperatorType.IS_SET to { dimensionValue: String, _, _ ->
@@ -223,7 +223,7 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
                     period.type.postOperation.find { it is DatePostOperation }
                         ?: throw MetriqlException("Post operation is not supported for type", HttpResponseStatus.NOT_FOUND)
                     ) as DatePostOperation
-                val now = getRequiredFunction(invoke.functions, RFunction.NOW)
+                val now = invoke.compileFunction(RFunction.NOW, listOf())
                 val value = getRequiredPostOperation(invoke.timeframes.datePostOperations, postOperation).format(now)
                 Triple(dateAdd, postOperation.name, value)
             },
@@ -252,7 +252,7 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
                         ?: throw MetriqlException("Post operation is not supported for type", HttpResponseStatus.NOT_FOUND)
                     ) as TimestampPostOperation
 
-                val now = getRequiredFunction(invoke.functions, RFunction.NOW)
+                val now = invoke.compileFunction(RFunction.NOW, listOf())
                 val value = getRequiredPostOperation(invoke.timeframes.timestampPostOperations, postOperation).format(now)
                 Triple(dateAdd, postOperation.name, value)
             },

@@ -42,7 +42,9 @@ class SuggestionService @Inject constructor(
     ): CompletableFuture<List<String>> {
         val (modelName, dimensionName) = when (value) {
             is ReportMetric.ReportMappingDimension -> {
-                deployment.getModelService().list(auth).firstNotNullOfOrNull { it.mappings.get(value.name)?.let { dim -> it.name to dim } } ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
+                deployment.getModelService().list(auth)
+                    .firstNotNullOfOrNull { it.mappings.get(value.name)?.let { dim -> it.name to dim } }
+                    ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
             }
             is ReportMetric.ReportDimension -> {
                 val sourceModelName = value.modelName!!
