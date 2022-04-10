@@ -5,7 +5,6 @@
     <groupId>com.metriql</groupId>
     <artifactId>metriql</artifactId>
     <version>0.5-SNAPSHOT</version>
-    <packaging>pom</packaging>
 
     <scm>
         <connection>scm:git:https://github.com/metriql/metriql.git</connection>
