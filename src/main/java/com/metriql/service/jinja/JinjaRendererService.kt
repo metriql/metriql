@@ -33,9 +33,9 @@ class JinjaRendererService @Inject constructor() {
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,
         sourceModelName: ModelName? = null,
-        targetModelName: ModelName? = null,
         variables: Map<String, Any> = mapOf(),
         renderAlias: Boolean = false,
+        extraContext: Map<String, Any> = mapOf(),
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
     ): String {
         /*
@@ -54,9 +54,8 @@ class JinjaRendererService @Inject constructor() {
             listOf()
         }
 
-        val base = mapOf(
-            "TABLE" to if (aliasName != null) dataSource.warehouse.bridge.quoteIdentifier(aliasName) else null,
-            "TARGET" to if (targetModelName != null) dataSource.warehouse.bridge.quoteIdentifier(targetModelName) else null,
+        val base = extraContext + mapOf(
+            "TABLE" to aliasName,
             "aq" to context.warehouseBridge.quote,
             "model" to MetriqlJinjaContext.ModelContext(context, renderAlias),
             "relation" to MetriqlJinjaContext.RelationContext(sourceModelName, context, renderAlias),

@@ -558,7 +558,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         val joinModel = context.getSQLReference(modelRelation.targetModelTarget, targetAlias, modelRelation.targetModelName, null)
         val joinExpression = when (relation.value) {
             is Model.Relation.RelationValue.SqlValue -> {
-                context.renderSQL(relation.value.sql, modelRelation.sourceModelName, targetModelName = modelRelation.targetModelName)
+                context.renderSQL(relation.value.sql, modelRelation.sourceModelName, extraContext = mapOf("TARGET" to context.getOrGenerateAlias(modelRelation.sourceModelName, modelRelation.relation.name)))
             }
             is Model.Relation.RelationValue.ColumnValue -> {
                 val columnTypeRelation = relation.value

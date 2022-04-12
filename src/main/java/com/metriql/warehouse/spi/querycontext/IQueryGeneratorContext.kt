@@ -70,10 +70,9 @@ interface IQueryGeneratorContext {
         modelName: ModelName?,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,
-        // Target model name only for join relations
-        targetModelName: ModelName? = null,
         // Instead of actual values, render alias
         renderAlias: Boolean = false,
+        extraContext : Map<String, Any> = mapOf(),
         hook: ((Map<String, Any?>) -> Map<String, Any?>)? = null,
     ): String
 

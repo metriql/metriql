@@ -191,8 +191,8 @@ class QueryGeneratorContext(
         modelName: ModelName?,
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,
-        targetModelName: ModelName?,
         renderAlias: Boolean,
+        extraContext : Map<String, Any>,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)?,
     ): String {
         return renderer.render(
@@ -204,7 +204,7 @@ class QueryGeneratorContext(
             inQueryDimensionNames,
             dateRange,
             sourceModelName = modelName,
-            targetModelName = targetModelName,
+            extraContext = extraContext,
             renderAlias = renderAlias
         )
     }

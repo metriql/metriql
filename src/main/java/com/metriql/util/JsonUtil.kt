@@ -27,6 +27,7 @@ object JsonUtil {
                     reference = extractPropertyReference(e.path)
                 }
 
+                // TODO: what if the property has '?
                 val property = substringBetween(e.originalMessage, "'", "'")
 
                 if (reference != null && property != null)
