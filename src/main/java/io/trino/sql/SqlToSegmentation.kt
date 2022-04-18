@@ -221,7 +221,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             var directReference = references[node]
             val reference = if (directReference != null) {
                 measures.add(directReference.second)
-                directReference.second
+                directReference
             } else if (isPlain(node)) {
                 // workaround for basic count(*) as we have a system measure for it
                 val isTotalRows = when (node.name.suffix) {
@@ -244,12 +244,20 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
                 if (isTotalRows) {
                     measures.add(TOTAL_ROWS_MEASURE.name)
-                    TOTAL_ROWS_MEASURE.name
+                    MetricType.MEASURE to TOTAL_ROWS_MEASURE.name
                 } else null
             } else null
 
             return if (reference != null) {
-                formatIdentifier(reference, queryContext)
+                val ref = Recipe.FieldReference.fromName(reference.second)
+
+                val alias = when (reference.first) {
+                    MetricType.MEASURE -> queryContext.getMeasureAlias(ref.name, ref.relation)
+                    MetricType.DIMENSION -> queryContext.getDimensionAlias(ref.name, ref.relation, null)
+                    else -> throw IllegalStateException()
+                }
+
+                return formatIdentifier(alias, queryContext)
             } else {
                 super.visitFunctionCall(node, context)
             }

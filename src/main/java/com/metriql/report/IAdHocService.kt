@@ -30,7 +30,9 @@ interface IAdHocService<T : ServiceReportOptions> {
         reportFilters: List<ReportFilter> = listOf()
     ): RenderedQuery
 
-    fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<ModelName>
+    fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<ModelName> {
+        return setOf()
+    }
 
     fun generateMaterializeQuery(
         projectId: String,
