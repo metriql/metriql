@@ -321,6 +321,7 @@ public class LocalTrinoQueryRunner {
                 .put(Deallocate.class, new DeallocateTask())
                 .put(ResetSession.class, new ResetSessionTask())
                 .put(SetSession.class, new SetSessionTask())
+                .put(StartTransaction.class, new StartTransactionTask())
                 .build();
     }
 
