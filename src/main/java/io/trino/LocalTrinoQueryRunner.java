@@ -19,7 +19,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closer;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.airlift.jaxrs.testing.GuavaMultivaluedMap;
 import io.airlift.node.NodeInfo;
 import io.airlift.units.Duration;
 import io.trino.client.ProtocolHeaders;
@@ -94,9 +93,7 @@ import io.trino.type.BlockTypeOperators;
 import io.trino.util.FinalizerService;
 import io.trino.util.StatementUtils;
 import org.intellij.lang.annotations.Language;
-import org.rakam.server.http.RakamHttpRequest;
 
-import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -321,7 +318,7 @@ public class LocalTrinoQueryRunner {
                 .put(Deallocate.class, new DeallocateTask())
                 .put(ResetSession.class, new ResetSessionTask())
                 .put(SetSession.class, new SetSessionTask())
-                .put(StartTransaction.class, new StartTransactionTask())
+                .put(StartTransaction.class, new NoOpStartTransactionTask())
                 .build();
     }
 
