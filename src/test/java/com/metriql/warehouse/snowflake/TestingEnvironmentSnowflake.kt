@@ -32,7 +32,7 @@ object TestingEnvironmentSnowflake : TestingServer<Connection> {
         properties["schema"] = config.schema
 
         return try {
-            driver.connect("jdbc:snowflake://${config.account}.${config.regionId}.snowflakecomputing.com", properties)
+            driver.connect("jdbc:snowflake://${config.account}${config.regionId?.let { ".$it" }}.snowflakecomputing.com", properties)
         } catch (e: SQLException) {
             throw MetriqlExceptions.SYSTEM_EXCEPTION_FROM_CAUSE.exceptionFromObject(e)
         }

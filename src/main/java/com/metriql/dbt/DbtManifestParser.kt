@@ -52,7 +52,7 @@ object DbtManifestParser {
         LOGGER.log(Level.INFO, "Parsing ${manifest.nodes.size} nodes, ${manifest.sources.size} sources and ${manifest.metrics?.size ?: 0} metrics")
 
         val models = manifest.nodes.mapNotNull { it.value.toModel(dataSource, manifest) }
-        val sources = manifest.sources.mapNotNull { it.value.toModel(manifest) }
+        val sources = manifest.sources.mapNotNull { it.value.toModel(dataSource, manifest) }
         val modelsAndSources = models + sources
         val metrics = manifest.metrics?.mapNotNull { it.value.toModel(manifest, modelsAndSources) } ?: listOf()
         return modelsAndSources + metrics

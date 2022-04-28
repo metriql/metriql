@@ -1,6 +1,7 @@
 package com.metriql.deployment
 
 import com.google.common.cache.CacheBuilder
+import com.google.common.net.HttpHeaders
 import com.metriql.Commands
 import com.metriql.UserContext
 import com.metriql.deployment.SingleTenantDeployment.Companion.parseRecipe
@@ -32,7 +33,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
     override val authType = Deployment.AuthType.USERNAME_PASS
 
     override fun getAuth(context: UserContext): ProjectAuth {
-        val user = context.user ?: throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
+        val user = context.user ?: context.token ?: throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
         val cachedAuth = cache.get(user) { Optional.empty() }
         val auth = ProjectAuth(
             user, "", isOwner = true,
@@ -40,11 +41,18 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
             attributes = mapOf(), timezone = null, source = null
         )
 
-        if (cachedAuth.isEmpty) {
+        if (cachedAuth.isEmpty || cachedAuth.get().modelsUpdatedAt == null) {
             synchronized(cachedAuth) {
-                if (cache.getIfPresent(user)?.isEmpty == true) {
-                    val request = UnirestHelper.unirest.get(multiTenantUrl)
-                        .basicAuth(user, context.pass)
+                if (cache.getIfPresent(user)?.isEmpty == true || cachedAuth.get().modelsUpdatedAt == null) {
+                    val get = UnirestHelper.unirest.get(multiTenantUrl)
+                    if(context.token != null) {
+                        get.header(HttpHeaders.AUTHORIZATION, "Bearer ${context.token}")
+                    }
+                    if(context.pass != null) {
+                        get.basicAuth(user, context.pass)
+                    }
+
+                    val request = get
                         .header("Content-Type", "application/json")
                         .asObject(Response::class.java)
                     if (request.status != 200) {
@@ -63,9 +71,12 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
 
                     val models = if (!updateAtAndModelPair.isPresent || updateAtAndModelPair.get().first < request.body.manifest.updated_at) {
                         synchronized(updateAtAndModelPair) {
+
                             val recipe = parseRecipe(dataSource, manifestUrl)
                             val models = SingleTenantDeployment.getPreparedModels(dataSource, auth, recipe)
-                            manifestCache[manifestUrl] = Optional.of(request.body.manifest.updated_at to models)
+                            request.body.manifest.updated_at?.let {
+                                manifestCache[manifestUrl] = Optional.of(it to models)
+                            }
                             models
                         }
                     } else {
@@ -102,9 +113,9 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
         Commands.logger.info("Started multi-tenant Metriql deployment")
     }
 
-    data class AdapterManifest(val dataSource: DataSource, val models: List<Model>, val modelsUpdatedAt: Instant)
+    data class AdapterManifest(val dataSource: DataSource, val models: List<Model>, val modelsUpdatedAt: Instant?)
 
     data class Response(val manifest: ManifestLocation, val connection_parameters: WarehouseConfig) {
-        data class ManifestLocation(val url: String, val updated_at: Instant)
+        data class ManifestLocation(val url: String, val updated_at: Instant?)
     }
 }

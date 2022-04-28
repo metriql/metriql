@@ -12,7 +12,7 @@ object RecipeUtil {
         checkResourceNames(models)
 
         val fieldUniquenessErrors = models.mapNotNull { model ->
-            val collidingFieldNames = model.dimensions.map { it.name }.intersect(model.measures.map { it.name })
+            val collidingFieldNames = model.dimensions.map { it.name }.intersect(model.measures.map { it.name }.toSet())
             if (collidingFieldNames.isEmpty()) {
                 null
             } else {

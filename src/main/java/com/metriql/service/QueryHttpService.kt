@@ -59,7 +59,7 @@ open class QueryHttpService(
 
     @ApiOperation(value = "Get datasets")
     @GET
-    @Path("/suggest")
+    @Path("/metadata/search_values")
     fun suggest(@Named("userContext") auth: ProjectAuth, @BodyParam query: SuggestionService.SuggestionQuery): CompletableFuture<List<String>> {
         return suggestionService.search(auth, query.value, query.filter)
     }
@@ -105,11 +105,25 @@ open class QueryHttpService(
         return compiled.query
     }
 
+    @ApiOperation(value = "Generate SQL")
+    @JsonRequest
+    @Path("/sql/internal")
+    fun sql(@Named("userContext") auth: ProjectAuth, @BodyParam query: InternalQuery): String {
+        val context = reportService.createContext(auth, deployment.getDataSource(auth))
+        val compiled = reportService.getServiceForReportType(query.type).renderQuery(
+            auth,
+            context,
+            query.report,
+            listOf(),
+        )
+
+        return compiled.query
+    }
+
     @ApiOperation(value = "Run metriql queries")
     @JsonRequest
     @Path("/query")
     fun query(
-        request: RakamHttpRequest,
         @Named("userContext") auth: ProjectAuth,
         @BodyParam query: Query,
         @QueryParam("useCache", required = false) useCache: Boolean?,
@@ -125,6 +139,32 @@ open class QueryHttpService(
 
         return taskQueueService.execute(task, initialWaitInSeconds ?: 60).thenApply { it.taskTicket() }
     }
+
+    @ApiOperation(value = "Run metriql internal queries")
+    @JsonRequest
+    @Path("/query/internal")
+    fun query(
+        @Named("userContext") auth: ProjectAuth,
+        @BodyParam query: InternalQuery,
+        @QueryParam("useCache", required = false) useCache: Boolean?,
+        @QueryParam("initialWaitInSeconds", required = false) initialWaitInSeconds: Long?
+    ): CompletableFuture<Task.TaskTicket<QueryResult>> {
+        val context = reportService.createContext(auth, deployment.getDataSource(auth))
+        val task = reportService.queryTask(
+            auth, query.type, context.datasource, query.report,
+            isBackgroundTask = false,
+            useCache = useCache ?: true,
+            context = context
+        )
+
+        return taskQueueService.execute(task, initialWaitInSeconds ?: 60).thenApply { it.taskTicket() }
+    }
+
+    data class InternalQuery(
+        val type: ReportType,
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
+        val report: ServiceReportOptions
+    )
 
     data class Query(
         val type: ReportType,

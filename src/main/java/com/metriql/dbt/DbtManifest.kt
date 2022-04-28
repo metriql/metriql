@@ -32,7 +32,7 @@ data class DbtManifest(
     val nodes: Map<String, Node>,
     val sources: Map<String, Source>,
     val generated_at: String?,
-    val child_map: Map<String, List<String>>,
+    val child_map: Map<String, List<String>>?,
     val metrics: Map<String, Metric>?
 ) {
     data class Metric(
@@ -207,13 +207,13 @@ data class DbtManifest(
 
             val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
                 val table = datasource.getTable(target.database, target.schema, target.table)
-                val recipeDimensions = createDimensionsFromColumns(table.columns).map { it.name to fromDimension(it) }.toMap()
+                val recipeDimensions = createDimensionsFromColumns(table.columns).associate { it.name to fromDimension(it) }
                 mapOf<String, RecipeModel.Metric.RecipeMeasure>() to recipeDimensions
             } else {
                 extractFields(modelName, columns)
             }
 
-            val dependencies = dbtManifest.child_map[unique_id] ?: listOf()
+            val dependencies = dbtManifest.child_map?.get(unique_id) ?: listOf()
 
             val model = metriql.copy(
                 hidden = meta.metriql?.hidden ?: if (resource_type == SEED_RESOURCE_TYPE) (docs?.show?.let { !it } ?: true) else false,
@@ -254,13 +254,21 @@ data class DbtManifest(
         val columns: Map<String, DbtColumn>,
         val meta: Node.Meta,
     ) {
-        fun toModel(dbtManifest: DbtManifest): RecipeModel? {
+        fun toModel(dataSource : DataSource, dbtManifest: DbtManifest): RecipeModel? {
             if (resource_type != "source" || meta.metriql == null) return null
 
             val modelName = TextUtil.toSlug("source_${package_name}_${source_name}_$name", true)
 
-            val (columnMeasures, columnDimensions) = extractFields(modelName, columns)
-            val dependencies = dbtManifest.child_map[unique_id] ?: listOf()
+            val dependencies = dbtManifest.child_map?.get(unique_id) ?: listOf()
+
+            val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
+                val table = dataSource.getTable(database, schema, identifier)
+                val recipeDimensions = createDimensionsFromColumns(table.columns).associate { it.name to fromDimension(it) }
+                mapOf<String, RecipeModel.Metric.RecipeMeasure>() to recipeDimensions
+            } else {
+                extractFields(modelName, columns)
+            }
+
             val model = meta.metriql.copy(
                 name = modelName,
                 label = meta.metriql.label ?: toUserFriendly(name),
@@ -289,10 +297,6 @@ data class DbtManifest(
 
     companion object {
         fun getModelIfApplicable(model: RecipeModel): RecipeModel? {
-            if (model.measures?.isEmpty() == true && model.dimensions?.isEmpty() == true) {
-                return null
-            }
-
             return model.copy(
                 dimensions = model.dimensions?.map { it.key to it.value.copy(sql = it.value.sql?.let { sql -> convertToJinja(sql) }) }?.toMap(),
                 measures = model.measures?.map { it.key to it.value.copy(sql = it.value.sql?.let { sql -> convertToJinja(sql) }) }?.toMap(),
