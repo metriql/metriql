@@ -21,7 +21,7 @@
         <air.version>200</air.version>
         <trino.version>357</trino.version>
         <testcontainers.version>1.16.3</testcontainers.version>
-        <dep.kotlin.version>1.6.10</dep.kotlin.version>
+        <dep.kotlin.version>1.6.21</dep.kotlin.version>
         <check.skip-dependency>false</check.skip-dependency>
         <check.fail-dependency>true</check.fail-dependency>
         <dep.jinja.version>2.5.7</dep.jinja.version>
@@ -191,7 +191,7 @@
         <dependency>
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java</artifactId>
-            <version>3.7.02</version>
+            <version>3.13.8</version>
         </dependency>
         <dependency>
             <groupId>net.snowflake</groupId>

@@ -18,7 +18,6 @@ import com.metriql.warehouse.spi.services.RecipeQuery
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import io.netty.handler.codec.http.HttpResponseStatus
 import org.rakam.server.http.HttpService
-import org.rakam.server.http.RakamHttpRequest
 import org.rakam.server.http.annotations.Api
 import org.rakam.server.http.annotations.ApiOperation
 import org.rakam.server.http.annotations.BodyParam
