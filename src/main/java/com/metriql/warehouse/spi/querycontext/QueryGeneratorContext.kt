@@ -192,7 +192,7 @@ class QueryGeneratorContext(
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,
         renderAlias: Boolean,
-        extraContext : Map<String, Any>,
+        extraContext: Map<String, Any>,
         hook: ((Map<String, Any?>) -> Map<String, Any?>)?,
     ): String {
         return renderer.render(

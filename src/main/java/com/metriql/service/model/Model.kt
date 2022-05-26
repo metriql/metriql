@@ -3,6 +3,7 @@ package com.metriql.service.model
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.CaseFormat
 import com.metriql.db.FieldType
@@ -257,6 +258,7 @@ data class Model(
         @UppercaseEnum
         enum class AggregationType {
             COUNT, COUNT_UNIQUE, SUM, MINIMUM, MAXIMUM, AVERAGE, APPROXIMATE_UNIQUE, SUM_DISTINCT, AVERAGE_DISTINCT, SQL
+
         }
     }
 

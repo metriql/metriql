@@ -45,10 +45,10 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
             synchronized(cachedAuth) {
                 if (cache.getIfPresent(user)?.isEmpty == true || cachedAuth.get().modelsUpdatedAt == null) {
                     val get = UnirestHelper.unirest.get(multiTenantUrl)
-                    if(context.token != null) {
+                    if (context.token != null) {
                         get.header(HttpHeaders.AUTHORIZATION, "Bearer ${context.token}")
                     }
-                    if(context.pass != null) {
+                    if (context.pass != null) {
                         get.basicAuth(user, context.pass)
                     }
 

@@ -43,7 +43,7 @@ data class DbtManifest(
         val name: String,
         val description: String?,
         val label: String?,
-        val type: Model.Measure.AggregationType,
+        val type: String,
         val sql: String?,
         val timestamp: String?,
         val time_grains: List<String>,
@@ -89,6 +89,12 @@ data class DbtManifest(
                 }?.toMap()
             } ?: sourceModel.relations
 
+            val metriqlType = try {
+                JsonHelper.convert(type, DbtMetric::class.java).type
+            } catch (e: Exception) {
+                JsonHelper.convert(type, Model.Measure.AggregationType::class.java)
+            }
+
             val label = label ?: meta.metriql?.label
             val model = sourceModel.copy(
                 name = datasetName,
@@ -97,7 +103,7 @@ data class DbtManifest(
                 description = description ?: meta.metriql?.description,
                 label = label ?: name,
                 dimensions = modelDimensions,
-                measures = mapOf(name to RecipeModel.Metric.RecipeMeasure(label = label, aggregation = type, sql = sql, filters = measureFilters)),
+                measures = mapOf(name to RecipeModel.Metric.RecipeMeasure(label = label, aggregation = metriqlType, sql = sql, filters = measureFilters)),
                 tags = tags ?: sourceModel.tags,
                 _path = original_file_path,
                 package_name = package_name
@@ -113,6 +119,13 @@ data class DbtManifest(
                 return JsonHelper.convert(operator, typeClass)
             }
         }
+    }
+
+    @UppercaseEnum
+    enum class DbtMetric(val type: Model.Measure.AggregationType) {
+        COUNT_DISTINCT(Model.Measure.AggregationType.COUNT_UNIQUE),
+        MAX(Model.Measure.AggregationType.MAXIMUM),
+        MIN(Model.Measure.AggregationType.MINIMUM)
     }
 
     data class Node(
@@ -254,7 +267,7 @@ data class DbtManifest(
         val columns: Map<String, DbtColumn>,
         val meta: Node.Meta,
     ) {
-        fun toModel(dataSource : DataSource, dbtManifest: DbtManifest): RecipeModel? {
+        fun toModel(dataSource: DataSource, dbtManifest: DbtManifest): RecipeModel? {
             if (resource_type != "source" || meta.metriql == null) return null
 
             val modelName = TextUtil.toSlug("source_${package_name}_${source_name}_$name", true)
@@ -262,7 +275,11 @@ data class DbtManifest(
             val dependencies = dbtManifest.child_map?.get(unique_id) ?: listOf()
 
             val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
-                val table = dataSource.getTable(database, schema, identifier)
+                val table = try {
+                    dataSource.getTable(database, schema, identifier)
+                } catch (e: MetriqlException) {
+                    throw MetriqlException("Unable to fetch columns for $modelName: ${e.message}", e.statusCode)
+                }
                 val recipeDimensions = createDimensionsFromColumns(table.columns).associate { it.name to fromDimension(it) }
                 mapOf<String, RecipeModel.Metric.RecipeMeasure>() to recipeDimensions
             } else {
