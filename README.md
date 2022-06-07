@@ -49,4 +49,4 @@ Once you're with the setup, please make sure that:
 
 ## Contributors ✨
 
-We're currently hiring a senior software engineer in [UK](https://grnh.se/fe7d05711us) & [France](https://grnh.se/fe7d05711us) if you'd like to join our team and help us build the next big thing in the modern data stack!
+We're currently hiring a senior software engineer in [UK](https://grnh.se/afd382051us) & [France](https://grnh.se/fe7d05711us) if you'd like to join our team and help us build the next big thing in the modern data stack!
