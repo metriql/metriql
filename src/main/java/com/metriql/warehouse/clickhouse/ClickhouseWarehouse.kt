@@ -29,7 +29,8 @@ object ClickhouseWarehouse : Warehouse<ClickhouseConfig> {
         val password: String,
         val ssl: Boolean?,
         val usePool: Boolean,
-        val connectionParameters: Map<String, String>?
+        val connectionParameters: Map<String, String>?,
+        val driverUriParameters: Map<String, String>?,
     ) : Warehouse.Config {
         override fun toString(): String = "$database - $host"
         override fun stripPassword() = this.copy(password = "")

@@ -26,7 +26,15 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
     override val dataSourceProperties: Properties by lazy {
         val properties = Properties()
         val port = if (config.port === 9000) 8123 else config.port
-        properties["jdbcUrl"] = "jdbc:clickhouse://${config.host}:$port/${config.database}"
+
+        var queryParams = ""
+        config.driverUriParameters?.let {
+            val list = ArrayList<String>()
+            it.map { (k, v) -> list.add("${k}=${v}") }
+            queryParams = list.joinToString(prefix = "?", separator = "&")
+        }
+        properties["jdbcUrl"] = "jdbc:clickhouse://${config.host}:$port/${config.database}${queryParams}"
+
         properties["driverClassName"] = "com.clickhouse.jdbc.ClickHouseDriver"
 
         properties["dataSource.user"] = config.user
