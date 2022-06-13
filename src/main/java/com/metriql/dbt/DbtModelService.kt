@@ -20,6 +20,7 @@ import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
+import com.metriql.warehouse.spi.services.MaterializeQuery.Companion.defaultModelName
 import org.rakam.server.http.HttpServer
 import javax.inject.Inject
 
@@ -103,7 +104,7 @@ class DbtModelService @Inject constructor(
                     "table" to renderedQuery
                 }
 
-                val materializedModelName = generateModelName(modelName, materialize.reportType, materialize.name)
+                val materializedModelName = materialize.value.getModelName() ?: defaultModelName(modelName, materialize.reportType, materialize.name)
                 val schema = recipe.getDependenciesWithFallback().dbtDependency().aggregateSchema()
                 val config = modelConfigMapper.invoke(Triple(materializedModelName, target.copy(schema = schema), mapOf("materialized" to materialized)))
                 val configs = jinja.render(CONFIG_TEMPLATE, mapOf("configs" to config, "tagName" to tagName))
@@ -131,8 +132,5 @@ class DbtModelService @Inject constructor(
     companion object {
         val CONFIG_TEMPLATE = this::class.java.getResource("/dbt/model.sql.jinja2").readText()
         const val tagName = "metriql_materialize"
-        fun generateModelName(modelName: String, reportType: ReportType, name: String): String {
-            return "${modelName}_${reportType.slug}_$name"
-        }
     }
 }

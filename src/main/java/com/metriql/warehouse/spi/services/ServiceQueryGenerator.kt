@@ -3,6 +3,7 @@ package com.metriql.warehouse.spi.services
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.hubspot.jinjava.Jinjava
 import com.metriql.db.JSONBSerializable
+import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
@@ -31,7 +32,14 @@ interface RecipeQuery {
 
 @JSONBSerializable
 interface MaterializeQuery {
+    fun getModelName() : String? = null
     fun toQuery(modelName: ModelName): RecipeQuery
+
+    companion object {
+        fun defaultModelName(modelName: String, reportType: ReportType, name: String): String {
+            return "${modelName}_${reportType.slug}_$name"
+        }
+    }
 }
 
 interface ServiceSupport

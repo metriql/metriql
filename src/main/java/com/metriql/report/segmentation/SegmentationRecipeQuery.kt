@@ -61,7 +61,8 @@ data class SegmentationRecipeQuery(
     data class SegmentationMaterialize(
         val measures: List<Recipe.FieldReference>,
         val dimensions: List<Recipe.FieldReference>?,
-        val filters: List<OrFilters>?
+        val filters: List<OrFilters>?,
+        val tableName : String? = null
     ) : MaterializeQuery {
         override fun toQuery(modelName: ModelName): RecipeQuery {
             return SegmentationRecipeQuery(modelName, measures, dimensions, filters)

@@ -17,6 +17,7 @@ import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DbtSettings.Companion.generateSchemaForModel
 import com.metriql.warehouse.spi.function.IPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
+import com.metriql.warehouse.spi.services.MaterializeQuery.Companion.defaultModelName
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
 
@@ -31,7 +32,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
         caches: ((MaterializeTableCache) -> Boolean)? = null,
     ): Pair<SegmentationReportOptions, Model>? {
         val plans = aggregates.mapNotNull {
-            val materializeModelName = DbtModelService.generateModelName(it.first, SegmentationReportType, it.second)
+            val materializeModelName = it.third.getModelName() ?: defaultModelName(it.first, SegmentationReportType, it.second)
             val model = getModel(materializeModelName, it.third, query)
 
             when (val planOrErrorMessage = generateQueryIfPossible(query, model, it.third, materializeModelName)) {

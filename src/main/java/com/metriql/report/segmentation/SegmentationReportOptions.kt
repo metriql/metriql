@@ -63,7 +63,7 @@ data class SegmentationReportOptions(
             dimensions?.map { it.toReference() },
             filters?.mapNotNull { it.toReference() },
             reportOptions, limit,
-            orders?.map { it.value.toMetricReference() to if (it.ascending == true) Recipe.OrderType.ASC else Recipe.OrderType.DESC }?.toMap()
+            orders?.associate { it.value.toMetricReference() to if (it.ascending == true) Recipe.OrderType.ASC else Recipe.OrderType.DESC }
         )
     }
 }
