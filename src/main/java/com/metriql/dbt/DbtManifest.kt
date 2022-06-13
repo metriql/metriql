@@ -125,7 +125,8 @@ data class DbtManifest(
     enum class DbtMetric(val type: Model.Measure.AggregationType) {
         COUNT_DISTINCT(Model.Measure.AggregationType.COUNT_UNIQUE),
         MAX(Model.Measure.AggregationType.MAXIMUM),
-        MIN(Model.Measure.AggregationType.MINIMUM)
+        MIN(Model.Measure.AggregationType.MINIMUM),
+        AVG(Model.Measure.AggregationType.AVERAGE)
     }
 
     data class Node(
