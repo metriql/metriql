@@ -27,7 +27,7 @@ class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWar
         properties["dataSource.user"] = config.user
         properties["dataSource.password"] = config.password
         config.connectionParameters?.map { (k, v) ->
-            properties[k] = v
+            properties["dataSource.$k"] = v
         }
         properties
     }

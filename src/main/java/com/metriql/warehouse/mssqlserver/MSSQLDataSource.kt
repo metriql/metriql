@@ -26,7 +26,7 @@ class MSSQLDataSource(override val config: MSSQLWarehouse.MSSQLServerConfig) : J
         properties["dataSource.user"] = config.user
         properties["dataSource.password"] = config.password
         config.connectionParameters?.map { (k, v) ->
-            properties[k] = v
+            properties["dataSource.$k"] = v
         }
         properties
     }

@@ -33,7 +33,7 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
         config.ssl?.let { properties["dataSource.ssl"] = it }
         properties["dataSource.password"] = config.password
         config.connectionParameters?.map { (k, v) ->
-            properties[k] = v
+            properties["dataSource.$k"] = v
         }
         properties
     }

@@ -18,7 +18,7 @@ class RedshiftDataSource(override val config: PostgresqlWarehouse.PostgresqlConf
             properties["dataSource.password"] = config.password
         }
         config.connectionParameters?.map { (k, v) ->
-            properties[k] = v
+            properties["dataSource.$k"] = v
         }
         properties
     }

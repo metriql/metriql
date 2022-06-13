@@ -40,7 +40,7 @@ open class PostgresqlDataSource(override val config: PostgresqlWarehouse.Postgre
         properties["dataSource.loginTimeout"] = 10
         properties["dataSource.ApplicationName"] = "metriql"
         config.connectionParameters?.map { (k, v) ->
-            properties[k] = v
+            properties["dataSource.$k"] = v
         }
         properties
     }
