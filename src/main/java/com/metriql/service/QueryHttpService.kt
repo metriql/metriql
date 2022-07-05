@@ -8,6 +8,7 @@ import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.Task
@@ -52,7 +53,7 @@ open class QueryHttpService(
     @ApiOperation(value = "Get datasets")
     @GET
     @Path("/metadata/datasets")
-    fun metadataDatasetNames(@Named("userContext") auth: ProjectAuth): Set<String> {
+    fun metadataDatasetNames(@Named("userContext") auth: ProjectAuth): List<IDatasetService.DatasetName> {
         return deployment.getModelService().listDatasetNames(auth)
     }
 

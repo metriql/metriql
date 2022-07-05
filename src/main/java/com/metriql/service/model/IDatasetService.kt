@@ -7,7 +7,9 @@ interface IDatasetService {
     fun getDataset(auth: ProjectAuth, modelName: ModelName): Model?
     fun update(auth: ProjectAuth)
 
-    fun listDatasetNames(auth: ProjectAuth): Set<String> {
-        return list(auth).map { it.name }.toSet()
+    fun listDatasetNames(auth: ProjectAuth): List<DatasetName> {
+        return list(auth).map { DatasetName(it.name, it.label ?: it.name) }.toList()
     }
+
+    data class DatasetName(val name : String, val label : String)
 }
