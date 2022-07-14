@@ -21,7 +21,6 @@ jobs:
         - name: Update Demo on Heroku
           uses: CamiloGarciaLaRotta/watermelon-http-client@v1.5
           with:
-            url: https://kolkrabbi.heroku.com/apps/2748b834-4cc7-409c-819c-f7aa907d8f46/github/push
-            method: POST
-            headers: '{"Authorization": "Bearer ${{ secrets.DEMO_HEROKU_API_TOKEN }}"}'
+            url: "${{ secrets.DEMO_DEPLOY_HOOK_URL }}"
+            method: GET
             verbose: true
