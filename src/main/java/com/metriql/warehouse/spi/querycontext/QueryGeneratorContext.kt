@@ -113,7 +113,7 @@ class QueryGeneratorContext(
         val dimensionNameNormalized = (
             if (mappingDimension != null) {
                 model.mappings.get(mappingDimension)
-                    ?: throw MetriqlException("The dimension `$dimensionName` in model `$modelName` not found", NOT_FOUND)
+                    ?: throw MetriqlException("The $mappingDimension mapping dimension in model `$modelName` not found", NOT_FOUND)
             } else {
                 dimensionName
             }
@@ -166,7 +166,6 @@ class QueryGeneratorContext(
             datasource.sqlReferenceForTarget(modelTarget, aliasName) {
                 renderer.render(
                     auth,
-                    datasource,
                     it,
                     aliasName,
                     this,
@@ -188,7 +187,8 @@ class QueryGeneratorContext(
 
     override fun renderSQL(
         sqlRenderable: SQLRenderable,
-        modelName: ModelName?,
+        alias: String?,
+        modelName : ModelName?,
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,
         renderAlias: Boolean,
@@ -197,9 +197,8 @@ class QueryGeneratorContext(
     ): String {
         return renderer.render(
             auth,
-            datasource,
             sqlRenderable,
-            modelName?.let { getOrGenerateAlias(it, null) },
+            alias,
             this,
             inQueryDimensionNames,
             dateRange,

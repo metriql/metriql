@@ -6,7 +6,6 @@ import com.hubspot.jinjava.lib.fn.ELFunctionDefinition
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.ModelName
 import com.metriql.util.MetriqlException
-import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -26,7 +25,6 @@ class JinjaRendererService @Inject constructor() {
 
     fun render(
         auth: ProjectAuth,
-        dataSource: DataSource,
         sqlRenderable: SQLRenderable,
         aliasName: String?,
         context: IQueryGeneratorContext,
@@ -57,11 +55,12 @@ class JinjaRendererService @Inject constructor() {
         val base = extraContext + mapOf(
             "TABLE" to aliasName,
             "aq" to context.warehouseBridge.quote,
-            "model" to MetriqlJinjaContext.ModelContext(context, renderAlias),
-            "relation" to MetriqlJinjaContext.RelationContext(sourceModelName, context, renderAlias),
-            "dimension" to (sourceModelName?.let { MetriqlJinjaContext.DimensionContext(it, null, context, renderAlias) }),
-            "measure" to (sourceModelName?.let { MetriqlJinjaContext.MeasureContext(it, null, context, renderAlias) }),
+            "model" to MetriqlJinjaContext.ModelContext(context, renderAlias, aliasName),
+            "relation" to MetriqlJinjaContext.RelationContext(sourceModelName, context, renderAlias, aliasName),
+            "dimension" to (sourceModelName?.let { MetriqlJinjaContext.DimensionContext(it, null, context, renderAlias, aliasName) }),
+            "measure" to (sourceModelName?.let { MetriqlJinjaContext.MeasureContext(it, null, context, renderAlias, aliasName) }),
             "user" to MetriqlJinjaContext.UserAttributeContext(context),
+            "function" to MetriqlJinjaContext.FunctionContext(context),
             "variables" to variables,
             "_auth" to auth,
             "_context" to context,

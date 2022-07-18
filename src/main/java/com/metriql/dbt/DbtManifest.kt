@@ -109,7 +109,7 @@ data class DbtManifest(
                 package_name = package_name
             )
 
-            return getModelIfApplicable(model)
+            return fixJinjaExpressions(model)
         }
 
         data class Filter(val field: String, val operator: String, val value: Any?) {
@@ -229,7 +229,7 @@ data class DbtManifest(
 
             val dependencies = dbtManifest.child_map?.get(unique_id) ?: listOf()
 
-            val model = metriql.copy(
+            val model = metriql?.copy(
                 hidden = meta.metriql?.hidden ?: if (resource_type == SEED_RESOURCE_TYPE) (docs?.show?.let { !it } ?: true) else false,
                 name = modelName,
                 sql = if (config.materialized == Config.EPHEMERAL) raw_sql else null,
@@ -243,10 +243,12 @@ data class DbtManifest(
                 package_name = package_name
             )
 
-            val modelWithTests = dependencies.mapNotNull { dbtManifest.nodes[it] }
-                .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model) ?: model }
+            val modelWithTests = model?.let {
+                dependencies.mapNotNull { dep -> dbtManifest.nodes[dep] }
+                    .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(it) ?: model }
+            }
 
-            return getModelIfApplicable(modelWithTests)
+            return fixJinjaExpressions(modelWithTests)
         }
     }
 
@@ -302,7 +304,7 @@ data class DbtManifest(
             val finalModel = dependencies.mapNotNull { dbtManifest.nodes[it] }
                 .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model) ?: model }
 
-            return getModelIfApplicable(finalModel)
+            return fixJinjaExpressions(finalModel)
         }
     }
 
@@ -314,7 +316,7 @@ data class DbtManifest(
     }
 
     companion object {
-        fun getModelIfApplicable(model: RecipeModel): RecipeModel? {
+        fun fixJinjaExpressions(model: RecipeModel): RecipeModel? {
             return model.copy(
                 dimensions = model.dimensions?.map { it.key to it.value.copy(sql = it.value.sql?.let { sql -> convertToJinja(sql) }) }?.toMap(),
                 measures = model.measures?.map { it.key to it.value.copy(sql = it.value.sql?.let { sql -> convertToJinja(sql) }) }?.toMap(),

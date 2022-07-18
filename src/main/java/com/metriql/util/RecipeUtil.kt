@@ -23,7 +23,7 @@ object RecipeUtil {
         // check for relation targets
         val relationErrors = models.flatMap { model ->
             model.relations.filter { relation -> !models.any { it.name == relation.modelName } }.map {
-                "`${it.modelName}` model not found for relation ${model.name}.${it.name}"
+                "`${it.modelName}` dataset not found for relation ${model.name}.${it.name}"
             }
         }
 

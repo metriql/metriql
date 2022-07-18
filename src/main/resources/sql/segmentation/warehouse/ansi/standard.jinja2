@@ -4,7 +4,7 @@ SELECT {% for field in projections %}
 {% endif %}{% set nonWindowProjections = projections | selectattr('window', 'equalto', false) | list %}
 SELECT {% for field in nonWindowProjections %}
     {{field.value}}{% if not loop.last %},{% endif %}{% endfor %}
-FROM {{tableReference}}
+FROM {{tableReference}} AS {{tableAlias}}
 {% for join in joins %} {{join}} {% endfor %}{% if whereFilters %}
     WHERE {% for whereFilter in whereFilters %}
         {% if not loop.first %}AND {% endif %}{{whereFilter}}{% endfor %}{% endif %}{% if groups %}

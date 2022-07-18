@@ -17,6 +17,7 @@ import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.filter.WarehouseFilters
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.function.WarehouseTimeframes
+import com.metriql.warehouse.spi.function.getRequiredPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
@@ -62,7 +63,8 @@ interface WarehouseMetriqlBridge {
         relationName: RelationName?,
         metricPositionType: MetricPositionType,
         queryType: AggregationContext,
-        extraFilters: List<ReportFilter>? = null
+        extraFilters: List<ReportFilter>? = null,
+        modelAlias: String? = null
     ): RenderedField
 
     /**
@@ -203,7 +205,7 @@ interface WarehouseMetriqlBridge {
     fun generateQuery(viewModels: Map<ModelName, String>, rawQuery: String, comments: List<String> = listOf()): String
 
     fun compileFunction(function: RFunction, arguments: List<Any>): String {
-        val template = functions[function] ?: throw MetriqlException("$function function is not implemented", BAD_REQUEST)
+        val template = functions[function] ?: getRequiredPostOperation(functions, function)
         return DbtJinjaRenderer.renderer.jinjava.render(template, mapOf("value" to arguments))
     }
 }

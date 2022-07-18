@@ -67,7 +67,8 @@ interface IQueryGeneratorContext {
 
     fun renderSQL(
         sqlRenderable: SQLRenderable,
-        modelName: ModelName?,
+        alias: String?,
+        modelName : ModelName?,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,
         // Instead of actual values, render alias
@@ -82,6 +83,9 @@ interface IQueryGeneratorContext {
     }
 
     fun getOrGenerateAlias(modelName: String, relationName: String?): String {
-        return aliases.computeIfAbsent(Pair(modelName, relationName)) { "t${aliases.size + 1}" }
+        return aliases.computeIfAbsent(Pair(modelName, relationName)) {
+            val size = aliases.size
+            "t${size + 1}"
+        }
     }
 }

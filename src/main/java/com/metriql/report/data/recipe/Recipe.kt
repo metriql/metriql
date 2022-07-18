@@ -786,7 +786,8 @@ data class Recipe(
 
             val targetModel = if (relation != null) {
                 val targetModelName = currentModel.relations.find { r -> r.name == relation }?.modelName
-                context.getModel(targetModelName!!)
+                    ?: throw MetriqlException("Relation `$relation` could not found", BAD_REQUEST)
+                context.getModel(targetModelName)
             } else currentModel
 
             val dimensionName = if (isMappingDimension()) {
