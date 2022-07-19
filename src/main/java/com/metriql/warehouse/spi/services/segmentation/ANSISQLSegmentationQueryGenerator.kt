@@ -16,6 +16,7 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
         return mapOf(
             "projections" to projections,
             "tableReference" to queryDSL.tableReference,
+            "tableAlias" to queryDSL.tableAlias,
             "joins" to queryDSL.joins,
             "limit" to (queryDSL.limit?.let { "LIMIT $it" } ?: ""),
             "whereFilters" to queryDSL.whereFilters,
