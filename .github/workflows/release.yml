@@ -18,7 +18,7 @@ jobs:
             username: ${{ secrets.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
             tags: "latest"
-        - name: Update Demo on Heroku
+        - name: Update Demo on Render
           uses: CamiloGarciaLaRotta/watermelon-http-client@v1.5
           with:
             url: "${{ secrets.DEMO_DEPLOY_HOOK_URL }}"
