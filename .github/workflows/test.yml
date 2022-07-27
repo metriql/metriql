@@ -2,13 +2,12 @@ name: Run Tests
 
 on:
   push:
-    branches: []
-#       - master
+    branches: [master]
 
 jobs:
   build:
     environment: e2e-tests
-    runs-on: ubuntu-latest
+    runs-on: buildjet-64vcpu-ubuntu-2004
     steps:
       - uses: actions/checkout@v2
       - name: Set up JDK 8
