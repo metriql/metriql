@@ -68,7 +68,7 @@ interface IQueryGeneratorContext {
     fun renderSQL(
         sqlRenderable: SQLRenderable,
         alias: String?,
-        modelName : ModelName?,
+        modelName: ModelName?,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,
         // Instead of actual values, render alias

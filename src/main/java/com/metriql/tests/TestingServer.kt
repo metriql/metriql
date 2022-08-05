@@ -15,9 +15,11 @@ interface TestingServer<C> {
 
     val bridge get() = dataSource.warehouse.bridge
 
+    val auth get() = ProjectAuth.singleProject(ZoneId.of("UTC"))
+
     fun runQueryFirstRow(query: String): List<Any?>? {
         val task = dataSource.createQueryTask(
-            ProjectAuth.singleProject(ZoneId.of("UTC")).warehouseAuth(),
+            auth,
             QueryResult.QueryStats.QueryInfo.rawSql(query),
             null,
             null,

@@ -3,13 +3,13 @@ package com.metriql.warehouse.postgresql
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JdbcUtil
 import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.SchemaName
 import com.metriql.warehouse.spi.Warehouse
-import com.metriql.warehouse.spi.WarehouseAuth
 import java.sql.Connection
 import java.time.ZoneId
 import java.time.format.TextStyle
@@ -62,12 +62,12 @@ open class PostgresqlDataSource(override val config: PostgresqlWarehouse.Postgre
         return JdbcUtil.fromPostgresqlType(dbType)
     }
 
-    override fun getColumnValue(auth: WarehouseAuth, conn: Connection, obj: Any, type: FieldType): Any? {
+    override fun getColumnValue(auth: ProjectAuth, conn: Connection, obj: Any, type: FieldType): Any? {
         return JdbcUtil.fromPostgresqlValue(type, obj)
     }
 
     override fun createQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,

@@ -3,8 +3,8 @@ package com.metriql.warehouse.presto
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.JDBCWarehouse
-import com.metriql.warehouse.spi.WarehouseAuth
 import io.trino.jdbc.TrinoConnection
 import java.sql.Statement
 import java.util.Properties
@@ -72,7 +72,7 @@ class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBC
     }
 
     override fun createQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
@@ -88,7 +88,7 @@ class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBC
         )
     }
 
-    override fun setupConnection(auth: WarehouseAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
+    override fun setupConnection(auth: ProjectAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
         val connection = statement.connection
         if (connection is TrinoConnection) {
             auth.timezone?.let { timeZone -> connection.timeZoneId = timeZone.id }

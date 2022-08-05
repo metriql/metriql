@@ -11,7 +11,7 @@ import java.time.Instant
 @Test(enabled = false)
 class TestSegmentationPresto : TestSegmentation() {
 
-    override val testingServer = TestingEnvironmentPresto
+    val testingServer = TestingEnvironmentPresto
 
     // Services
     override var dataSource = PrestoDataSource(testingServer.config)

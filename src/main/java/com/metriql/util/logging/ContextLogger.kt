@@ -1,16 +1,11 @@
 package com.metriql.util.logging
 
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.warehouse.spi.WarehouseAuth
 import java.util.logging.Level
 import java.util.logging.Logger
 
 // Sets user, project-ids to thread-context and removes after logging
 object ContextLogger {
-
-    fun log(logger: Logger, message: String, auth: WarehouseAuth, level: Level? = Level.INFO, throwable: Throwable? = null) {
-        log(logger, message, throwable, level, auth.userId.toString(), auth.projectId.toString())
-    }
 
     fun log(logger: Logger, message: String, auth: ProjectAuth, level: Level? = Level.INFO, throwable: Throwable? = null) {
         log(logger, message, throwable, level, auth.userId.toString(), auth.projectId.toString())

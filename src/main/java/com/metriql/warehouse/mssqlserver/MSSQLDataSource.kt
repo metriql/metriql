@@ -3,8 +3,8 @@ package com.metriql.warehouse.mssqlserver
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.JDBCWarehouse
-import com.metriql.warehouse.spi.WarehouseAuth
 import java.util.Properties
 
 class MSSQLDataSource(override val config: MSSQLWarehouse.MSSQLServerConfig) : JDBCWarehouse(
@@ -39,7 +39,7 @@ class MSSQLDataSource(override val config: MSSQLWarehouse.MSSQLServerConfig) : J
     }
 
     override fun createQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,

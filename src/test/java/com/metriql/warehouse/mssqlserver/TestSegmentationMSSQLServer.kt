@@ -8,7 +8,7 @@ import java.sql.Date
 // TODO: fix timezone issues first
 @Test(enabled = false)
 class TestSegmentationMSSQLServer : TestSegmentation() {
-    override val testingServer = TestingEnvironmentMSSQLServer
+    val testingServer = TestingEnvironmentMSSQLServer
     // Services
     override val dataSource = MSSQLDataSource(testingServer.config)
 

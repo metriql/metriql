@@ -35,7 +35,7 @@ class TestSimpleFilterBigQuery : TestSimpleFilter<BigQuery>() {
         )
         val schema = Schema.of(fields)
         val tableDefinition = StandardTableDefinition.of(schema)
-        val tableId = TableId.of("rakam_test", table)
+        val tableId = TableId.of(testingServer.config.dataset, table)
         val tableInfo = TableInfo.of(tableId, tableDefinition)
         `try?` { bigQuery.getTable(tableId).delete() }
         bigQuery.create(tableInfo)

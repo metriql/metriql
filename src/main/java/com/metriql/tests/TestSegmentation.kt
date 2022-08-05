@@ -45,7 +45,6 @@ import java.time.ZoneOffset
 abstract class TestSegmentation {
     abstract val dataSource: DataSource
     private val sqlQueryTaskGenerator = SqlQueryTaskGenerator(InMemoryCacheService(CacheBuilderSpec.disableCaching()))
-    abstract val testingServer: TestingServer<*>
     private val auth: ProjectAuth = ProjectAuth(
         1, "",
         isOwner = true, isSuperuser = true, email = null, permissions = null, attributes = null, timezone = ZoneId.of("UTC"), source = null

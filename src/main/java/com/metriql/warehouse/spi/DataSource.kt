@@ -2,6 +2,7 @@ package com.metriql.warehouse.spi
 
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.Model
 import com.metriql.service.task.Task
@@ -18,7 +19,7 @@ interface DataSource {
 
     fun listSchemaNames(database: String?): List<SchemaName>
 
-    fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> = throw UnsupportedOperationException()
+    fun preview(auth: ProjectAuth, target: Model.Target): Task<*, *> = throw UnsupportedOperationException()
 
     // Table Related
     fun listTableNames(database: String?, schema: String?): List<TableName>
@@ -49,7 +50,7 @@ interface DataSource {
 
     // Query execution
     fun createQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,

@@ -1,6 +1,5 @@
 package com.metriql.report.segmentation
 
-import com.metriql.dbt.DbtModelService
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION

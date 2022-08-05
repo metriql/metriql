@@ -3,11 +3,11 @@ package com.metriql.warehouse.clickhouse
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JdbcUtil.fromGenericJDBCTypeFieldType
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DbtSettings
-import com.metriql.warehouse.spi.WarehouseAuth
 import ru.yandex.clickhouse.response.ClickHouseColumnInfo
 import java.sql.Statement
 import java.sql.Types
@@ -52,7 +52,7 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
     }
 
     override fun createQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
@@ -88,7 +88,7 @@ class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseCo
         }
     }
 
-    override fun setupConnection(auth: WarehouseAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
+    override fun setupConnection(auth: ProjectAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
         val conn = statement.connection
 
         // clickhouse only has schema, not catalog

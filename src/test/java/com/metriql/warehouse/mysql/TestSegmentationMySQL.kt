@@ -5,7 +5,7 @@ import org.testng.annotations.BeforeSuite
 import java.sql.Date
 
 class TestSegmentationMySQL : TestSegmentation() {
-    override val testingServer = TestingEnvironmentMySQL
+    val testingServer = TestingEnvironmentMySQL
 
     // Services
     override var dataSource = MySQLDataSource(testingServer.config)

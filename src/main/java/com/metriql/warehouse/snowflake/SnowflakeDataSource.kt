@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.DbtSettings
-import com.metriql.warehouse.spi.WarehouseAuth
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.sql.Connection
 import java.time.ZoneId
@@ -86,7 +86,7 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
         return customProperties
     }
 
-    override fun getColumnValue(auth: WarehouseAuth, conn: Connection, obj: Any, type: FieldType): Any? {
+    override fun getColumnValue(auth: ProjectAuth, conn: Connection, obj: Any, type: FieldType): Any? {
         return when (type) {
             FieldType.MAP_STRING -> {
                 // ""{\"a\": 1}"" -> This is how snowflake returns variant from JDBC
@@ -112,7 +112,7 @@ class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfi
     }
 
     override fun createQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,

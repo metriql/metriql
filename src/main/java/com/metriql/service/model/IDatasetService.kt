@@ -11,5 +11,5 @@ interface IDatasetService {
         return list(auth).map { DatasetName(it.name, it.label ?: it.name) }.toList()
     }
 
-    data class DatasetName(val name : String, val label : String)
+    data class DatasetName(val name: String, val label: String)
 }

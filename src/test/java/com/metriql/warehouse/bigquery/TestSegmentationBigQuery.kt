@@ -17,7 +17,7 @@ import java.time.Instant
 import java.util.UUID
 
 class TestSegmentationBigQuery : TestSegmentation() {
-    override val testingServer = TestingEnvironmentBigQuery
+    val testingServer = TestingEnvironmentBigQuery
 
     // Services
     override var dataSource = BigQueryDataSource(testingServer.config)
@@ -25,8 +25,8 @@ class TestSegmentationBigQuery : TestSegmentation() {
     @BeforeSuite
     @Throws(Exception::class)
     fun setup() {
-//        testingServer.init()
-//        fillData()
+        testingServer.init()
+        fillData()
     }
 
     private fun fillData() {
@@ -58,7 +58,7 @@ class TestSegmentationBigQuery : TestSegmentation() {
 
             val schema = Schema.of(fields)
             val tableDefinition = StandardTableDefinition.of(schema)
-            val tableId = TableId.of("rakam_test", tableName)
+            val tableId = TableId.of(testingServer.config.dataset, tableName)
             val tableInfo = TableInfo.of(tableId, tableDefinition)
             `try?` { bigQuery.getTable(tableId).delete() }
             bigQuery.create(tableInfo)

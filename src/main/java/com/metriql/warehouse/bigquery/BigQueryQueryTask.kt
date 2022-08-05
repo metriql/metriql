@@ -21,11 +21,11 @@ import com.metriql.db.QueryResult.QueryStats.State.CONNECTING_TO_DATABASE
 import com.metriql.db.QueryResult.QueryStats.State.FINISHED
 import com.metriql.report.QueryTask
 import com.metriql.service.audit.MetriqlEvents
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.MetriqlEventBus
 import com.metriql.util.MetriqlException
 import com.metriql.util.`try?`
 import com.metriql.warehouse.WarehouseQueryTask
-import com.metriql.warehouse.spi.WarehouseAuth
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.time.Instant
 import java.time.LocalDate
@@ -38,7 +38,7 @@ class BigQueryQueryTask(
     val query: QueryStats.QueryInfo,
     project: String,
     dataset: String,
-    private val auth: WarehouseAuth,
+    private val auth: ProjectAuth,
     maximumBytesBilled: Long?,
     override val limit: Int,
     override val isBackgroundTask: Boolean

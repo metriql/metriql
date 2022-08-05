@@ -22,6 +22,7 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats.State.FINISHED
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.Model
 import com.metriql.service.task.Task
@@ -36,7 +37,6 @@ import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.SchemaName
 import com.metriql.warehouse.spi.TableName
 import com.metriql.warehouse.spi.TableSchema
-import com.metriql.warehouse.spi.WarehouseAuth
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import net.snowflake.client.jdbc.internal.amazonaws.util.StringInputStream
@@ -142,7 +142,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
             ?: throw MetriqlException("Unable to find `project_id`, please set the value in credentials", BAD_REQUEST)
     }
 
-    override fun preview(auth: WarehouseAuth, target: Model.Target): Task<*, *> {
+    override fun preview(auth: ProjectAuth, target: Model.Target): Task<*, *> {
         if (target.value is Model.Target.TargetValue.Table) {
             return object : QueryTask(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {
@@ -326,7 +326,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     }
 
     override fun createQueryTask(
-        warehouseAuth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
@@ -338,7 +338,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
             query,
             defaultDatabase ?: getProjectId(),
             defaultSchema ?: config.dataset,
-            warehouseAuth,
+            auth,
             config.maximumBytesBilled,
             limit ?: WarehouseQueryTask.DEFAULT_LIMIT,
             isBackgroundTask

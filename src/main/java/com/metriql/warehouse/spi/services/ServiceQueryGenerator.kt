@@ -32,7 +32,7 @@ interface RecipeQuery {
 
 @JSONBSerializable
 interface MaterializeQuery {
-    fun getModelName() : String? = null
+    fun getModelName(): String? = null
     fun toQuery(modelName: ModelName): RecipeQuery
 
     companion object {

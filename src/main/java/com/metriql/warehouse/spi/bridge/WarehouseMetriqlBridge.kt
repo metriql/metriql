@@ -9,7 +9,6 @@ import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
 import com.metriql.service.model.ModelRelation
 import com.metriql.service.model.RelationName
-import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
 import com.metriql.util.serializableName
 import com.metriql.warehouse.WarehouseSupports
@@ -20,7 +19,6 @@ import com.metriql.warehouse.spi.function.WarehouseTimeframes
 import com.metriql.warehouse.spi.function.getRequiredPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
-import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
 import io.trino.jdbc.TrinoDriver
 
 typealias RFunctions = Map<RFunction, String>

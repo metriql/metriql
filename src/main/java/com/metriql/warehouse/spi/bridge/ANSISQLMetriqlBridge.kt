@@ -325,7 +325,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                     ADHOC, INTERMEDIATE_ACCUMULATE -> context.renderSQL(
                         sqlMeasure.sql,
                         alias,
-                        modelMeasure.modelName)
+                        modelMeasure.modelName
+                    )
                     INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
@@ -579,41 +580,41 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             is Model.Relation.RelationValue.ColumnValue -> {
                 val columnTypeRelation = relation.value
                 "${
-                    context.getSQLReference(
-                        modelRelation.sourceModelTarget,
-                        sourceAlias,
-                        modelRelation.sourceModelName,
-                        columnTypeRelation.sourceColumn
-                    )
+                context.getSQLReference(
+                    modelRelation.sourceModelTarget,
+                    sourceAlias,
+                    modelRelation.sourceModelName,
+                    columnTypeRelation.sourceColumn
+                )
                 } = ${
-                    context.getSQLReference(
-                        modelRelation.targetModelTarget,
-                        targetAlias,
-                        modelRelation.targetModelName,
-                        columnTypeRelation.targetColumn
-                    )
+                context.getSQLReference(
+                    modelRelation.targetModelTarget,
+                    targetAlias,
+                    modelRelation.targetModelName,
+                    columnTypeRelation.targetColumn
+                )
                 }"
             }
             is Model.Relation.RelationValue.DimensionValue -> {
                 "${
-                    renderDimension(
-                        context,
-                        modelRelation.sourceModelName,
-                        relation.value.sourceDimension,
-                        null,
-                        null,
-                        MetricPositionType.FILTER
-                    ).value
+                renderDimension(
+                    context,
+                    modelRelation.sourceModelName,
+                    relation.value.sourceDimension,
+                    null,
+                    null,
+                    MetricPositionType.FILTER
+                ).value
                 } = ${
-                    renderDimension(
-                        context,
-                        modelRelation.targetModelName,
-                        relation.value.targetDimension,
-                        null,
-                        null,
-                        MetricPositionType.FILTER,
-                        modelAlias = targetAlias
-                    ).value
+                renderDimension(
+                    context,
+                    modelRelation.targetModelName,
+                    relation.value.targetDimension,
+                    null,
+                    null,
+                    MetricPositionType.FILTER,
+                    modelAlias = targetAlias
+                ).value
                 }"
             }
         }

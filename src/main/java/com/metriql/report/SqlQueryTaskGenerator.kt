@@ -102,7 +102,7 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
 
         val compiledQuery = bridge.generateQuery(context.viewModels, rawSqlQuery, context.comments)
         val task = dataSource.createQueryTask(
-            auth.warehouseAuth(),
+            auth,
             queryInfo.copy(compiledQuery = compiledQuery),
             queryOptions.defaultSchema,
             queryOptions.defaultDatabase,

@@ -2,9 +2,9 @@ package com.metriql.warehouse.mysql
 
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.JDBCWarehouse
 import com.metriql.warehouse.spi.SchemaName
-import com.metriql.warehouse.spi.WarehouseAuth
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Properties
@@ -52,7 +52,7 @@ class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWar
     }
 
     override fun createQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,

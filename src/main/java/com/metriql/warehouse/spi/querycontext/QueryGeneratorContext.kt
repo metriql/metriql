@@ -188,7 +188,7 @@ class QueryGeneratorContext(
     override fun renderSQL(
         sqlRenderable: SQLRenderable,
         alias: String?,
-        modelName : ModelName?,
+        modelName: ModelName?,
         inQueryDimensionNames: List<String>?,
         dateRange: DateRange?,
         renderAlias: Boolean,

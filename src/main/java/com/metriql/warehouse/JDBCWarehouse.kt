@@ -4,6 +4,7 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.audit.MetriqlEvents
+import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.Model
 import com.metriql.util.JdbcUtil
@@ -18,7 +19,6 @@ import com.metriql.warehouse.spi.SchemaName
 import com.metriql.warehouse.spi.TableName
 import com.metriql.warehouse.spi.TableSchema
 import com.metriql.warehouse.spi.Warehouse
-import com.metriql.warehouse.spi.WarehouseAuth
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -80,7 +80,7 @@ abstract class JDBCWarehouse(
     // When JDBCType is not enough to parse warehouse specific types.
     open fun getFieldType(sqlType: Int, dbType: String): FieldType? = null
 
-    open fun getColumnValue(auth: WarehouseAuth, conn: Connection, obj: Any, type: FieldType): Any? = null
+    open fun getColumnValue(auth: ProjectAuth, conn: Connection, obj: Any, type: FieldType): Any? = null
 
     override fun listDatabaseNames(): List<DatabaseName> {
         if (!supportsCrossDatabaseQueries) {
@@ -296,7 +296,7 @@ abstract class JDBCWarehouse(
             }
         }
 
-        fun getErrorQueryResult(auth: WarehouseAuth, e: Exception, query: QueryResult.QueryStats.QueryInfo, ignoredExceptionCodes: List<String>): QueryResult {
+        fun getErrorQueryResult(auth: ProjectAuth, e: Exception, query: QueryResult.QueryStats.QueryInfo, ignoredExceptionCodes: List<String>): QueryResult {
             return when (e) {
                 is SQLException -> {
                     if (!ignoredExceptionCodes.isNullOrEmpty() &&
@@ -314,7 +314,7 @@ abstract class JDBCWarehouse(
     }
 
     fun createSyncQueryTask(
-        auth: WarehouseAuth,
+        auth: ProjectAuth,
         query: QueryResult.QueryStats.QueryInfo,
         defaultSchema: String?,
         defaultDatabase: String?,
@@ -362,7 +362,7 @@ abstract class JDBCWarehouse(
         }
     }
 
-    open fun setupConnection(auth: WarehouseAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
+    open fun setupConnection(auth: ProjectAuth, statement: Statement, defaultDatabase: String?, defaultSchema: String?, limit: Int?) {
         val conn = statement.connection
 
         if (conn.catalog != defaultDatabase) {

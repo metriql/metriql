@@ -11,7 +11,7 @@ import java.sql.Timestamp
 import java.time.Instant
 
 class TestSegmentationPostgresql : TestSegmentation() {
-    override val testingServer = TestingEnvironmentPostgresql
+    val testingServer = TestingEnvironmentPostgresql
 
     // Services
     override var dataSource = PostgresqlDataSource(testingServer.config)

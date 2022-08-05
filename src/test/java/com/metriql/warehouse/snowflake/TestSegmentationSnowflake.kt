@@ -7,7 +7,7 @@ import java.sql.Date
 
 class TestSegmentationSnowflake : TestSegmentation() {
 
-    override val testingServer = TestingEnvironmentSnowflake
+    val testingServer = TestingEnvironmentSnowflake
     override var dataSource = SnowflakeDataSource(testingServer.config)
 
     @BeforeSuite

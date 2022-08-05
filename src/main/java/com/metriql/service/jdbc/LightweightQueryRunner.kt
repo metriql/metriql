@@ -8,7 +8,6 @@ import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService
 import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.metriql.ExternalConnectorFactory
-import com.metriql.warehouse.spi.WarehouseAuth
 import io.trino.LocalTrinoQueryRunner
 import io.trino.MetriqlConnectorFactory
 import io.trino.MetriqlConnectorFactory.Companion.QUERY_TYPE_PROPERTY
@@ -33,7 +32,7 @@ class LightweightQueryRunner(private val modelService: IDatasetService) {
     }
 
     fun createTask(auth: ProjectAuth, sessionContext: HttpRequestSessionContext, sql: String): QueryTask {
-        return TrinoQueryTask(sessionContext, sql, auth.warehouseAuth())
+        return TrinoQueryTask(sessionContext, sql, auth)
     }
 
     fun start(catalogs: CatalogFile.Catalogs?) {
@@ -43,7 +42,7 @@ class LightweightQueryRunner(private val modelService: IDatasetService) {
         runner
     }
 
-    inner class TrinoQueryTask(private val sessionContext: HttpRequestSessionContext, val sql: String, auth: WarehouseAuth) :
+    inner class TrinoQueryTask(private val sessionContext: HttpRequestSessionContext, val sql: String, auth: ProjectAuth) :
         QueryTask(auth.projectId, auth.userId, auth.source, false) {
         override fun getStats(): QueryResult.QueryStats {
             val state = when (status) {
