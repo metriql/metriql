@@ -5,6 +5,7 @@ import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.Warehouse
 import java.time.ZoneId
+import java.util.logging.Logger
 import kotlin.test.fail
 
 interface TestingServer<C> {
@@ -18,6 +19,8 @@ interface TestingServer<C> {
     val auth get() = ProjectAuth.singleProject(ZoneId.of("UTC"))
 
     fun runQueryFirstRow(query: String): List<Any?>? {
+        logger.info("Executing query: $query")
+
         val task = dataSource.createQueryTask(
             auth,
             QueryResult.QueryStats.QueryInfo.rawSql(query),
@@ -35,5 +38,9 @@ interface TestingServer<C> {
         } else {
             task.result?.get(0)
         }
+    }
+
+    companion object {
+        private val logger = Logger.getLogger(this::class.java.name)
     }
 }

@@ -1,7 +1,7 @@
 package com.metriql.warehouse.postgresql
 
-import com.metriql.tests.TestPostOperation
+import com.metriql.tests.JdbcTestDataSource
 
-class TestPostOperationPostgresql : TestPostOperation() {
+class TestDataSourcePostgresql : JdbcTestDataSource() {
     override val testingServer = TestingEnvironmentPostgresql
 }

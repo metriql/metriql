@@ -33,7 +33,7 @@ object TestingEnvironmentPostgresql : TestingServer<Connection> {
         )
     }
 
-    override val dataSource = PostgresqlDataSource(config)
+    override val dataSource = PostgresqlDataSource(config, readOnly = false)
 
     override fun getQueryRunner() = dataSource.openConnection()
 

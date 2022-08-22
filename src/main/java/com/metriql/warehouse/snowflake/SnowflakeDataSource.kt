@@ -8,7 +8,7 @@ import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil.stripLiteral
-import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.JDBCDataSource
 import com.metriql.warehouse.spi.DbtSettings
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.sql.Connection
@@ -17,7 +17,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 import java.util.Properties
 
-class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfig) : JDBCWarehouse(
+class SnowflakeDataSource(override val config: SnowflakeWarehouse.SnowflakeConfig) : JDBCDataSource(
     config,
     arrayOf("TABLE", "BASE TABLE", "VIEW"),
     config.usePool ?: true,

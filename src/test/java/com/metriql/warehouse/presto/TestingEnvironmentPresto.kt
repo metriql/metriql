@@ -1,12 +1,8 @@
 package com.metriql.warehouse.presto
 
-import com.metriql.HostPortProvider
 import com.metriql.tests.TestingServer
-import io.trino.jdbc.TrinoConnection
 import org.testcontainers.containers.TrinoContainer
 import java.sql.Connection
-import java.sql.DriverManager
-import java.util.Properties
 
 object TestingEnvironmentPresto : TestingServer<Connection> {
     private const val PRESTO_HOST = "127.0.0.1"
@@ -21,12 +17,8 @@ object TestingEnvironmentPresto : TestingServer<Connection> {
         server
     }
 
-    private fun getJdbcUrl(hostPortProvider: HostPortProvider): String? {
-        return "jdbc:presto://localhost:${hostPortProvider.getHostPort(PRESTO_PORT)}/$PRESTO_CATALOG?user=$PRESTO_USER"
-    }
-
     override val config = PrestoWarehouse.PrestoConfig(
-        PRESTO_HOST,
+        hostPortProvider.getHostPort(PRESTO_PORT),
         PRESTO_PORT,
         PRESTO_CATALOG,
         "rakam_test",
@@ -36,14 +28,7 @@ object TestingEnvironmentPresto : TestingServer<Connection> {
 
     override val dataSource = PrestoDataSource(config)
 
-    override fun getQueryRunner(): Connection {
-        val properties = Properties().apply {
-            setProperty("SSL", "false")
-        }
-
-        val connection = DriverManager.getConnection(getJdbcUrl(dockerContainer::getMappedPort), properties)
-        return connection.unwrap(TrinoConnection::class.java)
-    }
+    override fun getQueryRunner() = dataSource.openConnection()
 
     @Synchronized
     override fun init() {

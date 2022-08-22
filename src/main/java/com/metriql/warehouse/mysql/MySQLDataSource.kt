@@ -3,13 +3,13 @@ package com.metriql.warehouse.mysql
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.JDBCDataSource
 import com.metriql.warehouse.spi.SchemaName
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Properties
 
-class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCWarehouse(
+class MySQLDataSource(override val config: MySQLWarehouse.MysqlConfig) : JDBCDataSource(
     config,
     arrayOf("TABLE", "VIEW"),
     config.usePool,

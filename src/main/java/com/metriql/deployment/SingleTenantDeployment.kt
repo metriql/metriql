@@ -2,6 +2,7 @@ package com.metriql.deployment
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.google.common.base.Splitter
+import com.google.common.cache.CacheBuilderSpec
 import com.metriql.Commands
 import com.metriql.UserContext
 import com.metriql.dbt.DbtJinjaRenderer
@@ -15,6 +16,8 @@ import com.metriql.service.auth.ProjectAuth.Companion.PASSWORD_CREDENTIAL
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
 import com.metriql.service.model.UpdatableDatasetService
+import com.metriql.service.suggestion.InMemorySuggestionCacheService
+import com.metriql.service.suggestion.SuggestionCacheService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.RecipeUtil
@@ -41,10 +44,11 @@ class SingleTenantDeployment(
     profilesDir: String,
     vars: String?,
     profile: String?,
+    private val cacheSpec: CacheBuilderSpec,
 ) : Deployment {
     private val profileConfig = getProfileConfigForSingleTenant(projectDir, profilesContent, profilesDir, vars, profile)
     private val singleAuth = ProjectAuth.singleProject()
-    private val modelService = UpdatableDatasetService(null) {
+    private val datasetService = UpdatableDatasetService(null) {
         val dataSource = getDataSource(singleAuth)
         getPreparedModels(dataSource, singleAuth, parseRecipe(dataSource, manifestJson, modelsFilter))
     }
@@ -62,10 +66,14 @@ class SingleTenantDeployment(
         } else throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
     }
 
-    override fun getModelService() = modelService
+    override fun getDatasetService() = datasetService
+
+    override fun getCacheService(): SuggestionCacheService {
+        return InMemorySuggestionCacheService(cacheSpec)
+    }
 
     override fun logStart() {
-        Commands.logger.info("Serving ${modelService.list(singleAuth).size} datasets")
+        Commands.logger.info("Serving ${datasetService.list(singleAuth).size} datasets")
     }
 
     override fun getDataSource(auth: ProjectAuth): DataSource {

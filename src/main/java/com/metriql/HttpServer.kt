@@ -33,7 +33,6 @@ import com.metriql.service.jdbc.StatementService
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.ModelName
-import com.metriql.service.suggestion.InMemorySuggestionCacheService
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
@@ -59,9 +58,7 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
-    private val cacheConfig: CacheBuilderSpec = CacheBuilderSpec.parse("")
-
-    private fun getServices(deployment: Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
+    private fun getServices(deployment: Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?, cacheSpec : CacheBuilderSpec): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
         val postRun = mutableListOf<() -> Unit>()
 
@@ -69,7 +66,7 @@ object HttpServer {
         services.add(BaseHttpService())
         services.add(IntegrationHttpService(deployment))
 
-        val queryService = getQueryService(deployment)
+        val queryService = getQueryService(deployment, cacheSpec)
         services.add(queryService)
 
         services.add(TaskHttpService(queryService.taskQueueService))
@@ -83,16 +80,16 @@ object HttpServer {
         return services to { postRun.forEach { it.invoke() } }
     }
 
-    private fun getQueryService(deployment: Deployment): QueryHttpService {
+    private fun getQueryService(deployment: Deployment, cacheSpec : CacheBuilderSpec): QueryHttpService {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
-        val cacheService = InMemoryCacheService(cacheConfig)
-        val services = getReportServices(deployment.getModelService())
+        val cacheService = InMemoryCacheService(cacheSpec)
+        val services = getReportServices(deployment.getDatasetService())
 
         val queryTaskGenerator = SqlQueryTaskGenerator(cacheService)
         val reportService = ReportService(
-            deployment.getModelService(), JinjaRendererService(), queryTaskGenerator, services, this::getAttributes,
+            deployment.getDatasetService(), JinjaRendererService(), queryTaskGenerator, services, this::getAttributes,
             object : DependencyFetcher {
                 override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
                     return Recipe.Dependencies()
@@ -101,7 +98,6 @@ object HttpServer {
         )
 
         val suggestionService = SuggestionService(
-            InMemorySuggestionCacheService(cacheConfig),
             deployment,
             services[SegmentationReportType] as SegmentationService,
             reportService,
@@ -134,15 +130,15 @@ object HttpServer {
         }
     }
 
-    private fun getReportServices(modelService: IDatasetService): Map<ReportType, IAdHocService<out ServiceReportOptions>> {
+    private fun getReportServices(datasetService: IDatasetService): Map<ReportType, IAdHocService<out ServiceReportOptions>> {
         // we don't use a dependency injection system to speed up the initial start
         val segmentationService = SegmentationService()
         return mapOf(
             SegmentationReportType to segmentationService,
-            FunnelReportType to FunnelService(modelService, segmentationService),
-            RetentionReportType to RetentionService(modelService, segmentationService),
+            FunnelReportType to FunnelService(datasetService, segmentationService),
+            RetentionReportType to RetentionService(datasetService, segmentationService),
             SqlReportType to SqlService(),
-            MqlReportType to MqlService(SqlToSegmentation(segmentationService, modelService)),
+            MqlReportType to MqlService(SqlToSegmentation(segmentationService, datasetService)),
         )
     }
 
@@ -155,7 +151,8 @@ object HttpServer {
         deployment: Deployment,
         enableJdbc: Boolean,
         timezone: ZoneId?,
-        catalogs: CatalogFile.Catalogs?
+        catalogs: CatalogFile.Catalogs?,
+        cacheSpec: CacheBuilderSpec
     ) {
         val eventExecutors: EventLoopGroup = if (Epoll.isAvailable()) {
             EpollEventLoopGroup(numberOfThreads)
@@ -163,7 +160,7 @@ object HttpServer {
             NioEventLoopGroup(numberOfThreads)
         }
 
-        val (services, postRun) = getServices(deployment, enableJdbc, catalogs)
+        val (services, postRun) = getServices(deployment, enableJdbc, catalogs, cacheSpec)
 
         val httpServer = HttpServerBuilder()
             .setHttpServices(services)

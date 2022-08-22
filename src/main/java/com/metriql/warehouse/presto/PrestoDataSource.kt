@@ -4,12 +4,12 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.JDBCDataSource
 import io.trino.jdbc.TrinoConnection
 import java.sql.Statement
 import java.util.Properties
 
-class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBCWarehouse(
+class PrestoDataSource(override val config: PrestoWarehouse.PrestoConfig) : JDBCDataSource(
     config,
     arrayOf("BASE TABLE", "TABLE", "VIEW"),
     config.usePool ?: true,

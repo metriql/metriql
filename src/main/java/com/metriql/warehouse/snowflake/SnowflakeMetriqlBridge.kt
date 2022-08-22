@@ -53,7 +53,8 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         RFunction.NOW to "CURRENT_TIMESTAMP",
         RFunction.DATE_ADD to "DATEADD({{value[1]}}, {{value[2]}}, {{value[0]}})",
         RFunction.HEX_TO_INT to "TO_NUMBER({{value[0]}}, 'XXXXXXXXXXXXXXXX')",
-        RFunction.TO_ISO8601 to "CAST({{value[0]}} AS TEXT)"
+        RFunction.TO_ISO8601 to "CAST({{value[0]}} AS TEXT)",
+        RFunction.FROM_UNIXTIME to "to_timestamp_tz({{value[0]}})"
     )
 
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
@@ -67,7 +68,7 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         ): String {
             val zoneId = context.auth.timezone
             return when {
-                // Only convert timezone if no post operation is present. Snowflake does not accept post operation on converted timezone
+                // Only convert timezone if no timeframe is present. Snowflake does not accept timeframe on converted timezone
                 // A possible bug: SQL execution internal error: Processing aborted due to error 370001:653186283; incident 2921766.
                 metricPositionType == PROJECTION && dimension.fieldType == FieldType.TIMESTAMP &&
                     zoneId != null -> {

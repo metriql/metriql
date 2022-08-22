@@ -8,7 +8,7 @@ import org.testng.annotations.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
 
-abstract class JdbcTestWarehouse(override val useIntsForBoolean: Boolean = false) : TestWarehouse<Connection>() {
+abstract class JdbcTestDataSource(override val useIntsForBoolean: Boolean = false) : TestDataSource<Connection>() {
 
     open fun init() {}
 
@@ -65,13 +65,6 @@ abstract class JdbcTestWarehouse(override val useIntsForBoolean: Boolean = false
                 """.trimIndent()
             )
         }
-    }
-
-    @Test
-    override fun `test generate sql reference`() {
-        val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table("a", "b", "c"))
-        val sqlTarget = testingServer.dataSource.sqlReferenceForTarget(modelTarget, "model") { "" }
-        assertEquals("\"b\".\"c\" AS \"model\"", sqlTarget)
     }
 
     @Test

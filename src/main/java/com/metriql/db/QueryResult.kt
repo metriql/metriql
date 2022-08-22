@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.report.ReportType
 import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.report.sql.SqlReportOptions
+import com.metriql.service.cache.ICacheService
 import com.metriql.util.MetriqlException
 import com.metriql.util.UppercaseEnum
 import com.metriql.util.toCamelCase
@@ -21,7 +22,7 @@ data class QueryResult @JsonCreator constructor(
     val error: QueryError?,
     var properties: Map<String, Any>?,
     var responseHeaders: Map<String, String>? = null
-) {
+) : ICacheService.CacheValue  {
 
     constructor(metadata: List<QueryColumn>, result: List<List<Any?>>) : this(metadata, result, null, null)
     constructor(metadata: List<QueryColumn>, result: List<List<Any?>>, properties: Map<String, Any>?) : this(
@@ -148,5 +149,10 @@ data class QueryResult @JsonCreator constructor(
     @UppercaseEnum
     enum class PropertyKey {
         QUERY, LIMIT, CACHE_TIME, SUMMARIZED
+    }
+
+    override fun calculateSize(): Int {
+        // TODO
+        return this.result?.sumOf { row -> row.sumOf { Int.SIZE_BYTES } } ?: 0
     }
 }

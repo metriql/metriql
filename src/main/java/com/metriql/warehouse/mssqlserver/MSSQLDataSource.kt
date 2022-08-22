@@ -4,10 +4,10 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.JDBCDataSource
 import java.util.Properties
 
-class MSSQLDataSource(override val config: MSSQLWarehouse.MSSQLServerConfig) : JDBCWarehouse(
+class MSSQLDataSource(override val config: MSSQLWarehouse.MSSQLServerConfig) : JDBCDataSource(
     config,
     arrayOf("TABLE", "VIEW"),
     config.usePool,

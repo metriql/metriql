@@ -25,7 +25,7 @@ import javax.inject.Inject
 
 class DbtModelService @Inject constructor(
     private val renderer: JinjaRendererService,
-    private val modelService: IDatasetService?,
+    private val datasetService: IDatasetService?,
     private val dependencyFetcher: DependencyFetcher
 ) {
     private val jinja = Jinjava()
@@ -49,12 +49,12 @@ class DbtModelService @Inject constructor(
 
         val (_, _, modelConfigMapper) = dataSource.dbtSettings()
         val models = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, recipeId) } ?: listOf()
-        val modelService = UpdatableDatasetService(modelService) { models }
+        val datasetService = UpdatableDatasetService(datasetService) { models }
 
         val context = QueryGeneratorContext(
             auth,
             dataSource,
-            modelService,
+            datasetService,
             renderer,
             reportExecutor = null,
             userAttributeFetcher = null,

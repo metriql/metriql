@@ -18,10 +18,10 @@ import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import java.util.UUID
 
-open class ReportService(
-    protected val modelService: IDatasetService,
-    protected val rendererService: JinjaRendererService,
-    protected val queryTaskGenerator: SqlQueryTaskGenerator,
+class ReportService(
+    private val datasetService: IDatasetService,
+    private val rendererService: JinjaRendererService,
+    private val queryTaskGenerator: SqlQueryTaskGenerator,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>,
     private val userAttributeFetcher: UserAttributeFetcher,
     private val dependencyFetcher: DependencyFetcher,
@@ -32,7 +32,7 @@ open class ReportService(
         return QueryGeneratorContext(
             auth,
             dataSource,
-            modelService,
+            datasetService,
             rendererService,
             reportExecutor = { auth, type, options ->
                 val context = createContext(auth, dataSource)

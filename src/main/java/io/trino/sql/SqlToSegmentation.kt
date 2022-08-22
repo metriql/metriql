@@ -75,7 +75,7 @@ typealias Reference = Pair<MetricType, String>
 
 data class ExpressionAliasProjection(val expression: Expression, val projection: String, val alias: String?, val identifier: Boolean)
 
-class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val modelService: IDatasetService) {
+class SqlToSegmentation @Inject constructor(val segmentationService: SegmentationService, val datasetService: IDatasetService) {
     private fun getProjectionOfColumn(
         rewriter: MetriqlSegmentationQueryRewriter,
         expression: Expression,
@@ -125,7 +125,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val projectionColumns = select.selectItems.flatMap {
             when (it) {
                 is AllColumns -> {
-                    val metadata = MetriqlMetadata.ModelProxy(modelService.list(context.auth), model, select.isDistinct).tableMetadata
+                    val metadata = MetriqlMetadata.ModelProxy(datasetService.list(context.auth), model, select.isDistinct).tableMetadata
                     metadata.columns.map { column ->
                         getProjectionOfColumn(rewriter, Identifier(column.name), model.name, Optional.empty())
                     }

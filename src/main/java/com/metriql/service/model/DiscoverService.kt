@@ -74,7 +74,7 @@ class DiscoverService(private val dataSource: DataSource) {
 
         logger.info("Discovering ${dimensionsWithoutFieldType.size} dimensions of model `$modelName`")
         val tableMeta = try {
-            dataSource.getTable(query)
+            dataSource.getTableSchema(query)
         } catch (e: Exception) {
             logger.log(Level.WARNING, "Unable to discover dimension types", e)
             throw MetriqlException("Failed to run query for exploring the dimension types: ${e.message} \n $query", HttpResponseStatus.BAD_REQUEST)

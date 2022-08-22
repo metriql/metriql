@@ -41,7 +41,7 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
     @Path("/tableau")
     @GET
     fun tableau(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("dataset") dataset: String) {
-        val models = deployment.getModelService().list(auth)
+        val models = deployment.getDatasetService().list(auth)
         val stdin = JsonHelper.encodeAsBytes(models)
 
         val apiUrl = request.headers().get("origin") ?: request.headers().get("host")?.let { "http://$it" }
@@ -53,7 +53,7 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
     @Path("/looker")
     @GET
     fun looker(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("connection") connection: String) {
-        val models = deployment.getModelService().list(auth)
+        val models = deployment.getDatasetService().list(auth)
         val stdin = JsonHelper.encodeAsBytes(models)
         runCommand(request, listOf("metriql-lookml", "--connection", connection), stdin, "$connection.zip")
     }
@@ -64,7 +64,7 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
         runCommand(
             request, listOf("metriql-superset") + listOf(action.name) + buildArguments(parameters),
             if (action.needsStdin) {
-                val models = deployment.getModelService().list(auth)
+                val models = deployment.getDatasetService().list(auth)
                 JsonHelper.encodeAsBytes(models)
             } else null
         )
@@ -76,7 +76,7 @@ class IntegrationHttpService(val deployment: Deployment) : HttpService() {
         runCommand(
             request, listOf("metriql-metabase") + listOf(action.name) + buildArguments(parameters),
             if (action.needsStdin) {
-                val models = deployment.getModelService().list(auth)
+                val models = deployment.getDatasetService().list(auth)
                 JsonHelper.encodeAsBytes(models)
             } else null
         )

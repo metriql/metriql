@@ -66,7 +66,7 @@ object ClickhouseMetriqlBridge : ANSISQLMetriqlBridge() {
             return when {
                 // perform timezone conversion on both filter and projection because GROUP BY expressions don't match otherwise and
                 // Clickhouse is not sophisticated enough to understand the uniq
-                // Only convert timezone if no post operation is present. Snowflake does not accept post operation on converted timezone
+                // Only convert timezone if no timeframe is present. Snowflake does not accept timeframe on converted timezone
                 // A possible bug: SQL execution internal error: Processing aborted due to error 370001:653186283; incident 2921766.
                 dimension.fieldType == FieldType.TIMESTAMP &&
                     zoneId != null -> {

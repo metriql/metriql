@@ -16,6 +16,7 @@ import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.DimensionName
 import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
 import com.metriql.service.model.ModelName
+import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -25,10 +26,10 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Logger
 import javax.inject.Inject
 
 class SuggestionService @Inject constructor(
-    private val service: SuggestionCacheService,
     private val deployment: Deployment,
     private val segmentationService: SegmentationService,
     private val reportService: ReportService,
@@ -42,14 +43,14 @@ class SuggestionService @Inject constructor(
     ): CompletableFuture<List<String>> {
         val (modelName, dimensionName) = when (value) {
             is ReportMetric.ReportMappingDimension -> {
-                deployment.getModelService().list(auth)
+                deployment.getDatasetService().list(auth)
                     .firstNotNullOfOrNull { it.mappings.get(value.name)?.let { dim -> it.name to dim } }
                     ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
             }
             is ReportMetric.ReportDimension -> {
                 val sourceModelName = value.modelName!!
                 val realModelName = if (value.relationName != null) {
-                    deployment.getModelService().getDataset(auth, sourceModelName)?.relations?.find { value.relationName == it.name }?.modelName
+                    deployment.getDatasetService().getDataset(auth, sourceModelName)?.relations?.find { value.relationName == it.name }?.modelName
                         ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
                 } else {
                     sourceModelName
@@ -61,11 +62,11 @@ class SuggestionService @Inject constructor(
             else -> return CompletableFuture.completedFuture(listOf())
         }
 
-        val suggestionsInCache = if (filter == null || filter.isEmpty()) {
-            service.getCommon(auth, modelName, dimensionName)
+        val suggestionsInCache = if (filter.isNullOrEmpty()) {
+            deployment.getCacheService().getCommon(auth, modelName, dimensionName)
         } else {
             val filterExp = "%" + filter.replace("%".toRegex(), "\\%").replace("_".toRegex(), "\\_") + "%"
-            service.search(auth, modelName, dimensionName, filterExp)
+            deployment.getCacheService().search(auth, modelName, dimensionName, filterExp)
         }
 
         val task = if (suggestionsInCache != null) {
@@ -84,8 +85,12 @@ class SuggestionService @Inject constructor(
         return taskQueueService.execute(
             task, 59
         ).thenApply { result ->
-            if (result.status.isDone) {
-                val result = result.taskTicket().result?.result?.map { it[0].toString() } ?: listOf()
+            val taskTicket = result.taskTicket()
+            if (taskTicket.result?.error != null) {
+                throw MetriqlException("Unable to fetch suggestions for dataset $modelName.$dimensionName: ${taskTicket.result?.error}", HttpResponseStatus.INTERNAL_SERVER_ERROR)
+            } else
+            if (result.status == Task.Status.FINISHED) {
+                val result = taskTicket.result?.result?.map { it[0].toString() } ?: listOf()
                 if (filter == null) {
                     result.take(50)
                 } else {
@@ -104,7 +109,7 @@ class SuggestionService @Inject constructor(
         filterText: String?,
         useIncrementalDateFilter: Boolean = true,
     ): QueryTask {
-        val mapping = deployment.getModelService().getDataset(auth, modelName)?.mappings
+        val mapping = deployment.getDatasetService().getDataset(auth, modelName)?.mappings
         val datasource = deployment.getDataSource(auth)
         val rakamBridge = datasource.warehouse.bridge
         val context = reportService.createContext(auth, datasource)
@@ -157,8 +162,10 @@ class SuggestionService @Inject constructor(
         )
 
         executeTask.onFinish { result ->
-            val values = result?.result?.map { it[0].toString() } ?: listOf()
-            service.set(auth, modelName, dimensionName, values)
+            if(result?.error == null) {
+                val values = result?.result?.map { it[0].toString() } ?: listOf()
+                deployment.getCacheService().set(auth, modelName, dimensionName, values)
+            }
         }
 
         return executeTask
@@ -170,4 +177,8 @@ class SuggestionService @Inject constructor(
         val value: ReportMetric,
         val filter: String?,
     )
+
+    companion object {
+        private val LOGGER = Logger.getLogger(this::class.java.name)
+    }
 }

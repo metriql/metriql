@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import javax.inject.Inject
 
 class FunnelService @Inject constructor(
-    private val modelService: IDatasetService,
+    private val datasetService: IDatasetService,
     private val segmentationService: SegmentationService,
 ) : IAdHocService<FunnelReportOptions> {
 
@@ -72,7 +72,7 @@ class FunnelService @Inject constructor(
         reportFilters: List<ReportFilter> = listOf(),
         isExcludeStep: Boolean,
     ): Step {
-        val mappings by lazy { modelService.getDataset(auth, step.modelName)?.mappings }
+        val mappings by lazy { datasetService.getDataset(auth, step.modelName)?.mappings }
         val connectorDimensionName = options.connector ?: (
             mappings?.get(USER_ID)
                 ?: throw MetriqlException("`userId` mapping dimension is required for `${step.modelName}` model", HttpResponseStatus.BAD_REQUEST)

@@ -10,14 +10,14 @@ import com.google.cloud.bigquery.TableId
 import com.google.cloud.bigquery.TableInfo
 import com.metriql.service.model.Model
 import com.metriql.tests.SimpleFilterTests
-import com.metriql.tests.TestWarehouse
+import com.metriql.tests.TestDataSource
 import com.metriql.util.`try?`
 import org.testng.annotations.BeforeSuite
 import org.testng.annotations.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 
-class TestWarehouseBigQuery : TestWarehouse<BigQuery>() {
+class TestDataSourceBigQuery : TestDataSource<BigQuery>() {
     override val useIntsForBoolean = false
 
     override val testingServer = TestingEnvironmentBigQuery

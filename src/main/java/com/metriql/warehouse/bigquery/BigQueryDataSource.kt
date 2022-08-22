@@ -212,7 +212,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         }
     }
 
-    override fun getTable(database: String?, schema: String?, table: String): TableSchema {
+    override fun getTableSchema(database: String?, schema: String?, table: String): TableSchema {
         val tableId = TableId.of(database ?: config.project, schema ?: config.dataset, table)
         val bigQueryTable = bigQuery.getTable(tableId) ?: throw MetriqlException("Table '$table' not found in $tableId", HttpResponseStatus.NOT_FOUND)
         val columns = bigQueryTable
@@ -231,7 +231,7 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         return TableSchema(table, null, columns)
     }
 
-    override fun getTable(sql: String): TableSchema {
+    override fun getTableSchema(sql: String): TableSchema {
         val query = "$sql LIMIT 0"
         val jobId = JobId.of(UUID.randomUUID().toString())
         val queryConfig = QueryJobConfiguration

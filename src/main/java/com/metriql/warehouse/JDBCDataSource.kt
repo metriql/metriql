@@ -36,7 +36,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
-abstract class JDBCWarehouse(
+abstract class JDBCDataSource(
     override val config: Warehouse.Config,
     private val tableTypes: Array<String>,
     private val usePool: Boolean,
@@ -172,7 +172,7 @@ abstract class JDBCWarehouse(
         }
     }
 
-    override fun getTable(database: String?, schema: String?, table: String): TableSchema {
+    override fun getTableSchema(database: String?, schema: String?, table: String): TableSchema {
         openConnection().use { connection ->
             val meta = connection.metaData
             val finalDatabase = if (meta.storesUpperCaseIdentifiers()) database?.uppercase() else database
@@ -192,7 +192,7 @@ abstract class JDBCWarehouse(
         }
     }
 
-    override fun getTable(sql: String): TableSchema {
+    override fun getTableSchema(sql: String): TableSchema {
         openConnection().use { connection ->
             val preparedStatement = connection.prepareStatement(sql)
             preparedStatement.maxRows = 0

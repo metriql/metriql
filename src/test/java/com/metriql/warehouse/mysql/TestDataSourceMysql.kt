@@ -1,7 +1,7 @@
 package com.metriql.warehouse.mysql
 
-import com.metriql.tests.JdbcTestWarehouse
+import com.metriql.tests.JdbcTestDataSource
 
-class TestWarehouseMysql : JdbcTestWarehouse() {
+class TestDataSourceMysql : JdbcTestDataSource() {
     override val testingServer = TestingEnvironmentMySQL
 }

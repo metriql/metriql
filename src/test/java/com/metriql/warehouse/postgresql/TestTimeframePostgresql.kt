@@ -1,7 +1,7 @@
 package com.metriql.warehouse.postgresql
 
-import com.metriql.tests.JdbcTestWarehouse
+import com.metriql.tests.TestTimeframe
 
-class TestWarehousePostgresql : JdbcTestWarehouse() {
+class TestTimeframePostgresql : TestTimeframe() {
     override val testingServer = TestingEnvironmentPostgresql
 }

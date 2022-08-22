@@ -1,6 +1,6 @@
 package com.metriql
 
-import com.metriql.Helper.assertJsonEquals
+import com.metriql.tests.Helper.assertJsonEquals
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQueryReWriter
 import com.metriql.report.segmentation.SegmentationRecipeQuery
@@ -289,7 +289,7 @@ class TestQueryRewriter {
             val auth = systemUser("1", 1)
             val datasource = PostgresqlDataSource(PostgresqlConfig("127.0.0.1", 5432, "rakamtest", "public", "buremba", ""))
             val renderer = JinjaRendererService()
-            val modelService = TestDatasetService(
+            val datasetService = TestDatasetService(
                 listOf(
                     JsonHelper.read(
                         """{
@@ -354,7 +354,7 @@ class TestQueryRewriter {
                 )
             )
             return SegmentationQueryReWriter(
-                QueryGeneratorContext(auth, datasource, modelService, renderer, reportExecutor = null, userAttributeFetcher = null, dependencyFetcher = null),
+                QueryGeneratorContext(auth, datasource, datasetService, renderer, reportExecutor = null, userAttributeFetcher = null, dependencyFetcher = null),
             )
         }
 }

@@ -3,11 +3,14 @@ package com.metriql
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.output.CliktHelpFormatter
+import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.int
+import com.google.common.cache.CacheBuilderSpec
 import com.google.common.net.HostAndPort
 import com.metriql.dbt.DbtModelService
 import com.metriql.dbt.FileHandler
@@ -27,6 +30,7 @@ import com.metriql.warehouse.WarehouseLocator
 import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
+import io.airlift.units.DataSize
 import io.airlift.units.Duration
 import java.io.File
 import java.io.FileInputStream
@@ -212,6 +216,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             envvar = "DBT_MANIFEST_JSON"
         )
 
+        val cacheSpec: CacheBuilderSpec by option("--cache-spec", envvar = "CACHE_SPEC").convert { CacheBuilderSpec.parse(it) }.required()
+            .default(CacheBuilderSpec.parse("maximumWeight=${DataSize.valueOf("100MB").toBytes()}"))
+
         override fun run() {
             super.checkVersion()
             val apiSecret = when {
@@ -228,9 +235,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val arg = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
             val deployment = deployment ?: if (multiTenantUrl != null) {
-                MultiTenantDeployment(multiTenantUrl!!, Duration.valueOf(multiTenantCacheDuration))
+                MultiTenantDeployment(multiTenantUrl!!, Duration.valueOf(multiTenantCacheDuration), cacheSpec)
             } else {
-                SingleTenantDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile)
+                SingleTenantDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile, cacheSpec)
             }
 
             val catalogFile = when {
@@ -242,7 +249,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val httpHost = System.getenv("METRIQL_RUN_HOST") ?: host
             HttpServer.start(
                 HostAndPort.fromParts(httpHost, httpPort), apiSecret, threads, debug, origin,
-                deployment, enableTrinoInterface, timezone, catalogFile?.catalogs
+                deployment, enableTrinoInterface, timezone, catalogFile?.catalogs, cacheSpec
             )
         }
     }

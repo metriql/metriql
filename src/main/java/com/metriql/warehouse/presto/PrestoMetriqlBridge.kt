@@ -13,6 +13,7 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
+import io.trino.spi.type.StandardTypes
 
 object PrestoMetriqlBridge : ANSISQLMetriqlBridge() {
     override val filters = PrestoFilters { PrestoMetriqlBridge }
@@ -21,6 +22,8 @@ object PrestoMetriqlBridge : ANSISQLMetriqlBridge() {
         SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
         FunnelReportType.slug to ANSISQLFunnelQueryGenerator()
     )
+
+    override val mqlTypeMap = super.mqlTypeMap + mapOf(StandardTypes.DOUBLE to "DECIMAL")
 
     enum class PrestoReverseAggregation(val aggregation: AggregationType, val distinctAggregation: AggregationType? = null) {
         MIN(AggregationType.MINIMUM),

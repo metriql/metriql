@@ -30,7 +30,7 @@ import java.util.Arrays
 import javax.inject.Inject
 
 class RetentionService @Inject constructor(
-    private val modelService: IDatasetService,
+    private val datasetService: IDatasetService,
     private val segmentationService: SegmentationService,
 ) : IAdHocService<RetentionReportOptions> {
 
@@ -41,7 +41,7 @@ class RetentionService @Inject constructor(
         reportFilters: List<ReportFilter>,
     ): IAdHocService.RenderedQuery {
         fun stepForRetentionStep(aStep: Dataset, isFirst: Boolean): Retention.Step {
-            val mappings = modelService.getDataset(auth, aStep.modelName)?.mappings
+            val mappings = datasetService.getDataset(auth, aStep.modelName)?.mappings
             val connectorDimensionName = report.connector ?: (
                 mappings?.get(USER_ID)
                     ?: throw MetriqlException("userId dimension is required for using connectors", HttpResponseStatus.BAD_REQUEST)
@@ -112,7 +112,7 @@ class RetentionService @Inject constructor(
                 }) AS $contextModelName",
                 // While the modelReference is rendered by the segmentation service, these dimension values must always refer to dimension aliases.
                 connector = context.warehouseBridge.quoteIdentifier(context.getDimensionAlias(connectorDimensionName, null, null)),
-                // Also pass the post-operator to alias generator, since post operated dimensions has prefix of the post operation name
+                // Also pass the post-operator to alias generator, since post operated dimensions has prefix of the timeframe name
                 // i.e timestamp day post operated _time dimensions alias is: column as _time_timestamp_day
                 eventTimestamp = context.warehouseBridge.quoteIdentifier(
                     context.getDimensionAlias(

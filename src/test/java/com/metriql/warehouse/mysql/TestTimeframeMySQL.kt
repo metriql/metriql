@@ -1,7 +1,7 @@
 package com.metriql.warehouse.mysql
 
-import com.metriql.tests.TestPostOperation
+import com.metriql.tests.TestTimeframe
 
-class TestPostOperationMySQL : TestPostOperation() {
+class TestTimeframeMySQL : TestTimeframe() {
     override val testingServer = TestingEnvironmentMySQL
 }

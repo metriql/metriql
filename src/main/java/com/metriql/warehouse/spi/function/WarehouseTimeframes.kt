@@ -6,7 +6,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 typealias WarehousePostOperation<T> = Map<T, String>
 
 fun <T> getRequiredPostOperation(functions: WarehousePostOperation<T>, function: T): String {
-    return functions[function] ?: throw MetriqlException("$function post operation is not implemented", HttpResponseStatus.BAD_REQUEST)
+    return functions[function] ?: throw MetriqlException("$function timeframe is not implemented", HttpResponseStatus.BAD_REQUEST)
 }
 
 interface WarehouseTimeframes {

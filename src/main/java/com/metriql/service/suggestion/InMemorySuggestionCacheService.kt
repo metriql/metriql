@@ -8,16 +8,21 @@ import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
 import java.time.Instant
 
-class InMemorySuggestionCacheService(spec: CacheBuilderSpec) : SuggestionCacheService {
-    private val cache = CacheBuilder.from(spec).build<CacheKey, CacheValue>()
+open class InMemorySuggestionCacheService(spec: CacheBuilderSpec) : SuggestionCacheService {
+    private val cache = CacheBuilder.from(spec)
+        .weigher<CacheKey, CacheValue> { _, value -> value.calculateSize() }
+        .build<CacheKey, CacheValue>()
+    open fun get(auth: ProjectAuth, modelName: ModelName, dimensionName: DimensionName): CacheValue? {
+        return cache.getIfPresent(CacheKey(auth.projectId, modelName, dimensionName))
+    }
 
     override fun getCommon(auth: ProjectAuth, modelName: ModelName, dimensionName: DimensionName): SuggestionCacheService.Suggestion? {
-        val items = cache.getIfPresent(CacheKey(auth.projectId, modelName, dimensionName)) ?: return null
+        val items = get(auth, modelName, dimensionName) ?: return null
         return SuggestionCacheService.Suggestion(items.values.take(20), items.lastUpdated)
     }
 
     override fun search(auth: ProjectAuth, modelName: ModelName, dimensionName: DimensionName, filter: String): SuggestionCacheService.Suggestion? {
-        val items = cache.getIfPresent(CacheKey(auth.projectId, modelName, dimensionName)) ?: return null
+        val items = get(auth, modelName, dimensionName) ?: return null
         return SuggestionCacheService.Suggestion(items.values.filter { it.contains(filter, ignoreCase = true) }.take(20), items.lastUpdated)
     }
 
@@ -38,5 +43,9 @@ class InMemorySuggestionCacheService(spec: CacheBuilderSpec) : SuggestionCacheSe
     data class CacheValue(
         val values: List<String>,
         val lastUpdated: Instant
-    )
+    ) {
+        fun calculateSize(): Int {
+            return values.sumOf { it.length }
+        }
+    }
 }

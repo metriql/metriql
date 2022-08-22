@@ -9,9 +9,11 @@ import java.time.Duration
 import java.time.Instant
 
 class InMemoryCacheService(spec: CacheBuilderSpec) : ICacheService {
-    private val cache = CacheBuilder.from(spec).build<ICacheService.CacheKey, InMemoryCacheItem>()
+    private val cache = CacheBuilder.from(spec)
+        .weigher<ICacheService.CacheKey, InMemoryCacheItem> { _, value -> value.value?.calculateSize() ?: 0 }
+        .build<ICacheService.CacheKey, InMemoryCacheItem>()
 
-    override fun setCache(cacheKey: ICacheService.CacheKey, value: Any?, ttl: Duration?) {
+    override fun setCache(cacheKey: ICacheService.CacheKey, value: ICacheService.CacheValue?, ttl: Duration?) {
         cache.put(cacheKey, InMemoryCacheItem(ttl, Instant.now(), value))
     }
 
@@ -56,5 +58,5 @@ class InMemoryCacheService(spec: CacheBuilderSpec) : ICacheService {
         cache.invalidateAll(keys)
     }
 
-    data class InMemoryCacheItem(val ttl: Duration?, val createdAt: Instant, val value: Any?)
+    data class InMemoryCacheItem(val ttl: Duration?, val createdAt: Instant, val value: ICacheService.CacheValue?)
 }

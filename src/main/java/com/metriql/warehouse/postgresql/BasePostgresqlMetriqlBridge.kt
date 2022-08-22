@@ -16,6 +16,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
+import io.trino.spi.type.StandardTypes
 
 open abstract class BasePostgresqlMetriqlBridge : ANSISQLMetriqlBridge() {
     override val supportedDBTTypes = setOf(DBTType.INCREMENTAL, DBTType.TABLE, DBTType.VIEW)
@@ -54,5 +55,9 @@ object PostgresqlMetriqlBridge : BasePostgresqlMetriqlBridge() {
         FunnelReportType.slug to ANSISQLFunnelQueryGenerator(),
         RetentionReportType.slug to PostgresqlRetentionQueryGenerator(),
         FlowReportType.slug to ANSISQLFlowQueryGenerator(),
+    )
+
+    override val mqlTypeMap = super.mqlTypeMap + mapOf(
+        StandardTypes.DOUBLE to "DOUBLE PRECISION"
     )
 }

@@ -31,7 +31,7 @@ interface IQueryGeneratorContext {
     val reportExecutor: ReportExecutor?
     val userAttributeFetcher: UserAttributeFetcher?
     val dependencyFetcher: DependencyFetcher?
-    val modelService: IDatasetService
+    val datasetService: IDatasetService
     val renderer: JinjaRendererService
     val referencedDimensions: Map<Pair<ModelName, DimensionName>, ModelDimension>
     val referencedMeasures: Map<Pair<ModelName, MeasureName>, ModelMeasure>

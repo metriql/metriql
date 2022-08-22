@@ -39,7 +39,7 @@ class SnowflakeTimeframes : WarehouseTimeframes {
 
     override val datePostOperations: Map<DatePostOperation, String> = mapOf(
         DatePostOperation.DAY to "to_date(date_trunc('day', %s))",
-        DatePostOperation.WEEK to "DATEADD(day, -1, to_date(cast(date_trunc('week', %s) as date)))",
+        DatePostOperation.WEEK to "to_date(cast(date_trunc('week', %s) as date))",
         DatePostOperation.MONTH to "to_date(cast(date_trunc('month', %s) as date))",
         DatePostOperation.QUARTER to "to_date(cast(date_trunc('quarter', %s) as date))",
         DatePostOperation.YEAR to "to_date(cast(date_trunc('year', %s) as date))",

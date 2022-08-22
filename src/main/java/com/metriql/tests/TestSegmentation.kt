@@ -51,7 +51,7 @@ abstract class TestSegmentation {
     )
     private val rendererService = JinjaRendererService()
 
-    private val modelService = TestDatasetService(getModels())
+    private val datasetService = TestDatasetService(getModels())
     private val service: SegmentationService get() = SegmentationService()
 
     private fun generateReportFilter(dateRange: DateRange): ReportFilter {
@@ -107,7 +107,7 @@ abstract class TestSegmentation {
         return QueryGeneratorContext(
             auth,
             dataSource,
-            modelService,
+            datasetService,
             rendererService,
             reportExecutor = null,
             userAttributeFetcher = null,

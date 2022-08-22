@@ -22,11 +22,11 @@ import java.util.logging.Logger
 
 const val QUERY_TYPE = "QUERY_TYPE"
 
-class LightweightQueryRunner(private val modelService: IDatasetService) {
+class LightweightQueryRunner(private val datasetService: IDatasetService) {
     val runner: LocalTrinoQueryRunner by lazy {
         var internalRunner = LocalTrinoQueryRunner(FeaturesConfig(), NodeSpillConfig())
         internalRunner.addSystemProperty(QUERY_TYPE_PROPERTY)
-        internalRunner.createCatalog("metriql", MetriqlConnectorFactory(internalRunner.nodeManager, modelService), mapOf())
+        internalRunner.createCatalog("metriql", MetriqlConnectorFactory(internalRunner.nodeManager, datasetService), mapOf())
         // internalRunner.createCatalog("tpch", TpchConnectorFactory(), mapOf("tpch.produce-pages" to "true"))
         internalRunner
     }

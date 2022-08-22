@@ -4,13 +4,13 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.JDBCDataSource
 import com.metriql.warehouse.mssqlserver.MSSQLWarehouse
 import java.util.Properties
 
 class AzureSQLDataSource(
     override val config: MSSQLWarehouse.MSSQLServerConfig
-) : JDBCWarehouse(
+) : JDBCDataSource(
     config,
     arrayOf("TABLE", "VIEW"),
     config.usePool,

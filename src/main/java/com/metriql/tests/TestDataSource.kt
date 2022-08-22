@@ -4,6 +4,7 @@ import com.metriql.db.FieldType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
+import com.metriql.tests.Helper.assetEqualsCaseInsensitive
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import org.testng.annotations.Test
 import java.time.Instant
@@ -12,7 +13,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.assertEquals
 
-abstract class TestWarehouse<T> {
+abstract class TestDataSource<T> {
     abstract val testingServer: TestingServer<T>
     abstract val useIntsForBoolean: Boolean
 
@@ -73,13 +74,15 @@ abstract class TestWarehouse<T> {
     open fun `test fill defaults`() {
         val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table(null, null, "dumb_table"))
         val filledModelTarget = testingServer.dataSource.fillDefaultsToTarget(modelTarget).value as Model.Target.TargetValue.Table
-        assertEquals(filledModelTarget.database, "test_db")
-        assertEquals("rakam_test", filledModelTarget.schema)
+        val config = testingServer.dataSource.config
+        assertEquals(filledModelTarget.database, config.warehouseDatabase())
+        assertEquals(filledModelTarget.schema, config.warehouseSchema())
     }
 
     @Test
     open fun `test get tables of a schema`() {
-        assertEquals(testingServer.dataSource.listTableNames(null, null).first(), tableName)
+        val expected = testingServer.dataSource.listTableNames(null, null).first()
+        assetEqualsCaseInsensitive(expected, tableName)
     }
 
     @Test
@@ -90,10 +93,10 @@ abstract class TestWarehouse<T> {
                1.1 as test_double,
                ${testingServer.bridge.filters.parseAnyValue(LocalDate.parse("1970-01-01"), context, FieldType.DATE)} as test_date,
                TRUE as test_bool,
-               ${testingServer.bridge.filters.parseAnyValue(Instant.parse("1970-01-01"), context, FieldType.TIMESTAMP)} as test_timestamp,
-               ${testingServer.bridge.filters.parseAnyValue(Instant.parse("15:30:00"), context, FieldType.TIME)} as test_time
+               ${testingServer.bridge.filters.parseAnyValue(LocalDate.parse("1970-01-01"), context, FieldType.TIMESTAMP)} as test_timestamp,
+               ${testingServer.bridge.filters.parseAnyValue(LocalTime.parse("15:30:00"), context, FieldType.TIME)} as test_time
         """.trimIndent()
-        testingServer.dataSource.getTable(query).columns.forEach { column ->
+        testingServer.dataSource.getTableSchema(query).columns.forEach { column ->
             assert(columnTypes[column.name]?.contains(column.type) == true)
         }
         assert(true)
@@ -102,22 +105,22 @@ abstract class TestWarehouse<T> {
     @Test
     fun `test table schema by table reference`() {
         val tableSchema = testingServer.dataSource
-            .getTable(null, null, tableName)
-        assertEquals(tableSchema.name, tableName)
+            .getTableSchema(null, null, tableName)
+        assetEqualsCaseInsensitive(tableSchema.name, tableName)
         tableSchema.columns.forEach { column ->
             assert(columnTypes[column.name]?.contains(column.type) == true)
         }
-        assertEquals(tableSchema.name, tableName)
+        assetEqualsCaseInsensitive(tableSchema.name, tableName)
     }
 
     @Test
     fun `test listing schema and field types of columns`() {
         val tableSchema = testingServer.dataSource.listSchema(null, null, null)
             .first()
-        assertEquals(tableSchema.name, tableName)
+        assetEqualsCaseInsensitive(tableSchema.name, tableName)
         tableSchema.columns.forEach { column ->
             assert(columnTypes[column.name]?.contains(column.type) == true)
         }
-        assertEquals(tableSchema.name, tableName)
+        assetEqualsCaseInsensitive(tableSchema.name, tableName)
     }
 }

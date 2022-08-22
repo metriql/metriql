@@ -220,7 +220,7 @@ data class DbtManifest(
             val target = Model.Target.TargetValue.Table(database, schema, alias ?: name)
 
             val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
-                val table = datasource.getTable(target.database, target.schema, target.table)
+                val table = datasource.getTableSchema(target.database, target.schema, target.table)
                 val recipeDimensions = createDimensionsFromColumns(table.columns).associate { it.name to fromDimension(it) }
                 mapOf<String, RecipeModel.Metric.RecipeMeasure>() to recipeDimensions
             } else {
@@ -279,7 +279,7 @@ data class DbtManifest(
 
             val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
                 val table = try {
-                    dataSource.getTable(database, schema, identifier)
+                    dataSource.getTableSchema(database, schema, identifier)
                 } catch (e: MetriqlException) {
                     throw MetriqlException("Unable to fetch columns for $modelName: ${e.message}", e.statusCode)
                 }

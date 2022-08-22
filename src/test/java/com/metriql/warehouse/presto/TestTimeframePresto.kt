@@ -1,7 +1,7 @@
 package com.metriql.warehouse.presto
 
-import com.metriql.tests.TestPostOperation
+import com.metriql.tests.TestTimeframe
 
-class TestPostOperationPresto : TestPostOperation() {
+class TestTimeframePresto : TestTimeframe() {
     override val testingServer = TestingEnvironmentPresto
 }

@@ -1,7 +1,7 @@
 package com.metriql.warehouse.presto
 
-import com.metriql.tests.JdbcTestWarehouse
+import com.metriql.tests.JdbcTestDataSource
 
-class TestWarehousePresto : JdbcTestWarehouse() {
+class TestDataSourcePresto : JdbcTestDataSource() {
     override val testingServer = TestingEnvironmentPresto
 }

@@ -66,7 +66,7 @@ class StatementService(
     private val reportService: ReportService,
     private val deployment: Deployment
 ) : HttpService() {
-    private val runner = LightweightQueryRunner(deployment.getModelService())
+    private val runner = LightweightQueryRunner(deployment.getDatasetService())
     private val mapper = ObjectMapperProvider().get()
     private val groupProviderManager = TestingGroupProvider()
 

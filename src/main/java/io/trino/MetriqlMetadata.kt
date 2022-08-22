@@ -38,12 +38,12 @@ import io.trino.spi.type.VarcharType
 import io.trino.type.UnknownType
 import java.util.Optional
 
-class MetriqlMetadata(val modelService: IDatasetService) : SystemTablesProvider {
+class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTablesProvider {
 
     private fun getModels(session: ConnectorSession): List<Model> {
         // TODO: Find a way to pass projects
 //        val projectId = session.getProperty("project", Int::class.java)
-        return modelService.list(ProjectAuth.systemUser("", session.user)).filter { !it.hidden }
+        return datasetService.list(ProjectAuth.systemUser("", session.user)).filter { !it.hidden }
     }
 
     override fun listSystemTables(session: ConnectorSession): Set<SystemTable> {

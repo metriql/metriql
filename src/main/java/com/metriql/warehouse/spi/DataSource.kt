@@ -23,8 +23,8 @@ interface DataSource {
 
     // Table Related
     fun listTableNames(database: String?, schema: String?): List<TableName>
-    fun getTable(database: String?, schema: String?, table: String): TableSchema
-    fun getTable(sql: String): TableSchema
+    fun getTableSchema(database: String?, schema: String?, table: String): TableSchema
+    fun getTableSchema(sql: String): TableSchema
 
     fun connectionTest(userId: Int): Boolean
 

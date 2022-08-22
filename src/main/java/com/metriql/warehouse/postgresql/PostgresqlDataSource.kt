@@ -6,7 +6,7 @@ import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JdbcUtil
 import com.metriql.util.ValidationUtil.stripLiteral
-import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.JDBCDataSource
 import com.metriql.warehouse.spi.DbtSettings
 import com.metriql.warehouse.spi.SchemaName
 import com.metriql.warehouse.spi.Warehouse
@@ -16,7 +16,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 import java.util.Properties
 
-open class PostgresqlDataSource(override val config: PostgresqlWarehouse.PostgresqlConfig, val readOnly: Boolean = true) : JDBCWarehouse(
+open class PostgresqlDataSource(override val config: PostgresqlWarehouse.PostgresqlConfig, val readOnly: Boolean = true) : JDBCDataSource(
     config,
     arrayOf("TABLE", "VIEW", "MATERIALIZED VIEW"),
     config.usePool ?: true,

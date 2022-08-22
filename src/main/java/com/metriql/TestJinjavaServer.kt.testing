@@ -38,7 +38,7 @@ object TestJinjavaServer {
         numberOfThreads: Int,
         isDebug: Boolean,
         origin: String?,
-        modelService: IModelService?,
+        datasetService: IModelService?,
         dataSource: DataSource?,
         timezone: ZoneId?
     ) {
@@ -67,12 +67,12 @@ object TestJinjavaServer {
         Thread.sleep(Long.MAX_VALUE)
     }
 
-    private fun registerHttpServices(app: Javalin, modelService: IModelService, dataSource: DataSource) {
+    private fun registerHttpServices(app: Javalin, datasetService: IModelService, dataSource: DataSource) {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
         val cacheConfig = CacheBuilderSpec.parse("")
-        val apiService = QueryHttpService(modelService, dataSource, InMemoryCacheService(cacheConfig), taskQueueService, null!!, null!!)
+        val apiService = QueryHttpService(datasetService, dataSource, InMemoryCacheService(cacheConfig), taskQueueService, null!!, null!!)
 
         val serviceClass = apiService.javaClass
         val mainPath = serviceClass.getAnnotation(Path::class.java) ?: throw IllegalStateException()

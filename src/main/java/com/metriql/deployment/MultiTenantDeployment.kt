@@ -1,6 +1,7 @@
 package com.metriql.deployment
 
 import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheBuilderSpec
 import com.google.common.net.HttpHeaders
 import com.metriql.Commands
 import com.metriql.UserContext
@@ -9,6 +10,8 @@ import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
+import com.metriql.service.suggestion.InMemorySuggestionCacheService
+import com.metriql.service.suggestion.SuggestionCacheService
 import com.metriql.util.MetriqlException
 import com.metriql.util.UnirestHelper
 import com.metriql.warehouse.WarehouseConfig
@@ -23,15 +26,14 @@ import java.util.concurrent.TimeUnit
 
 typealias ManifestCacheHolder = Optional<Pair<Instant, List<Model>>>
 
-class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration: Duration) : Deployment {
+class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration: Duration, private val cacheSpec: CacheBuilderSpec) : Deployment {
     private val cache = CacheBuilder.newBuilder().expireAfterWrite(cacheExpiration.toMillis(), TimeUnit.MILLISECONDS)
         .build<String, Optional<AdapterManifest>>()
     private val manifestCache = ConcurrentHashMap<String, ManifestCacheHolder>()
 
-    private val internalModelService = MultiTenantDatasetService()
-    override fun getModelService() = internalModelService
+    private val internalDatasetService = MultiTenantDatasetService()
+    override fun getDatasetService() = internalDatasetService
     override val authType = Deployment.AuthType.USERNAME_PASS
-
     override fun getAuth(context: UserContext): ProjectAuth {
         val user = context.user ?: context.token ?: throw MetriqlException(HttpResponseStatus.UNAUTHORIZED)
         val cachedAuth = cache.get(user) { Optional.empty() }
@@ -89,6 +91,10 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
         }
 
         return auth
+    }
+
+    override fun getCacheService(): SuggestionCacheService {
+        return InMemorySuggestionCacheService(cacheSpec)
     }
 
     override fun getDataSource(auth: ProjectAuth) = cache.getIfPresent(auth.userId as String)!!.get().dataSource

@@ -163,7 +163,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                         true
                     } else {
                         try {
-                            dataSource.getTable(it.target.database, it.target.schema, it.target.table) != null
+                            dataSource.getTableSchema(it.target.database, it.target.schema, it.target.table) != null
                             materializeTableExists.add(it)
                             true
                         } catch (e: MetriqlException) {

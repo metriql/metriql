@@ -5,7 +5,7 @@ import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JdbcUtil.fromGenericJDBCTypeFieldType
-import com.metriql.warehouse.JDBCWarehouse
+import com.metriql.warehouse.JDBCDataSource
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DbtSettings
 import ru.yandex.clickhouse.response.ClickHouseColumnInfo
@@ -13,7 +13,7 @@ import java.sql.Statement
 import java.sql.Types
 import java.util.Properties
 
-class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseConfig) : JDBCWarehouse(
+class ClickhouseDataSource(override val config: ClickhouseWarehouse.ClickhouseConfig) : JDBCDataSource(
     config,
     arrayOf("TABLE", "VIEW"),
     config.usePool,

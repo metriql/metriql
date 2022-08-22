@@ -1,7 +1,7 @@
 package com.metriql.warehouse.snowflake
 
-import com.metriql.tests.TestPostOperation
+import com.metriql.tests.TestTimeframe
 
-class TestPostOperationSnowflake : TestPostOperation() {
+class TestTimeframeSnowflake : TestTimeframe() {
     override val testingServer = TestingEnvironmentSnowflake
 }

@@ -37,7 +37,7 @@ open class QueryHttpService(
     val deployment: Deployment,
     val reportService: ReportService,
     val taskQueueService: TaskQueueService,
-    val suggestionService: SuggestionService,
+    private val suggestionService: SuggestionService,
     val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>
 ) : HttpService() {
     private val startTime: Instant = Instant.now()
@@ -47,18 +47,18 @@ open class QueryHttpService(
     @GET
     @Path("/metadata")
     fun metadata(@Named("userContext") auth: ProjectAuth): List<Model> {
-        return deployment.getModelService().list(auth)
+        return deployment.getDatasetService().list(auth)
     }
 
     @ApiOperation(value = "Get datasets")
     @GET
     @Path("/metadata/datasets")
     fun metadataDatasetNames(@Named("userContext") auth: ProjectAuth): List<IDatasetService.DatasetName> {
-        return deployment.getModelService().listDatasetNames(auth)
+        return deployment.getDatasetService().listDatasetNames(auth)
     }
 
     @ApiOperation(value = "Get datasets")
-    @GET
+    @JsonRequest
     @Path("/metadata/search_values")
     fun suggest(@Named("userContext") auth: ProjectAuth, @BodyParam query: SuggestionService.SuggestionQuery): CompletableFuture<List<String>> {
         return suggestionService.search(auth, query.value, query.filter)
@@ -68,7 +68,7 @@ open class QueryHttpService(
     @GET
     @Path("/metadata/dataset")
     fun metadataDataset(@Named("userContext") auth: ProjectAuth, @QueryParam("name") name: String): Model {
-        return deployment.getModelService().getDataset(auth, name) ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
+        return deployment.getDatasetService().getDataset(auth, name) ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
     }
 
     @ApiOperation(value = "Get ticker info")
@@ -83,7 +83,7 @@ open class QueryHttpService(
     @PUT
     @Path("/update-manifest")
     fun updateManifest(@Named("userContext") auth: ProjectAuth): SuccessMessage {
-        deployment.getModelService().update(auth)
+        deployment.getDatasetService().update(auth)
         synchronized(this) {
             lastMetadataChangeTime = Instant.now()
         }

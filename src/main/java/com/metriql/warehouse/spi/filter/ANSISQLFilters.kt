@@ -38,6 +38,7 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
             is LocalDate -> "'${ValidationUtil.stripLiteral(value.format(DateTimeFormatter.ISO_DATE))}'"
             is Boolean -> if (value) "TRUE" else "FALSE"
             is Number -> value.toString()
+            is LocalTime -> value.toString()
             is List<*> -> "(${value.joinToString(", ") { if (it == null) "NULL" else "${parseAnyValue(it, context, type?.arrayElementType)}" }})"
             else -> "NULL"
         }

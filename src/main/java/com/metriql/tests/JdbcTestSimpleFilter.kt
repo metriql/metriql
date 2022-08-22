@@ -51,7 +51,7 @@ abstract class JdbcTestSimpleFilter : TestSimpleFilter<Connection>() {
                     ${SimpleFilterTests.testDouble[index]},
                     CAST('${SimpleFilterTests.testDate[index]}' AS ${mqlTypeMap[StandardTypes.DATE]}),
                     ${SimpleFilterTests.testBool[index]},
-                    $requiredFunction)
+                    $requiredFunction
                     )
                 """.trimIndent()
             }

@@ -42,7 +42,7 @@ interface DependencyFetcher {
 class QueryGeneratorContext(
     override val auth: ProjectAuth,
     override val datasource: DataSource,
-    override val modelService: IDatasetService,
+    override val datasetService: IDatasetService,
     override val renderer: JinjaRendererService,
     override val reportExecutor: ReportExecutor?,
     override val userAttributeFetcher: UserAttributeFetcher?,
@@ -72,13 +72,13 @@ class QueryGeneratorContext(
 
     override fun getModel(modelName: ModelName): Model {
         return models.computeIfAbsent(modelName) {
-            modelService.getDataset(auth, modelName)
+            datasetService.getDataset(auth, modelName)
                 ?: throw MetriqlException("Model '$modelName' not found", NOT_FOUND)
         }
     }
 
     override fun getAggregatesForModel(target: Model.Target, reportType: ReportType): List<Triple<ModelName, String, SegmentationMaterialize>> {
-        val allModels = modelService.list(auth, target = target)
+        val allModels = datasetService.list(auth, target = target)
 
         return allModels.filter { it.target == target }
             .flatMap { model ->
