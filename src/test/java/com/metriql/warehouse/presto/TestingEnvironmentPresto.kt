@@ -5,7 +5,6 @@ import org.testcontainers.containers.TrinoContainer
 import java.sql.Connection
 
 object TestingEnvironmentPresto : TestingServer<Connection> {
-    private const val PRESTO_HOST = "127.0.0.1"
     private const val PRESTO_CATALOG = "memory"
     private const val PRESTO_USER = "metriql_user"
     private const val PRESTO_PORT = 8080
@@ -17,14 +16,16 @@ object TestingEnvironmentPresto : TestingServer<Connection> {
         server
     }
 
-    override val config = PrestoWarehouse.PrestoConfig(
-        hostPortProvider.getHostPort(PRESTO_PORT),
-        PRESTO_PORT,
-        PRESTO_CATALOG,
-        "rakam_test",
-        PRESTO_USER,
-        ""
-    )
+    override val config by lazy {
+        PrestoWarehouse.PrestoConfig(
+            dockerContainer.host,
+            dockerContainer.getMappedPort(PRESTO_PORT),
+            PRESTO_CATALOG,
+            "rakam_test",
+            PRESTO_USER,
+            ""
+        )
+    }
 
     override val dataSource = PrestoDataSource(config)
 
