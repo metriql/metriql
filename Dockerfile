@@ -24,7 +24,7 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
 RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
 
 # install packages required at runtime
-RUN apt-get update && apt-get install python-dev python3-pip google-cloud-sdk -y && pip3 install "pip>=20" && pip3 install metriql-lookml==0.3 metriql-tableau==0.6 metriql-superset==0.6 metriql-metabase==0.5
+RUN apt-get update && apt-get install python-dev python3-pip google-cloud-sdk -y && pip3 install "pip>=20" && pip3 install metriql-lookml==0.3 metriql-tableau==0.7 metriql-superset==0.6 metriql-metabase==0.5
 
 RUN mv metriql-* app
 
