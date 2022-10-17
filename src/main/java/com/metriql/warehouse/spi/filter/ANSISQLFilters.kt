@@ -6,8 +6,8 @@ import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.RPeriod
 import com.metriql.util.ValidationUtil
-import com.metriql.util.`try?`
 import com.metriql.util.serializableName
+import com.metriql.util.`try?`
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.filter.WarehouseFilters.Companion.validateFilterValue
 import com.metriql.warehouse.spi.function.DatePostOperation
@@ -34,7 +34,9 @@ open class ANSISQLFilters(open val bridge: () -> WarehouseMetriqlBridge) : Wareh
             return "NULL"
         }
         val rawValue = when (value) {
-            is String, is LocalTime, is Instant -> "'${ValidationUtil.stripLiteral(value.toString())}'"
+            is String -> "'${ValidationUtil.stripLiteral(value.toString())}'"
+            is Instant -> "'${ValidationUtil.stripLiteral(DateTimeFormatter.ISO_INSTANT.format(value))}'"
+            is LocalTime -> "'${ValidationUtil.stripLiteral(value.format(DateTimeFormatter.ISO_TIME))}'"
             is LocalDate -> "'${ValidationUtil.stripLiteral(value.format(DateTimeFormatter.ISO_DATE))}'"
             is Boolean -> if (value) "TRUE" else "FALSE"
             is Number -> value.toString()

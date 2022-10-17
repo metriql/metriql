@@ -95,7 +95,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         context: IQueryGeneratorContext
     ): RenderedFilter {
         return when (filter.value) {
-            is ReportFilter.FilterValue.Sql -> {
+            is ReportFilter.FilterValue.SqlFilter -> {
                 val renderedQuery = context.renderSQL(filter.value.sql, context.getOrGenerateAlias(contextModelName, null), contextModelName)
                 RenderedFilter(listOf(), renderedQuery, null)
             }
@@ -105,8 +105,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 val havings = mutableListOf<String>()
 
                 filter.value.filters.forEach {
-                    val metricValue = it.metricValue ?: filter.value.metricValue ?: throw java.lang.IllegalStateException()
-                    when (metricValue) {
+                    when (val metricValue = it.metricValue) {
                         is ReportMetric.ReportDimension -> {
                             // hacky way to find out relation if the dimension doesn't belong to context model
                             val relationName = if (contextModelName != metricValue.modelName) {
@@ -346,19 +345,21 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                     HttpResponseStatus.BAD_REQUEST
                 )
             }
-            val renderedFilters = filters.map {
+            val renderedFilters = filters.flatMap {
                 // Measure filters only have metric filter
-                val metricValue = (it.value as ReportFilter.FilterValue.MetricFilter).metricValue
-                val filterDimensionsModelName = if (metricValue is ReportMetric.ReportDimension) {
-                    metricValue.modelName!!
-                } else {
-                    contextModelName
+                (it.value as ReportFilter.FilterValue.MetricFilter).filters.map { metricValue ->
+                    val filterDimensionsModelName = if (metricValue.metricValue is ReportMetric.ReportDimension) {
+                        metricValue.metricValue.modelName
+                    } else {
+                        contextModelName
+                    }
+                    renderFilter(
+                        it,
+                        filterDimensionsModelName,
+                        context
+                    )
                 }
-                renderFilter(
-                    it,
-                    filterDimensionsModelName,
-                    context
-                )
+
             }
 
             val measureFilterExpression = renderedFilters

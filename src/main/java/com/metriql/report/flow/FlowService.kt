@@ -1,7 +1,7 @@
 package com.metriql.report.flow
 
 import com.metriql.report.IAdHocService
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilters
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.segmentation.SegmentationService
@@ -19,7 +19,7 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: FlowReportOptions,
-        reportFilters: List<ReportFilter>,
+        reportFilters: ReportFilters
     ): IAdHocService.RenderedQuery {
         reportOptions.event
 

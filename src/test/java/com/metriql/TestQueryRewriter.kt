@@ -323,7 +323,7 @@ class TestQueryRewriter {
                           }
                         }""",
                         Recipe.RecipeModel::class.java
-                    ).toModel("", datasource.warehouse.bridge, -1),
+                    ).toModel("", datasource.warehouse.bridge),
                     JsonHelper.read(
                         """{
                               "name": "test2",
@@ -350,7 +350,7 @@ class TestQueryRewriter {
                               }
                             }""",
                         Recipe.RecipeModel::class.java
-                    ).toModel("", datasource.warehouse.bridge, -1)
+                    ).toModel("", datasource.warehouse.bridge)
                 )
             )
             return SegmentationQueryReWriter(

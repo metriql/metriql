@@ -10,6 +10,7 @@ import com.metriql.report.data.ReportMetric
 import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
+import com.metriql.util.JsonUtil
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 // Depends on ACCEPT_SINGLE_VALUE_AS_ARRAY
@@ -47,7 +48,7 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
         return ReportFilter(
             ReportFilter.Type.METRIC_FILTER,
             ReportFilter.FilterValue.MetricFilter(
-                null, null,
+                ReportFilter.FilterValue.MetricFilter.Connector.OR,
                 orFilters
             )
         )
@@ -55,17 +56,7 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
 
     class FilterReferenceSerializer : JsonSerializer<OrFilters>() {
         override fun serialize(value: OrFilters, gen: JsonGenerator, serializers: SerializerProvider) {
-            val serializer = serializers.findValueSerializer(Recipe.FilterReference::class.java)
-
-            when {
-                value.size > 1 -> {
-                    gen.writeStartArray(value)
-                    value.forEach { serializer.serialize(it, gen, serializers) }
-                    gen.writeEndArray()
-                }
-                value.size == 1 -> serializer.serialize(value[0], gen, serializers)
-                else -> gen.writeNull()
-            }
+            JsonUtil.serializeAsArrayOrSingle(value, gen, serializers, Recipe.FilterReference::class.java)
         }
     }
 }

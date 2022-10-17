@@ -7,6 +7,7 @@ import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION
+import com.metriql.report.data.ReportFilters
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationReportOptions
 import com.metriql.report.segmentation.SegmentationService
@@ -47,6 +48,7 @@ class SuggestionService @Inject constructor(
                     .firstNotNullOfOrNull { it.mappings.get(value.name)?.let { dim -> it.name to dim } }
                     ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
             }
+
             is ReportMetric.ReportDimension -> {
                 val sourceModelName = value.modelName!!
                 val realModelName = if (value.relationName != null) {
@@ -89,16 +91,16 @@ class SuggestionService @Inject constructor(
             if (taskTicket.result?.error != null) {
                 throw MetriqlException("Unable to fetch suggestions for dataset $modelName.$dimensionName: ${taskTicket.result?.error}", HttpResponseStatus.INTERNAL_SERVER_ERROR)
             } else
-            if (result.status == Task.Status.FINISHED) {
-                val result = taskTicket.result?.result?.map { it[0].toString() } ?: listOf()
-                if (filter == null) {
-                    result.take(50)
+                if (result.status == Task.Status.FINISHED) {
+                    val result = taskTicket.result?.result?.map { it[0].toString() } ?: listOf()
+                    if (filter == null) {
+                        result.take(50)
+                    } else {
+                        result.filter { it.contains(filter) }.take(50)
+                    }
                 } else {
-                    result.filter { it.contains(filter) }.take(50)
+                    listOf()
                 }
-            } else {
-                listOf()
-            }
         }
     }
 
@@ -120,27 +122,28 @@ class SuggestionService @Inject constructor(
             useIncrementalDateFilter
 
         val filters = if (canUseIncrementalFilter) {
-            listOf(
-                ReportFilter(
-                    ReportFilter.Type.METRIC_FILTER,
-                    MetricFilter(
-                        MAPPING_DIMENSION,
-                        ReportMetric.ReportMappingDimension(
-                            EVENT_TIMESTAMP, null
-                        ),
-                        listOf(
-                            MetricFilter.Filter(
-                                null, null,
-                                TimestampOperatorType.BETWEEN.name,
-                                "P2W"
+            ReportFilters(
+                MetricFilter.Connector.AND,
+                listOf(
+                    ReportFilter(
+                        ReportFilter.Type.METRIC_FILTER,
+                        MetricFilter(
+                            MetricFilter.Connector.AND,
+                            listOf(
+                                MetricFilter.Filter(
+                                    MAPPING_DIMENSION,
+                                    ReportMetric.ReportMappingDimension(
+                                        EVENT_TIMESTAMP, null
+                                    ),
+                                    TimestampOperatorType.BETWEEN.name,
+                                    "P2W"
+                                )
                             )
                         )
                     )
                 )
             )
-        } else {
-            listOf()
-        }
+        } else null
 
         val dimensions = ReportMetric.ReportDimension(dimensionName, modelName, null, null, null)
         val segmentationQuery = segmentationService.renderQuery(
@@ -162,7 +165,7 @@ class SuggestionService @Inject constructor(
         )
 
         executeTask.onFinish { result ->
-            if(result?.error == null) {
+            if (result?.error == null) {
                 val values = result?.result?.map { it[0].toString() } ?: listOf()
                 deployment.getCacheService().set(auth, modelName, dimensionName, values)
             }

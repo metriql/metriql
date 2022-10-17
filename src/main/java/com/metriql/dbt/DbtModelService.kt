@@ -42,13 +42,12 @@ class DbtModelService @Inject constructor(
         committer: FileHandler,
         recipe: Recipe,
         dataSource: DataSource,
-        recipeId: Int,
     ): List<HttpServer.JsonAPIError> {
         val directory = recipe.getDependenciesWithFallback().dbtDependency().aggregatesDirectory()
         committer.deletePath(directory)
 
         val (_, _, modelConfigMapper) = dataSource.dbtSettings()
-        val models = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, recipeId) } ?: listOf()
+        val models = recipe.models?.map { it.toModel(recipe.packageName ?: "", dataSource.warehouse.bridge) } ?: listOf()
         val datasetService = UpdatableDatasetService(datasetService) { models }
 
         val context = QueryGeneratorContext(

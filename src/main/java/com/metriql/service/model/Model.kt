@@ -53,10 +53,8 @@ data class Model(
     val measures: List<Measure>,
     val materializes: List<Materialize>? = null,
     val alwaysFilters: List<OrFilters>? = null,
-    val id: Int? = null,
     val tags: List<String>? = null,
-    val recipeId: Int? = null,
-    val recipePath: String? = null,
+    val location: String? = null,
 ) {
 
     data class Materialize(val name: String, val reportType: ReportType, val value: SegmentationMaterialize)
@@ -229,8 +227,8 @@ data class Model(
 
         init {
             // Validate measure filters
-            filters?.forEach {
-                if (it.value is ReportFilter.FilterValue.MetricFilter && it.value.metricType == ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE) {
+            filters?.forEach { filter ->
+                if (filter.value is ReportFilter.FilterValue.MetricFilter && filter.value.filters.any { it.metricType ==  ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE }) {
                     throw MetriqlException("Only dimension filters are supported inside filters for measure: $name", HttpResponseStatus.BAD_REQUEST)
                 }
             }

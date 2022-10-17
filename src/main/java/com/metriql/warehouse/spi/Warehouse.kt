@@ -15,7 +15,7 @@ interface Warehouse<T : Warehouse.Config> {
         fun stripPassword(): Config
 
         @JsonIgnore
-        fun isValid(): Boolean
+        fun isValid(): Boolean = true
 
         @JsonIgnore
         fun warehouseSchema(): String?

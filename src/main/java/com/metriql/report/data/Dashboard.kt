@@ -120,7 +120,7 @@ data class Dashboard(
                         null
                     }
 
-                    MetricFilter(DIMENSION, metricValue, listOfNotNull(filter))
+                    MetricFilter(MetricFilter.Connector.AND, listOfNotNull(filter))
                 }
                 is ReportMetric.ReportMappingDimension -> {
                     val valueType = value.name.fieldType
@@ -140,7 +140,7 @@ data class Dashboard(
                         null
                     }
 
-                    MetricFilter(MAPPING_DIMENSION, metricValue, listOfNotNull(filter))
+                    MetricFilter(MetricFilter.Connector.AND, listOfNotNull(filter))
                 }
                 else -> throw IllegalStateException()
             }

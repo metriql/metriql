@@ -1,13 +1,26 @@
 package com.metriql.report.segmentation
 
 import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.dbt.DbtJinjaRenderer
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilters
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationReportOptions.Order.Type.DIMENSION
 import com.metriql.report.segmentation.SegmentationReportOptions.Order.Type.MEASURE
+import com.metriql.service.model.Model
 import com.metriql.service.model.ModelName
+import com.metriql.util.JsonUtil.serializeAsArrayOrSingle
 import com.metriql.util.MetriqlException
+import com.metriql.warehouse.WarehouseConfigJsonDeserializer
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.MaterializeQuery
 import com.metriql.warehouse.spi.services.RecipeQuery
@@ -19,11 +32,31 @@ data class SegmentationRecipeQuery(
     val dataset: ModelName,
     val measures: List<Recipe.FieldReference>?,
     val dimensions: List<Recipe.FieldReference>?,
-    val filters: List<OrFilters>?,
+    val filters: Filters?,
     val reportOptions: SegmentationReportOptions.ReportOptions? = null,
     val limit: Int? = null,
     val orders: Map<Recipe.FieldReference, Recipe.OrderType>? = null
 ) : RecipeQuery {
+    @JsonSerialize(using = Filters.FiltersSerializer::class)
+    @JsonDeserialize(using = WarehouseConfigJsonDeserializer::class)
+    class Filters(val and : List<OrFilters>, val or : List<OrFilters>) {
+        fun toReportFilters(context: IQueryGeneratorContext, model: Model): ReportFilters {
+            return ReportFilters(connector, items.map { it.toReportFilter(context, model.name) })
+        }
+
+        class FiltersDeserializer : JsonDeserializer<OrFilters>() {
+            override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OrFilters {
+                TODO("not implemented")
+            }
+        }
+
+        class FiltersSerializer : JsonSerializer<Filters>() {
+            override fun serialize(value: Filters, gen: JsonGenerator, serializers: SerializerProvider) {
+                serializeAsArrayOrSingle(value.items, gen, serializers, OrFilters::class.java)
+            }
+        }
+    }
+
     override fun toReportOptions(context: IQueryGeneratorContext): SegmentationReportOptions {
         val regexModelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
         val model = context.getModel(regexModelName)
@@ -31,7 +64,7 @@ data class SegmentationRecipeQuery(
             model.name,
             dimensions?.map { it.toDimension(model.name, it.getType(context, model.name)) },
             measures?.map { it.toMeasure(model.name) } ?: listOf(),
-            filters?.map { it.toReportFilter(context, model.name) },
+            filters?.toReportFilters(context, model),
             reportOptions,
             limit = limit,
             orders = orders?.entries?.map { order ->
@@ -61,7 +94,7 @@ data class SegmentationRecipeQuery(
     data class SegmentationMaterialize(
         val measures: List<Recipe.FieldReference>,
         val dimensions: List<Recipe.FieldReference>?,
-        val filters: List<OrFilters>?,
+        val filters: Filters?,
         val tableName: String? = null
     ) : MaterializeQuery {
         override fun toQuery(modelName: ModelName): RecipeQuery {

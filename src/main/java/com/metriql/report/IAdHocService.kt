@@ -1,6 +1,6 @@
 package com.metriql.report
 
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilters
 import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.report.sql.SqlReportOptions
 import com.metriql.service.auth.ProjectAuth
@@ -27,7 +27,7 @@ interface IAdHocService<T : ServiceReportOptions> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: T,
-        reportFilters: List<ReportFilter> = listOf()
+        reportFilters: ReportFilters = ReportFilters.EMPTY
     ): RenderedQuery
 
     fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<ModelName> {

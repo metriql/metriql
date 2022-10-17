@@ -6,12 +6,12 @@ import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
 import com.metriql.tests.Helper.assetEqualsCaseInsensitive
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
+import org.testng.Assert.assertEquals
 import org.testng.annotations.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import kotlin.test.assertEquals
 
 abstract class TestDataSource<T> {
     abstract val testingServer: TestingServer<T>

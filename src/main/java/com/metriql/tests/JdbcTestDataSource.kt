@@ -1,12 +1,10 @@
 package com.metriql.tests
 
 import com.metriql.db.FieldType
-import com.metriql.service.model.Model
 import io.trino.spi.type.StandardTypes
 import org.testng.annotations.BeforeSuite
 import org.testng.annotations.Test
 import java.sql.Connection
-import kotlin.test.assertEquals
 
 abstract class JdbcTestDataSource(override val useIntsForBoolean: Boolean = false) : TestDataSource<Connection>() {
 

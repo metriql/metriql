@@ -4,49 +4,39 @@ import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.segmentation.SegmentationRecipeQuery
 import com.metriql.service.model.ModelName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 data class Dataset(
     val modelName: String,
-    val filters: List<ReportFilter>,
+    val filters: ReportFilters?,
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     val dimension: ReportMetric.ReportDimension?
 ) {
     @JsonIgnore
     fun toRecipe(): RecipeDataset {
-        return RecipeDataset(modelName, filters.mapNotNull { it.toReference() }, dimension?.toReference())
+        return RecipeDataset(modelName, filters?.toRecipeFilters(), dimension?.toReference())
     }
 }
 
 data class RecipeDataset(
     @JsonAlias("model")
     val dataset: String,
-    val filters: List<OrFilters>?,
+    val filters: SegmentationRecipeQuery.Filters?,
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     val dimension: Recipe.FieldReference?
 ) {
     @JsonIgnore
     fun toDataset(context: IQueryGeneratorContext): Dataset {
         val modelName = DbtJinjaRenderer.renderer.renderModelNameRegex(dataset)
-        val filters = filters?.map { it.toReportFilter(context, modelName) } ?: listOf()
         val dimension = dimension?.toDimension(dataset, dimension.getType(context, modelName))
-        return Dataset(modelName, filters, dimension)
+        val model = context.getModel(modelName)
+        return Dataset(modelName, filters?.toReportFilters(context, model), dimension)
     }
 }
 
 fun getUsedModels(step: Dataset, context: IQueryGeneratorContext): List<ModelName> {
-    val filterRelations = step.filters.mapNotNull {
-        when (it.value) {
-            is ReportFilter.FilterValue.MetricFilter -> it.value.metricValue?.toMetricReference()?.relation
-            is ReportFilter.FilterValue.Sql -> null
-        }
-    }
-
-    val model = context.getModel(step.modelName)
-
-    val relationModels = filterRelations.map { relation -> model.relations.first { it.name == relation }.modelName }
-    return relationModels + listOf(step.modelName)
+    return listOf(step.modelName)
 }

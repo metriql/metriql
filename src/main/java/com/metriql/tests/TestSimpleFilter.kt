@@ -8,9 +8,9 @@ import com.metriql.service.model.Model.Dimension.DimensionValue.Column
 import com.metriql.service.model.Model.Dimension.Type.COLUMN
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.trino.spi.type.StandardTypes
+import org.testng.Assert.assertEquals
 import org.testng.annotations.Test
 import java.time.ZoneId
-import kotlin.test.assertEquals
 
 abstract class TestSimpleFilter<C> {
 

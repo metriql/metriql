@@ -28,23 +28,22 @@ data class ReportFilter(
 
     @UppercaseEnum
     enum class Type(private val clazz: KClass<out FilterValue>) : StrValueEnum {
-        SQL_FILTER(FilterValue.Sql::class),
+        SQL_FILTER(FilterValue.SqlFilter::class),
+        GROUP_FILTER(FilterValue.GroupFilter::class),
         METRIC_FILTER(FilterValue.MetricFilter::class);
-
         override fun getValueClass() = clazz.java
     }
 
     fun toReference(): OrFilters? {
         return when (value) {
-            is FilterValue.Sql -> throw UnsupportedOperationException()
+            is FilterValue.SqlFilter -> throw UnsupportedOperationException()
             is FilterValue.MetricFilter -> {
                 if (value.filters.isEmpty()) {
                     null
                 } else {
                     val references = OrFilters()
                     value.filters.map {
-                        val metricValue = it.metricValue ?: value.metricValue ?: throw IllegalStateException()
-                        val item = when (metricValue) {
+                        val item = when (val metricValue = it.metricValue) {
                             is ReportMetric.ReportDimension ->
                                 Recipe.FilterReference(dimension = metricValue.toReference(), operator = it.operator, value = it.value)
                             is ReportMetric.ReportMeasure ->
@@ -61,11 +60,13 @@ data class ReportFilter(
                     references
                 }
             }
+
+            is FilterValue.GroupFilter -> TODO()
         }
     }
 
     sealed class FilterValue {
-        data class Sql(val sql: String) : FilterValue() {
+        data class SqlFilter(val sql: String) : FilterValue() {
             override fun subtract(filter: ReportFilter): ReportFilter? {
                 return if (filter.value == this) {
                     null
@@ -75,15 +76,19 @@ data class ReportFilter(
             }
         }
 
-        data class MetricFilter(
-            @Deprecated("Use filter.metricType instead")
-            val metricType: MetricType?,
-            @Deprecated("Use filter.metricValue instead")
-            @PolymorphicTypeStr<MetricType>(externalProperty = "metricType", valuesEnum = MetricType::class)
-            val metricValue: ReportMetric?,
+        data class GroupFilter(val connector: MetricFilter.Connector, val filters: ReportFilters) : FilterValue() {
+            override fun subtract(filter: ReportFilter): ReportFilter? {
+                return if (filter.value == this) {
+                    null
+                } else {
+                    filter
+                }
+            }
+        }
 
-            val filters: List<Filter>,
-        ) : FilterValue() {
+        data class MetricFilter(val connector: Connector, val filters: List<Filter>) : FilterValue() {
+            @UppercaseEnum
+            enum class Connector { AND, OR }
 
             override fun subtract(filter: ReportFilter): ReportFilter? {
                 return if (filter.value == this) {
@@ -94,11 +99,9 @@ data class ReportFilter(
             }
 
             data class Filter(
-                //  TODO: make it required when MetricFilter.metricType is removed
-                val metricType: MetricType?,
-                //  TODO: make it required when MetricFilter.metricValue is removed
+                val metricType: MetricType,
                 @PolymorphicTypeStr<MetricType>(externalProperty = "metricType", valuesEnum = MetricType::class)
-                val metricValue: ReportMetric?,
+                val metricValue: ReportMetric,
                 val operator: String,
                 val value: Any?
             ) {
@@ -131,13 +134,13 @@ data class ReportFilter(
 
     companion object {
         fun extractDateRangeForEventTimestamp(filters: List<ReportFilter>): DateRange? {
-            return filters.firstNotNullOfOrNull {
-                if (it.value is FilterValue.MetricFilter &&
-                    it.value.metricType == FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION &&
-                    it.value.metricValue is ReportMetric.ReportMappingDimension &&
-                    it.value.metricValue.name == Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-                ) {
-                    it.value.filters[0]
+            return filters.firstNotNullOfOrNull { filter ->
+                if (filter.value is FilterValue.MetricFilter) {
+                    filter.value.filters.find {
+                        it.metricType == FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION &&
+                            it.metricValue is ReportMetric.ReportMappingDimension &&
+                            it.metricValue.name == Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+                    }
                 } else null
             }?.let {
                 val (type, operation) = getOperation(FieldType.TIMESTAMP, it.operator)

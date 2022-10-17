@@ -133,7 +133,7 @@ class SingleTenantDeployment(
 
         fun getPreparedModels(dataSource: DataSource, auth: ProjectAuth, recipe: Recipe): List<Model> {
             val metriqlModels = recipe.models?.map {
-                resolveExtends(recipe.models, it, recipe.packageName ?: "").toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
+                resolveExtends(recipe.models, it, recipe.packageName ?: "").toModel(recipe.packageName ?: "", dataSource.warehouse.bridge)
             } ?: listOf()
             val context = QueryGeneratorContext(auth, dataSource, UpdatableDatasetService(null) { metriqlModels }, JinjaRendererService(), null, null, null)
             return RecipeUtil.prepareModelsForInstallation(dataSource, context, metriqlModels)

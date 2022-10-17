@@ -166,7 +166,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                     override fun getContent() = throw IllegalStateException()
                     override fun cancel() = throw IllegalStateException()
                 },
-                recipe, dataSource, -1
+                recipe, dataSource
             )
 
             errors.forEach {

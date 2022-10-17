@@ -72,29 +72,31 @@ class RetentionService @Inject constructor(
             // in order to calculate the retention for the following days
             val normalizedReportFilters = if (!isFirst) {
                 val now = LocalDate.now()
-                reportFilters.map { reportFilter ->
-                    if (((reportFilter.value as? ReportFilter.FilterValue.MetricFilter)?.metricValue as? ReportMetric.ReportMappingDimension)?.name == EVENT_TIMESTAMP) {
-                        reportFilter.copy(
-                            value = reportFilter.value.copy(
-                                filters = reportFilter.value.filters.map {
-                                    if (it.operator.lowercase() == "between" && it.value is Map<*, *>) {
-                                        val endDate = LocalDate.parse(it.value["end"].toString())
-                                        val maximumEnd = when (report.dateUnit) {
-                                            DAY -> endDate.plusDays(14)
-                                            WEEK -> endDate.plusWeeks(14)
-                                            MONTH -> endDate.plusMonths(14)
+                reportFilters.flatMap { reportFilter ->
+                    ((reportFilter.value as? ReportFilter.FilterValue.MetricFilter)?.filters)?.map {
+                        if ((it.metricValue as? ReportMetric.ReportMappingDimension)?.name == EVENT_TIMESTAMP) {
+                            reportFilter.copy(
+                                value = reportFilter.value.copy(
+                                    filters = reportFilter.value.filters.map {
+                                        if (it.operator.lowercase() == "between" && it.value is Map<*, *>) {
+                                            val endDate = LocalDate.parse(it.value["end"].toString())
+                                            val maximumEnd = when (report.dateUnit) {
+                                                DAY -> endDate.plusDays(14)
+                                                WEEK -> endDate.plusWeeks(14)
+                                                MONTH -> endDate.plusMonths(14)
+                                            }
+                                            val finalEnd = if (now > maximumEnd) maximumEnd else now
+                                            it.copy(value = mapOf("start" to it.value["start"], "end" to finalEnd.toString()))
+                                        } else {
+                                            it
                                         }
-                                        val finalEnd = if (now > maximumEnd) maximumEnd else now
-                                        it.copy(value = mapOf("start" to it.value["start"], "end" to finalEnd.toString()))
-                                    } else {
-                                        it
                                     }
-                                }
+                                )
                             )
-                        )
-                    } else {
-                        reportFilter
-                    }
+                        } else {
+                            reportFilter
+                        }
+                    } ?: listOf()
                 }
             } else {
                 reportFilters
@@ -102,13 +104,13 @@ class RetentionService @Inject constructor(
 
             return Retention.Step(
                 model = "(${
-                segmentationService.renderQuery(
-                    auth,
-                    context,
-                    SegmentationReportOptions(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters),
-                    normalizedReportFilters,
-                    useAggregate = false, forAccumulator = false
-                ).second
+                    segmentationService.renderQuery(
+                        auth,
+                        context,
+                        SegmentationReportOptions(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters),
+                        normalizedReportFilters,
+                        useAggregate = false, forAccumulator = false
+                    ).second
                 }) AS $contextModelName",
                 // While the modelReference is rendered by the segmentation service, these dimension values must always refer to dimension aliases.
                 connector = context.warehouseBridge.quoteIdentifier(context.getDimensionAlias(connectorDimensionName, null, null)),
@@ -164,6 +166,7 @@ class RetentionService @Inject constructor(
                                     val value = (days[i] as Number).toLong()
                                     list.add(Arrays.asList<Any>(date, day, value))
                                 }
+
                                 else -> throw MetriqlException(
                                     "Query result is not valid",
                                     HttpResponseStatus.BAD_REQUEST
@@ -174,6 +177,7 @@ class RetentionService @Inject constructor(
 
                     list
                 }
+
                 3 -> result.result!!
                 else -> throw MetriqlException("Invalid result returned by retention query", HttpResponseStatus.INTERNAL_SERVER_ERROR)
             }

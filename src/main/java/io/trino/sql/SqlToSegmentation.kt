@@ -168,7 +168,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             val orderBy = if (projectionOrders.any { it != null }) "\nORDER BY ${projectionOrders.joinToString(" ")}" else ""
 
             // We don't need to use HAVING as we have sub-query
-            val whereFilters = (whereFilterProjections + havingFilterProjections).map { it.value as ReportFilter.FilterValue.Sql }.joinToString(" AND ") { it.sql }
+            val whereFilters = (whereFilterProjections + havingFilterProjections).map { it.value as ReportFilter.FilterValue.SqlFilter }.joinToString(" AND ") { it.sql }
 
             """SELECT ${if (select.isDistinct) "DISTINCT " else ""}$projections FROM (
                 |$renderedQuery
@@ -390,7 +390,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             ReportFilter(
                 METRIC_FILTER,
                 MetricFilter(
-                    metricReference.first, metricValue,
+                    MetricFilter.Connector.AND,
                     listOf(MetricFilter.Filter(metricReference.first, metricValue, operatorFunction.invoke(type).name, value))
                 )
             )
@@ -458,11 +458,11 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     LogicalBinaryExpression.Operator.OR -> {
                         val filters = allFilters.flatMap { filter ->
                             when (filter.value) {
-                                is ReportFilter.FilterValue.Sql -> throw UnsupportedOperationException()
+                                is ReportFilter.FilterValue.SqlFilter -> throw UnsupportedOperationException()
                                 is MetricFilter -> filter.value.filters
                             }
                         }
-                        listOf(ReportFilter(METRIC_FILTER, MetricFilter(null, null, filters = filters)))
+                        listOf(ReportFilter(METRIC_FILTER, MetricFilter(MetricFilter.Connector.OR, filters = filters)))
                     }
                 }
             }
@@ -484,7 +484,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     false -> null
                     else -> {
                         val metricReference =
-                            references[exp.left] ?: references[exp.right] ?: return listOf(ReportFilter(SQL_FILTER, ReportFilter.FilterValue.Sql(rewriter.process(exp))))
+                            references[exp.left] ?: references[exp.right] ?: return listOf(ReportFilter(SQL_FILTER, ReportFilter.FilterValue.SqlFilter(rewriter.process(exp))))
                         val value = getFilterValue(parameterMap, if (references.containsKey(exp.left)) exp.right else exp.left)
                         getReportFilter(context, model, metricReference, { convertMetriqlOperator(exp.operator, it.operatorClass.java) }, value)
                     }

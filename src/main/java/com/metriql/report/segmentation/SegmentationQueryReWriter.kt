@@ -1,6 +1,7 @@
 package com.metriql.report.segmentation
 
 import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Connector.AND
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE
@@ -92,10 +93,10 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             }
 
             when (filter.value) {
-                is ReportFilter.FilterValue.Sql -> return Either.Right("SQL filters are not supported.")
+                is ReportFilter.FilterValue.SqlFilter -> return Either.Right("SQL filters are not supported.")
                 is ReportFilter.FilterValue.MetricFilter -> {
                     filter.value.filters.forEach {
-                        when (val metricValue = it.metricValue ?: filter.value.metricValue) {
+                        when (val metricValue = it.metricValue) {
                             is ReportMetric.ReportDimension -> {
                                 try {
                                     newFilters.add(getFilterForDimension(materializeQuery, metricValue, filter.value.filters))
@@ -109,7 +110,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
                                     newFilters.add(
                                         ReportFilter(
                                             METRIC_FILTER,
-                                            ReportFilter.FilterValue.MetricFilter(MEASURE, metricValue, filter.value.filters)
+                                            ReportFilter.FilterValue.MetricFilter(AND, filter.value.filters.map { it.copy(metricType = MEASURE, metricValue = metricValue) })
                                         )
                                     )
                                 } else {
@@ -183,7 +184,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             return ReportFilter(
                 METRIC_FILTER,
                 ReportFilter.FilterValue.MetricFilter(
-                    DIMENSION, metricValue.copy(relationName = null), filters
+                    AND, filters.map { it.copy(DIMENSION, metricValue.copy(relationName = null)) }
                 )
             )
         } else {

@@ -171,6 +171,7 @@ data class Recipe(
                             } ?: false
                         }
                     }
+
                     else -> throw MetriqlException(
                         "Only segmentation materializes are allowed at the moment.",
                         HttpResponseStatus.NOT_IMPLEMENTED
@@ -223,6 +224,7 @@ data class Recipe(
                         dimension.primary,
                         dimension.value.window
                     )
+
                     is Model.Dimension.DimensionValue.Column -> Metric.RecipeDimension(
                         dimension.label,
                         dimension.description,
@@ -257,6 +259,7 @@ data class Recipe(
                             null,
                             if (relation.hidden === true) true else null,
                         )
+
                         is Model.Relation.RelationValue.ColumnValue -> RecipeRelation(
                             relation.label,
                             relation.description,
@@ -270,6 +273,7 @@ data class Recipe(
                             relation.value.targetColumn,
                             if (relation.hidden === true) true else null
                         )
+
                         is Model.Relation.RelationValue.DimensionValue -> RecipeRelation(
                             relation.label,
                             relation.description,
@@ -295,7 +299,7 @@ data class Recipe(
                         measure.filters
                             .map { filter ->
                                 when (filter.value) {
-                                    is ReportFilter.FilterValue.Sql -> {
+                                    is ReportFilter.FilterValue.SqlFilter -> {
                                         listOf(
                                             Metric.RecipeMeasure.Filter(
                                                 null,
@@ -310,10 +314,10 @@ data class Recipe(
                                             )
                                         )
                                     }
+
                                     is ReportFilter.FilterValue.MetricFilter -> {
                                         filter.value.filters.map {
-                                            val metricValue = filter.value.metricValue ?: it.metricValue ?: throw java.lang.IllegalArgumentException()
-                                            when (metricValue) {
+                                            when (val metricValue = it.metricValue) {
                                                 is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters can't filter measures")
                                                 is ReportMetric.ReportDimension -> {
                                                     val dimensionType = model.dimensions.find { dim -> dim.name == metricValue.name }?.fieldType
@@ -337,6 +341,7 @@ data class Recipe(
                                                             )
                                                         }
                                                 }
+
                                                 is ReportMetric.ReportMappingDimension -> {
                                                     val name = model.mappings.get(metricValue.name)
                                                     val dimensionType = model.dimensions.find { dim -> dim.name == name }?.fieldType
@@ -361,6 +366,7 @@ data class Recipe(
                                                             )
                                                         }
                                                 }
+
                                                 is ReportMetric.Function -> TODO()
                                                 is ReportMetric.Unary -> TODO()
                                                 else -> TODO()
@@ -389,6 +395,7 @@ data class Recipe(
                                 measure.value.window
                             )
                         }
+
                         is Model.Measure.MeasureValue.Column -> {
                             Metric.RecipeMeasure(
                                 measure.label,
@@ -405,6 +412,7 @@ data class Recipe(
                                 null
                             )
                         }
+
                         is Model.Measure.MeasureValue.Dimension -> {
                             Metric.RecipeMeasure(
                                 measure.label,
@@ -444,12 +452,12 @@ data class Recipe(
                     aggregates,
                     model.tags,
                     model.alwaysFilters,
-                    model.recipePath
+                    model.location
                 )
             }
         }
 
-        fun toModel(packageNameFromModel: String, bridge: WarehouseMetriqlBridge, recipeId: Int): Model {
+        fun toModel(packageNameFromModel: String, bridge: WarehouseMetriqlBridge): Model {
             val packageName = this.package_name ?: packageNameFromModel
             val modelName = name ?: throw MetriqlException("Model name is required", BAD_REQUEST)
 
@@ -459,10 +467,12 @@ data class Recipe(
                 sql != null -> {
                     Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql(sql))
                 }
+
                 dataset != null -> {
                     val modelName = DbtJinjaRenderer.renderer.renderReference(dataset, packageName)
                     Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql("select * from {{model.$modelName}}"))
                 }
+
                 else -> {
                     Model.Target(Model.Target.Type.TABLE, target!!)
                 }
@@ -472,21 +482,19 @@ data class Recipe(
 
             return Model(
                 modelName,
-                hidden ?: false,
-                modelTarget,
-                label,
-                description,
-                category,
-                mappings ?: Model.MappingDimensions(),
-                modelRelations,
-                ((dimensions ?: mapOf()) + dbtDimensions)?.map { (dimensionName, dimension) -> dimension.toDimension(dimensionName, bridge) },
-                ((measures ?: mapOf()) + dbtMeasures)?.map { (measureName, measure) -> measure.toMeasure(measureName, modelName) },
-                getMaterializes(),
-                alwaysFilters,
-                null,
-                tags,
-                recipeId,
-                _path
+                hidden = hidden ?: false,
+                target = modelTarget,
+                label = label,
+                description = description,
+                category = category,
+                mappings = mappings ?: Model.MappingDimensions(),
+                relations = modelRelations,
+                dimensions = ((dimensions ?: mapOf()) + dbtDimensions)?.map { (dimensionName, dimension) -> dimension.toDimension(dimensionName, bridge) },
+                measures = ((measures ?: mapOf()) + dbtMeasures)?.map { (measureName, measure) -> measure.toMeasure(measureName, modelName) },
+                materializes = getMaterializes(),
+                alwaysFilters = alwaysFilters,
+                tags = tags,
+                location = _path
             )
         }
 
@@ -595,6 +603,7 @@ data class Recipe(
                         sql != null -> {
                             Pair(Model.Measure.Type.SQL, Model.Measure.MeasureValue.Sql(sql, aggregation, window))
                         }
+
                         dimension != null -> {
                             val agg = aggregation ?: throw MetriqlException("Aggregation is required for $modelName.$measureName", BAD_REQUEST)
                             Pair(
@@ -602,6 +611,7 @@ data class Recipe(
                                 Model.Measure.MeasureValue.Dimension(agg, dimension)
                             )
                         }
+
                         else -> {
                             val agg = aggregation ?: throw MetriqlException("Aggregation is required for $modelName.$measureName", BAD_REQUEST)
                             Pair(
@@ -617,38 +627,46 @@ data class Recipe(
                                 ReportFilter(
                                     ReportFilter.Type.METRIC_FILTER,
                                     ReportFilter.FilterValue.MetricFilter(
-                                        // TODO: it's deprecated
-                                        ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                        // TODO: it's deprecated
-                                        ReportMetric.ReportDimension(
-                                            filter.dimension,
-                                            filter.modelName ?: modelName,
-                                            filter.relationName,
-                                            filter.postOperation
-                                        ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.operator!!.name, filter.value))
+                                        ReportFilter.FilterValue.MetricFilter.Connector.AND,
+                                        listOf(
+                                            ReportFilter.FilterValue.MetricFilter.Filter(
+                                                ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION, ReportMetric.ReportDimension(
+                                                    filter.dimension,
+                                                    filter.modelName ?: modelName,
+                                                    filter.relationName,
+                                                    filter.postOperation
+                                                ), filter.operator!!.name, filter.value
+                                            )
+                                        )
                                     )
                                 )
                             }
+
                             filter.mappingDimension != null -> {
                                 ReportFilter(
                                     ReportFilter.Type.METRIC_FILTER,
                                     ReportFilter.FilterValue.MetricFilter(
-                                        ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION,
-                                        ReportMetric.ReportMappingDimension(
-                                            filter.mappingDimension,
-                                            filter.postOperation
-                                        ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.operator!!.name, filter.value))
+                                        ReportFilter.FilterValue.MetricFilter.Connector.AND,
+                                        listOf(
+                                            ReportFilter.FilterValue.MetricFilter.Filter(
+                                                ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION,
+                                                ReportMetric.ReportMappingDimension(
+                                                    filter.mappingDimension,
+                                                    filter.postOperation
+                                                ), filter.operator!!.name, filter.value
+                                            )
+                                        )
                                     )
                                 )
                             }
+
                             filter.sql != null -> {
                                 ReportFilter(
                                     ReportFilter.Type.SQL_FILTER,
-                                    ReportFilter.FilterValue.Sql(filter.sql)
+                                    ReportFilter.FilterValue.SqlFilter(filter.sql)
                                 )
                             }
+
                             else -> throw IllegalStateException("dimension, mappingDimension or sql must be present in a measure filter")
                         }
                     }
@@ -736,12 +754,14 @@ data class Recipe(
                     sql != null -> {
                         Pair(Model.Relation.Type.SQL, Model.Relation.RelationValue.SqlValue(sql))
                     }
+
                     source != null -> {
                         Pair(
                             Model.Relation.Type.DIMENSION,
                             Model.Relation.RelationValue.DimensionValue(source, target!!)
                         )
                     }
+
                     else -> {
                         Pair(
                             Model.Relation.Type.COLUMN,

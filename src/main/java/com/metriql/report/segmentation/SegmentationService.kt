@@ -2,8 +2,9 @@ package com.metriql.report.segmentation
 
 import com.metriql.db.FieldType
 import com.metriql.report.IAdHocService
-import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.Companion.extractDateRangeForEventTimestamp
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Connector.AND
+import com.metriql.report.data.ReportFilters
 import com.metriql.report.data.ReportMetric.ReportDimension
 import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.report.segmentation.SegmentationQueryReWriter.MaterializeTableCache
@@ -22,6 +23,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.segmentation.Segmentation
 import com.metriql.warehouse.spi.services.segmentation.SegmentationQueryGenerator
 import io.netty.handler.codec.http.HttpResponseStatus
+import java.util.Collections.list
 import java.util.Collections.newSetFromMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
@@ -70,16 +72,8 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
     }
 
     override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: SegmentationReportOptions): Set<ModelName> {
-        val filterRelations = (reportOptions.filters ?: listOf()).mapNotNull {
-            when (it.value) {
-                // TODO
-                is ReportFilter.FilterValue.MetricFilter -> it.value.metricValue?.toMetricReference()?.relation
-                is ReportFilter.FilterValue.Sql -> null
-            }
-        }
 
-        val allRelations = (filterRelations + reportOptions.measures.mapNotNull { it.relationName } + (reportOptions.dimensions ?: listOf()).mapNotNull { it.relationName }).toSet()
-
+        val allRelations = reportOptions.measures.mapNotNull { it.relationName } + (reportOptions.dimensions ?: listOf()).mapNotNull { it.relationName }
         val model = context.getModel(reportOptions.modelName)
         val relationModels = allRelations.map { relation -> model.relations.first { it.name == relation }.modelName }.toSet()
         return relationModels + setOf(reportOptions.modelName)
@@ -89,7 +83,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: SegmentationReportOptions,
-        reportFilters: List<ReportFilter>,
+        reportFilters: ReportFilters,
     ): IAdHocService.RenderedQuery {
         val (_, query, dsl) = renderQuery(
             auth,
@@ -112,7 +106,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: SegmentationReportOptions,
-        reportFilters: List<ReportFilter>,
+        reportFilters: ReportFilters,
         useAggregate: Boolean = false,
         forAccumulator: Boolean = false,
     ): Triple<Table?, String, Segmentation> {
@@ -141,7 +135,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         dataSource: DataSource,
         context: IQueryGeneratorContext,
         reportOptions: SegmentationReportOptions,
-        reportFilters: List<ReportFilter>,
+        reportFilters: ReportFilters,
         useAggregate: Boolean,
         forAccumulator: Boolean,
     ): Pair<Table?, Segmentation> {
@@ -154,7 +148,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         val alwaysFilters = usedModels.flatMap { model -> context.getModel(model).alwaysFilters?.map { it.toReportFilter(context, model) } ?: listOf() }
 
         val (materializeQuery, aggregateModel) = if (useAggregate) {
-            val allFilters = (reportOptions.filters ?: listOf()) + reportFilters + alwaysFilters
+            val allFilters = reportOptions.filters + reportFilters + alwaysFilters
             try {
                 SegmentationQueryReWriter(context).findOptimumPlan(
                     reportOptions.copy(filters = allFilters), aggregatesForModel

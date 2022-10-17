@@ -2,7 +2,7 @@ package com.metriql.report.segmentation
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportFilters
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.model.ModelName
@@ -12,7 +12,6 @@ import com.metriql.util.RPeriod
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.WarehouseQueryTask
-import com.metriql.warehouse.spi.services.RecipeQuery
 import com.metriql.warehouse.spi.services.ServiceReportOptions
 import io.netty.handler.codec.http.HttpResponseStatus
 import kotlin.reflect.KClass
@@ -21,7 +20,7 @@ data class SegmentationReportOptions(
     val modelName: ModelName,
     val dimensions: List<ReportMetric.ReportDimension>?,
     val measures: List<ReportMetric.ReportMeasure>,
-    val filters: List<ReportFilter>? = null,
+    val filters: ReportFilters,
     val reportOptions: ReportOptions? = null,
     val defaultDateRange: RPeriod? = null,
     val limit: Int? = null,
@@ -56,12 +55,12 @@ data class SegmentationReportOptions(
         val columnOptions: ObjectNode?
     )
 
-    override fun toRecipeQuery(): RecipeQuery {
+    override fun toRecipeQuery(): SegmentationRecipeQuery {
         return SegmentationRecipeQuery(
             modelName,
             measures.map { it.toMetricReference() },
             dimensions?.map { it.toReference() },
-            filters?.mapNotNull { it.toReference() },
+            filters?.toRecipeFilters(),
             reportOptions, limit,
             orders?.associate { it.value.toMetricReference() to if (it.ascending == true) Recipe.OrderType.ASC else Recipe.OrderType.DESC }
         )

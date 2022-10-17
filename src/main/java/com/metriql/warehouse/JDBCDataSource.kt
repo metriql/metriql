@@ -41,7 +41,7 @@ abstract class JDBCDataSource(
     private val tableTypes: Array<String>,
     private val usePool: Boolean,
     private val supportsCrossDatabaseQueries: Boolean,
-    private val defaultDatabase: String,
+    private val defaultDatabase: String?,
     private val defaultSchema: String?, // Not every database supports schema (i.e mysql)
 ) : DataSource {
 
@@ -84,7 +84,7 @@ abstract class JDBCDataSource(
 
     override fun listDatabaseNames(): List<DatabaseName> {
         if (!supportsCrossDatabaseQueries) {
-            return listOf(defaultDatabase)
+            return listOfNotNull(defaultDatabase)
         }
         return openConnection().use { connection ->
             val meta = connection.metaData
@@ -245,11 +245,9 @@ abstract class JDBCDataSource(
                     targetBuilder.add(warehouse.bridge.quoteIdentifier(schemaName))
                 }
                 targetBuilder.add(warehouse.bridge.quoteIdentifier(table))
-
-                val targetSQL = targetBuilder.joinToString(".")
-                "$targetSQL AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
+                targetBuilder.joinToString(".")
             }
-        }
+        } + "AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
     }
 
     override fun fillDefaultsToTarget(target: Model.Target): Model.Target {
@@ -300,7 +298,7 @@ abstract class JDBCDataSource(
             return when (e) {
                 is SQLException -> {
                     if (!ignoredExceptionCodes.isNullOrEmpty() &&
-                        !ignoredExceptionCodes.map { ignoredCode -> e.sqlState.startsWith(ignoredCode) }.reduce { c1, c2 -> c1 || c2 }
+                        !ignoredExceptionCodes.map { ignoredCode -> e.sqlState?.startsWith(ignoredCode) == true }.reduce { c1, c2 -> c1 || c2 }
                     ) {
                         MetriqlEventBus.publish(MetriqlEvents.InternalException(e as Throwable, auth.userId, auth.projectId))
                     }
@@ -368,6 +366,7 @@ abstract class JDBCDataSource(
         if (conn.catalog != defaultDatabase) {
             conn.catalog = defaultDatabase
         }
+
         if (conn.schema != defaultSchema) {
             conn.schema = defaultSchema
         }
