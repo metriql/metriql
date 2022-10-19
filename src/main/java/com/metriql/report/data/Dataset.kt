@@ -17,7 +17,7 @@ data class Dataset(
 ) {
     @JsonIgnore
     fun toRecipe(): RecipeDataset {
-        return RecipeDataset(modelName, filters?.toRecipeFilters(), dimension?.toReference())
+        return RecipeDataset(modelName, null!!, dimension?.toReference())
     }
 }
 

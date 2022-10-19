@@ -19,7 +19,7 @@ abstract class JdbcTestSimpleFilter : TestSimpleFilter<Connection>() {
         stmt.execute("SET time_zone = 'UTC'")
     }
 
-    fun populate() {
+    open fun populate() {
         val mqlTypeMap = testingServer.bridge.mqlTypeMap
 
         testingServer.getQueryRunner().use { connection ->

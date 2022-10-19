@@ -73,11 +73,14 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
             }
         }
 
-        val aggregateFilters = (materializeQuery.filters ?: listOf()).toMutableList()
+        null!!
+//        val aggregateFilters = (materializeQuery.filters ?: listOf()).toMutableList()
+        val aggregateFilters = mutableListOf<ReportFilter>()
         val newFilters = mutableListOf<ReportFilter>()
 
-        for (filter in query.filters ?: listOf()) {
-            val fittedFilters = aggregateFilters.map { it.toReportFilter(context, query.modelName).value.subtract(filter) }
+        for (filter in query.filters) {
+            val fittedFilters = listOf<ReportFilter>()
+//            val fittedFilters = aggregateFilters.map { it.toReportFilter(context, query.modelName).value.subtract(filter) }
 
             val fullMatchIndex = fittedFilters.indexOfFirst { it == null }
             if (fullMatchIndex > -1) {

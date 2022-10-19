@@ -107,7 +107,7 @@ class RetentionService @Inject constructor(
                     segmentationService.renderQuery(
                         auth,
                         context,
-                        SegmentationReportOptions(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters),
+                        SegmentationReportOptions(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters ?: listOf()),
                         normalizedReportFilters,
                         useAggregate = false, forAccumulator = false
                     ).second

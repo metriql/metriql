@@ -148,7 +148,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             model.name,
             measures.toSet().map { Recipe.FieldReference.fromName(it) },
             dimensions.toSet().map { Recipe.FieldReference.fromName(it) },
-            (whereFiltersPushdown + havingFiltersPushdown).mapNotNull { it.toReference() },
+            SegmentationRecipeQuery.Filters(and = (whereFiltersPushdown + havingFiltersPushdown).mapNotNull { it.toReference() }),
             limit = parseLimit(limit.orElse(null)),
             orders = orders
         ).toReportOptions(context)
@@ -460,6 +460,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                             when (filter.value) {
                                 is ReportFilter.FilterValue.SqlFilter -> throw UnsupportedOperationException()
                                 is MetricFilter -> filter.value.filters
+                                is ReportFilter.FilterValue.GroupFilter -> TODO()
                             }
                         }
                         listOf(ReportFilter(METRIC_FILTER, MetricFilter(MetricFilter.Connector.OR, filters = filters)))

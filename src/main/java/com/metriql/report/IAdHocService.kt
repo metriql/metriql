@@ -27,7 +27,7 @@ interface IAdHocService<T : ServiceReportOptions> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: T,
-        reportFilters: ReportFilters = ReportFilters.EMPTY
+        reportFilters: ReportFilters = listOf()
     ): RenderedQuery
 
     fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<ModelName> {

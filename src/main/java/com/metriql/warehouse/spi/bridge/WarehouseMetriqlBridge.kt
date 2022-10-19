@@ -86,6 +86,7 @@ interface WarehouseMetriqlBridge {
 
     data class RenderedFilter(val joins: List<String>, val whereFilter: String?, val havingFilter: String?)
 
+
     /**
      * Renders where, having and a join expression.
      * Where filters comes from the dimensions and havings from the measures.

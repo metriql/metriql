@@ -1,11 +1,15 @@
 package com.metriql.tests
 
 import com.metriql.db.FieldType
+import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.ReportMetric
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Model
 import com.metriql.service.model.Model.Dimension.DimensionValue.Column
 import com.metriql.service.model.Model.Dimension.Type.COLUMN
+import com.metriql.warehouse.spi.filter.NumberOperatorType
+import com.metriql.warehouse.spi.filter.StringOperatorType
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.trino.spi.type.StandardTypes
 import org.testng.Assert.assertEquals
@@ -385,5 +389,63 @@ abstract class TestSimpleFilter<C> {
         val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
             "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
         assertEquals(test.result, testingServer.runQueryFirstRow(query))
+    }
+
+    @Test
+    fun testComplexFilters3() {
+        val test = listOf(
+            ReportFilter(
+                ReportFilter.Type.GROUP_FILTER,
+                ReportFilter.FilterValue.GroupFilter(
+                    ReportFilter.FilterValue.MetricFilter.Connector.OR,
+                    listOf(
+                        ReportFilter(
+                            ReportFilter.Type.METRIC_FILTER, ReportFilter.FilterValue.MetricFilter(
+                                ReportFilter.FilterValue.MetricFilter.Connector.AND,
+                                listOf(
+                                    ReportFilter.FilterValue.MetricFilter.Filter(
+                                        ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                        ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 1
+                                    ),
+                                    ReportFilter.FilterValue.MetricFilter.Filter(
+                                        ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                        ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 2
+                                    )
+                                )
+                            )
+                        ),
+                        ReportFilter(
+                            ReportFilter.Type.GROUP_FILTER, ReportFilter.FilterValue.GroupFilter(
+                                ReportFilter.FilterValue.MetricFilter.Connector.AND,
+                                listOf(
+                                    ReportFilter(
+                                        ReportFilter.Type.METRIC_FILTER, ReportFilter.FilterValue.MetricFilter(
+                                            ReportFilter.FilterValue.MetricFilter.Connector.OR,
+                                            listOf(
+                                                ReportFilter.FilterValue.MetricFilter.Filter(
+                                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                                    ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "10"
+                                                ),
+                                                ReportFilter.FilterValue.MetricFilter.Filter(
+                                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                                    ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "20"
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val context = context()
+        val generatedFilter = test
+            .map { testingServer.bridge.renderFilter(it, table, context) }
+            .joinToString(" AND ") { "(${it.whereFilter})" }
+        val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
+            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
+//        assertEquals(test.result, testingServer.runQueryFirstRow(query))
     }
 }

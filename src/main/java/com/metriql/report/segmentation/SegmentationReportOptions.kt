@@ -20,7 +20,7 @@ data class SegmentationReportOptions(
     val modelName: ModelName,
     val dimensions: List<ReportMetric.ReportDimension>?,
     val measures: List<ReportMetric.ReportMeasure>,
-    val filters: ReportFilters,
+    val filters: ReportFilters = listOf(),
     val reportOptions: ReportOptions? = null,
     val defaultDateRange: RPeriod? = null,
     val limit: Int? = null,
@@ -60,7 +60,7 @@ data class SegmentationReportOptions(
             modelName,
             measures.map { it.toMetricReference() },
             dimensions?.map { it.toReference() },
-            filters?.toRecipeFilters(),
+            null!!,
             reportOptions, limit,
             orders?.associate { it.value.toMetricReference() to if (it.ascending == true) Recipe.OrderType.ASC else Recipe.OrderType.DESC }
         )

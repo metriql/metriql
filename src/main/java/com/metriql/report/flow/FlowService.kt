@@ -43,7 +43,8 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
                     event.modelName,
                     listOf(),
                     requiredDimensions + (event.dimension?.let { listOf(it.toReference()) } ?: listOf()),
-                    event.filters.mapNotNull { it.toReference() }
+                    null!!
+//                    event.filters.mapNotNull { it.toReference() }
                 ).toReportOptions(context),
                 reportFilters,
                 useAggregate = false, forAccumulator = false
@@ -55,7 +56,10 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
         segmentationService.renderQuery(
             auth,
             context,
-            SegmentationRecipeQuery(reportOptions.event.modelName, listOf(), requiredDimensions, reportOptions.event.filters.mapNotNull { it.toReference() }).toReportOptions(
+            SegmentationRecipeQuery(reportOptions.event.modelName, listOf(), requiredDimensions, 
+                null!!
+//                reportOptions.event.filters.mapNotNull { it.toReference() }
+            ).toReportOptions(
                 context
             ),
             reportFilters,

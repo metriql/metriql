@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilters
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.data.recipe.Recipe
@@ -39,9 +38,10 @@ data class SegmentationRecipeQuery(
 ) : RecipeQuery {
     @JsonSerialize(using = Filters.FiltersSerializer::class)
     @JsonDeserialize(using = WarehouseConfigJsonDeserializer::class)
-    class Filters(val and : List<OrFilters>, val or : List<OrFilters>) {
+    class Filters(val and : List<OrFilters>, val or : List<OrFilters> = listOf()) {
         fun toReportFilters(context: IQueryGeneratorContext, model: Model): ReportFilters {
-            return ReportFilters(connector, items.map { it.toReportFilter(context, model.name) })
+            return null!!
+//            return ReportFilters(connector, items.map { it.toReportFilter(context, model.name) })
         }
 
         class FiltersDeserializer : JsonDeserializer<OrFilters>() {
@@ -52,7 +52,7 @@ data class SegmentationRecipeQuery(
 
         class FiltersSerializer : JsonSerializer<Filters>() {
             override fun serialize(value: Filters, gen: JsonGenerator, serializers: SerializerProvider) {
-                serializeAsArrayOrSingle(value.items, gen, serializers, OrFilters::class.java)
+                serializeAsArrayOrSingle(value.or, gen, serializers, OrFilters::class.java)
             }
         }
     }
@@ -64,7 +64,7 @@ data class SegmentationRecipeQuery(
             model.name,
             dimensions?.map { it.toDimension(model.name, it.getType(context, model.name)) },
             measures?.map { it.toMeasure(model.name) } ?: listOf(),
-            filters?.toReportFilters(context, model),
+            filters?.toReportFilters(context, model) ?: listOf(),
             reportOptions,
             limit = limit,
             orders = orders?.entries?.map { order ->

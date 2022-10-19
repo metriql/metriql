@@ -121,35 +121,36 @@ class SuggestionService @Inject constructor(
             rakamBridge.filters.timestampOperators[TimestampOperatorType.GREATER_THAN] != null &&
             useIncrementalDateFilter
 
-        val filters = if (canUseIncrementalFilter) {
-            ReportFilters(
-                MetricFilter.Connector.AND,
-                listOf(
-                    ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
-                        MetricFilter(
-                            MetricFilter.Connector.AND,
-                            listOf(
-                                MetricFilter.Filter(
-                                    MAPPING_DIMENSION,
-                                    ReportMetric.ReportMappingDimension(
-                                        EVENT_TIMESTAMP, null
-                                    ),
-                                    TimestampOperatorType.BETWEEN.name,
-                                    "P2W"
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        } else null
+//        val filters = if (canUseIncrementalFilter) {
+//            ReportFilters(
+//                MetricFilter.Connector.AND,
+//                listOf(
+//                    ReportFilter(
+//                        ReportFilter.Type.METRIC_FILTER,
+//                        MetricFilter(
+//                            MetricFilter.Connector.AND,
+//                            listOf(
+//                                MetricFilter.Filter(
+//                                    MAPPING_DIMENSION,
+//                                    ReportMetric.ReportMappingDimension(
+//                                        EVENT_TIMESTAMP, null
+//                                    ),
+//                                    TimestampOperatorType.BETWEEN.name,
+//                                    "P2W"
+//                                )
+//                            )
+//                        )
+//                    )
+//                )
+//            )
+//        } else null
 
         val dimensions = ReportMetric.ReportDimension(dimensionName, modelName, null, null, null)
         val segmentationQuery = segmentationService.renderQuery(
             auth,
             context,
-            SegmentationReportOptions(modelName, listOf(dimensions), listOf(ReportMetric.ReportMeasure(modelName, TOTAL_ROWS_MEASURE.name)), filters = filters),
+            SegmentationReportOptions(modelName, listOf(dimensions), listOf(ReportMetric.ReportMeasure(modelName, TOTAL_ROWS_MEASURE.name)), filters = null!!),
+//            SegmentationReportOptions(modelName, listOf(dimensions), listOf(ReportMetric.ReportMeasure(modelName, TOTAL_ROWS_MEASURE.name)), filters = filters),
             listOf(),
             useAggregate = false, forAccumulator = false
         )

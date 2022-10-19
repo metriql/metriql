@@ -373,6 +373,8 @@ data class Recipe(
                                             }
                                         }.flatten()
                                     }
+
+                                    is ReportFilter.FilterValue.GroupFilter -> null!!
                                 }
                             }.flatten()
                     } else {

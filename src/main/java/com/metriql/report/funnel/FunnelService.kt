@@ -109,7 +109,8 @@ class FunnelService @Inject constructor(
                     contextModelName,
                     dimensionsToRender,
                     listOf(),
-                    filters = step.filters,
+                    filters = null!!,
+//                    filters = step.filters,
                     reportOptions = null
                 ),
                 reportFilters,
