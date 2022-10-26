@@ -7,7 +7,6 @@ class MqlReportTypeProxy : ReportType by MqlReportType, ReportTypeProxy(MqlRepor
 
 object MqlReportType : ReportType {
     override val slug = "mql"
-    override val configClass = MqlReportOptions::class
-    override val recipeClass = MqlReportOptions::class
+    override val configClass = MqlQuery::class
     override val serviceClass = MqlService::class
 }

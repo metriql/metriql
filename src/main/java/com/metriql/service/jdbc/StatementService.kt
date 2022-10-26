@@ -7,9 +7,9 @@ import com.metriql.deployment.Deployment
 import com.metriql.report.ReportLocator
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
-import com.metriql.report.mql.MqlReportOptions
+import com.metriql.report.mql.MqlQuery
 import com.metriql.report.mql.MqlReportType
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.report.sql.SqlReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.task.Task
@@ -145,9 +145,9 @@ class StatementService(
                 } else sql
 
                 val options = when (reportType) {
-                    MqlReportType -> MqlReportOptions(finalSql, null, parameters, null)
-                    SqlReportType -> SqlReportOptions(finalSql, null, null, null)
-                    else -> JsonHelper.read(finalSql, reportType.recipeClass.java).toReportOptions(context)
+                    MqlReportType -> MqlQuery(finalSql, null, parameters, null)
+                    SqlReportType -> SqlQuery(finalSql, null, null, null)
+                    else -> JsonHelper.read(finalSql, reportType.configClass.java)
                 }
 
                 reportService.queryTask(

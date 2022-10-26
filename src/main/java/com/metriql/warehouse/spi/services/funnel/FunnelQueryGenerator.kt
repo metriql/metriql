@@ -1,14 +1,14 @@
 package com.metriql.warehouse.spi.services.funnel
 
-import com.metriql.report.funnel.FunnelReportOptions
+import com.metriql.report.funnel.FunnelQuery
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.services.ServiceQueryDSL
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
 import com.metriql.warehouse.spi.services.ServiceSupport
 import io.netty.handler.codec.http.HttpResponseStatus
 
-interface FunnelQueryGenerator : ServiceQueryGenerator<Funnel, FunnelReportOptions, FunnelSupport> {
-    fun checkSupport(isStrictlyOrdered: Boolean, options: FunnelReportOptions) {
+interface FunnelQueryGenerator : ServiceQueryGenerator<Funnel, FunnelQuery, FunnelSupport> {
+    fun checkSupport(isStrictlyOrdered: Boolean, options: FunnelQuery) {
         val support = supports().firstOrNull { it.isStrictlyOrdered == isStrictlyOrdered }
             ?: throw MetriqlException("Funnel order type is not supported", HttpResponseStatus.BAD_REQUEST)
         if (!support.approximation && options.approximate) {

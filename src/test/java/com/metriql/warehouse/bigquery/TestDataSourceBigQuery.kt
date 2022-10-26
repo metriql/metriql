@@ -8,7 +8,7 @@ import com.google.cloud.bigquery.Schema
 import com.google.cloud.bigquery.StandardTableDefinition
 import com.google.cloud.bigquery.TableId
 import com.google.cloud.bigquery.TableInfo
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.tests.SimpleFilterTests
 import com.metriql.tests.TestDataSource
 import com.metriql.util.`try?`
@@ -33,10 +33,10 @@ class TestDataSourceBigQuery : TestDataSource<BigQuery>() {
 
     @Test
     override fun `test fill defaults`() {
-        val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table(null, null, "dumb_table"))
-        val filledModelTarget = testingServer.dataSource.fillDefaultsToTarget(modelTarget).value as Model.Target.TargetValue.Table
-        assertEquals(filledModelTarget.database, "rakamui-215316")
-        assertEquals(schemaName, filledModelTarget.schema)
+        val datasetTarget = Dataset.Target(Dataset.Target.Type.TABLE, Dataset.Target.TargetValue.Table(null, null, "dumb_table"))
+        val filledDatasetTarget = testingServer.dataSource.fillDefaultsToTarget(datasetTarget).value as Dataset.Target.TargetValue.Table
+        assertEquals(filledDatasetTarget.database, "rakamui-215316")
+        assertEquals(schemaName, filledDatasetTarget.schema)
     }
 
     @Test

@@ -3,7 +3,7 @@ package com.metriql.report
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.PropertyKey.CACHE_TIME
 import com.metriql.db.QueryResult.QueryStats
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent
 import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext
 import com.metriql.service.auth.ProjectAuth
@@ -38,13 +38,13 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
 
     data class QueryIdentifierForCache(
         val query: String,
-        val options: SqlReportOptions.QueryOptions,
+        val options: SqlQuery.QueryOptions,
     )
 
     data class QueryIdentifierForRunningTasks(
         val projectId: String,
         val query: String,
-        val options: SqlReportOptions.QueryOptions,
+        val options: SqlQuery.QueryOptions,
     )
 
     fun createTask(
@@ -52,7 +52,7 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
         context: IQueryGeneratorContext,
         dataSource: DataSource,
         rawSqlQuery: String,
-        queryOptions: SqlReportOptions.QueryOptions,
+        queryOptions: SqlQuery.QueryOptions,
         isBackgroundTask: Boolean,
         postProcessors: List<PostProcessor> = listOf(),
         info: SQLContext? = null,

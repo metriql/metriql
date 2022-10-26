@@ -6,8 +6,8 @@ import com.metriql.report.flow.FlowReportType
 import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.retention.RetentionReportType
 import com.metriql.report.segmentation.SegmentationReportType
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
+import com.metriql.service.model.Dataset
+import com.metriql.service.model.Dataset.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -52,8 +52,8 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
             override fun dimensionBeforePostOperation(
                 context: IQueryGeneratorContext,
                 metricPositionType: WarehouseMetriqlBridge.MetricPositionType,
-                dimension: Model.Dimension,
-                postOperation: ReportMetric.PostOperation?,
+                dimension: Dataset.Dimension,
+                timeframe: ReportMetric.Timeframe?,
                 dimensionValue: String,
             ): String {
                 val zoneId = context.auth.timezone
@@ -80,7 +80,7 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
         )
     }
 
-    override fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
+    override fun performAggregation(columnValue: String, aggregationType: Dataset.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
         return if (aggregationType == APPROXIMATE_UNIQUE) {
             when (context) {
                 ADHOC -> "APPROX_COUNT_DISTINCT($columnValue)"

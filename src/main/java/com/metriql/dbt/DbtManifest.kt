@@ -12,8 +12,8 @@ import com.metriql.report.data.recipe.Recipe.RecipeModel.Companion.fromDimension
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeMeasure.Filter
 import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DiscoverService.Companion.createDimensionsFromColumns
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.service.model.Dataset
+import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -61,9 +61,9 @@ data class DbtManifest(
 
             val measureFilters = filters?.let { it.map { filter -> Filter(filter.field, operator = filter.convertPostOperation(sourceModel, name), value = filter.value) } }
 
-            val mappings = sourceModel.mappings ?: Model.MappingDimensions()
+            val mappings = sourceModel.mappings ?: Dataset.MappingDimensions()
             if (timestamp != null) {
-                mappings.put(EVENT_TIMESTAMP, timestamp)
+                mappings.put(TIME_SERIES, timestamp)
             }
 
             val existingDimensions = sourceModel.dimensions?.map {
@@ -73,7 +73,7 @@ data class DbtManifest(
             }?.toMap() ?: mapOf()
 
             val modelDimensions = if (time_grains != null) {
-                val eventTimestamp = mappings.get(EVENT_TIMESTAMP)
+                val eventTimestamp = mappings.get(TIME_SERIES)
                 val dimension = sourceModel.dimensions?.get(eventTimestamp)?.copy(timeframes = time_grains)
                     ?: throw MetriqlException("Unable to find timestamp column $timestamp for metric $name", NOT_FOUND)
                 existingDimensions + mapOf(eventTimestamp!! to dimension)
@@ -92,7 +92,7 @@ data class DbtManifest(
             val metriqlType = try {
                 JsonHelper.convert(type, DbtMetric::class.java).type
             } catch (e: Exception) {
-                JsonHelper.convert(type, Model.Measure.AggregationType::class.java)
+                JsonHelper.convert(type, Dataset.Measure.AggregationType::class.java)
             }
 
             val label = label ?: meta.metriql?.label
@@ -122,11 +122,11 @@ data class DbtManifest(
     }
 
     @UppercaseEnum
-    enum class DbtMetric(val type: Model.Measure.AggregationType) {
-        COUNT_DISTINCT(Model.Measure.AggregationType.COUNT_UNIQUE),
-        MAX(Model.Measure.AggregationType.MAXIMUM),
-        MIN(Model.Measure.AggregationType.MINIMUM),
-        AVG(Model.Measure.AggregationType.AVERAGE)
+    enum class DbtMetric(val type: Dataset.Measure.AggregationType) {
+        COUNT_DISTINCT(Dataset.Measure.AggregationType.COUNT_UNIQUE),
+        MAX(Dataset.Measure.AggregationType.MAXIMUM),
+        MIN(Dataset.Measure.AggregationType.MINIMUM),
+        AVG(Dataset.Measure.AggregationType.AVERAGE)
     }
 
     data class Node(
@@ -217,7 +217,7 @@ data class DbtManifest(
             ) return null
 
             val modelName = TextUtil.toSlug("model_${package_name}_$name", true)
-            val target = Model.Target.TargetValue.Table(database, schema, alias ?: name)
+            val target = Dataset.Target.TargetValue.Table(database, schema, alias ?: name)
 
             val (columnMeasures, columnDimensions) = if (columns.isEmpty()) {
                 val table = datasource.getTableSchema(target.database, target.schema, target.table)
@@ -289,10 +289,10 @@ data class DbtManifest(
                 extractFields(modelName, columns)
             }
 
-            val model = meta.metriql.copy(
+            val dataset = meta.metriql.copy(
                 name = modelName,
                 label = meta.metriql.label ?: toUserFriendly(name),
-                target = Model.Target.TargetValue.Table(database, schema, identifier),
+                target = Dataset.Target.TargetValue.Table(database, schema, identifier),
                 description = meta.metriql.description ?: description,
                 dimensions = (meta.metriql.dimensions ?: mapOf()) + columnDimensions,
                 measures = (meta.metriql.measures ?: mapOf()) + columnMeasures,
@@ -302,7 +302,7 @@ data class DbtManifest(
             )
 
             val finalModel = dependencies.mapNotNull { dbtManifest.nodes[it] }
-                .foldRight(model) { node, model -> node.test_metadata?.applyTestToModel(model) ?: model }
+                .foldRight(dataset) { node, model -> node.test_metadata?.applyTestToModel(model) ?: model }
 
             return fixJinjaExpressions(finalModel)
         }

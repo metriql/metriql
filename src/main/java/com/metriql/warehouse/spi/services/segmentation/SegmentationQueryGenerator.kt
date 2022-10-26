@@ -1,12 +1,12 @@
 package com.metriql.warehouse.spi.services.segmentation
 
-import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.services.ServiceQueryDSL
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
 import com.metriql.warehouse.spi.services.ServiceSupport
 
-typealias SegmentationQueryGenerator = ServiceQueryGenerator<Segmentation, SegmentationReportOptions, ServiceSupport>
+typealias SegmentationQueryGenerator = ServiceQueryGenerator<Segmentation, SegmentationQuery, ServiceSupport>
 
 data class Segmentation(
     val columnNames: List<String>,
@@ -16,10 +16,10 @@ data class Segmentation(
     val limit: Int?,
     val tableAlias: String,
     val joins: Set<String>?,
-    val whereFilters: List<String>?,
+    val whereFilter: String?,
     val groups: Set<String>?,
     val groupIdx: Set<Int>?,
-    val havingFilters: Set<String>?,
+    val havingFilter: String?,
     val orderByIdx: Set<String>?,
     val orderBy: Set<String>?
 ) : ServiceQueryDSL

@@ -5,11 +5,11 @@ import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.Dimension.DimensionValue.Column
-import com.metriql.service.model.Model.Dimension.Type.COLUMN
+import com.metriql.service.model.Dataset
+import com.metriql.service.model.Dataset.Dimension.DimensionValue.Column
+import com.metriql.service.model.Dataset.Dimension.Type.COLUMN
+import com.metriql.util.JsonHelper
 import com.metriql.warehouse.spi.filter.NumberOperatorType
-import com.metriql.warehouse.spi.filter.StringOperatorType
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.trino.spi.type.StandardTypes
 import org.testng.Assert.assertEquals
@@ -30,17 +30,17 @@ abstract class TestSimpleFilter<C> {
             ProjectAuth.singleProject(timezone = ZoneId.of("UTC")), testingServer.dataSource,
             TestDatasetService(
                 listOf(
-                    Model(
+                    Dataset(
                         "filter_tests", false,
-                        Model.Target.initWithTable(null, "rakam_test", "filter_tests"),
-                        null, null, null, Model.MappingDimensions.build(Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP to "_time"), listOf(),
+                        Dataset.Target.initWithTable(null, "rakam_test", "filter_tests"),
+                        null, null, null, Dataset.MappingDimensions.build(Dataset.MappingDimensions.CommonMappings.TIME_SERIES to "_time"), listOf(),
                         listOf(
-                            Model.Dimension("test_int", COLUMN, Column("test_int"), fieldType = FieldType.INTEGER),
-                            Model.Dimension("test_string", COLUMN, Column("test_string"), fieldType = FieldType.STRING),
-                            Model.Dimension("test_double", COLUMN, Column("test_double"), fieldType = FieldType.DOUBLE),
-                            Model.Dimension("test_date", COLUMN, Column("test_date"), fieldType = FieldType.DATE),
-                            Model.Dimension("test_bool", COLUMN, Column("test_bool"), fieldType = FieldType.BOOLEAN),
-                            Model.Dimension("test_timestamp", COLUMN, Column("test_timestamp"), fieldType = FieldType.TIMESTAMP),
+                            Dataset.Dimension("test_int", COLUMN, Column("test_int"), fieldType = FieldType.INTEGER),
+                            Dataset.Dimension("test_string", COLUMN, Column("test_string"), fieldType = FieldType.STRING),
+                            Dataset.Dimension("test_double", COLUMN, Column("test_double"), fieldType = FieldType.DOUBLE),
+                            Dataset.Dimension("test_date", COLUMN, Column("test_date"), fieldType = FieldType.DATE),
+                            Dataset.Dimension("test_bool", COLUMN, Column("test_bool"), fieldType = FieldType.BOOLEAN),
+                            Dataset.Dimension("test_timestamp", COLUMN, Column("test_timestamp"), fieldType = FieldType.TIMESTAMP),
                         ),
                         listOf(),
                     )
@@ -393,43 +393,41 @@ abstract class TestSimpleFilter<C> {
 
     @Test
     fun testComplexFilters3() {
-        val test = listOf(
-            ReportFilter(
-                ReportFilter.Type.GROUP_FILTER,
-                ReportFilter.FilterValue.GroupFilter(
-                    ReportFilter.FilterValue.MetricFilter.Connector.OR,
-                    listOf(
-                        ReportFilter(
-                            ReportFilter.Type.METRIC_FILTER, ReportFilter.FilterValue.MetricFilter(
-                                ReportFilter.FilterValue.MetricFilter.Connector.AND,
-                                listOf(
-                                    ReportFilter.FilterValue.MetricFilter.Filter(
-                                        ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                        ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 1
-                                    ),
-                                    ReportFilter.FilterValue.MetricFilter.Filter(
-                                        ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                        ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 2
-                                    )
+        val test = ReportFilter(
+            ReportFilter.Type.NESTED,
+            ReportFilter.FilterValue.NestedFilter(
+                ReportFilter.FilterValue.MetricFilter.Connector.OR,
+                listOf(
+                    ReportFilter(
+                        ReportFilter.Type.METRIC, ReportFilter.FilterValue.MetricFilter(
+                            ReportFilter.FilterValue.MetricFilter.Connector.AND,
+                            listOf(
+                                ReportFilter.FilterValue.MetricFilter.Filter(
+                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                    ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 1
+                                ),
+                                ReportFilter.FilterValue.MetricFilter.Filter(
+                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                    ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 2
                                 )
                             )
-                        ),
-                        ReportFilter(
-                            ReportFilter.Type.GROUP_FILTER, ReportFilter.FilterValue.GroupFilter(
-                                ReportFilter.FilterValue.MetricFilter.Connector.AND,
-                                listOf(
-                                    ReportFilter(
-                                        ReportFilter.Type.METRIC_FILTER, ReportFilter.FilterValue.MetricFilter(
-                                            ReportFilter.FilterValue.MetricFilter.Connector.OR,
-                                            listOf(
-                                                ReportFilter.FilterValue.MetricFilter.Filter(
-                                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                                    ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "10"
-                                                ),
-                                                ReportFilter.FilterValue.MetricFilter.Filter(
-                                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                                    ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "20"
-                                                )
+                        )
+                    ),
+                    ReportFilter(
+                        ReportFilter.Type.NESTED, ReportFilter.FilterValue.NestedFilter(
+                            ReportFilter.FilterValue.MetricFilter.Connector.AND,
+                            listOf(
+                                ReportFilter(
+                                    ReportFilter.Type.METRIC, ReportFilter.FilterValue.MetricFilter(
+                                        ReportFilter.FilterValue.MetricFilter.Connector.OR,
+                                        listOf(
+                                            ReportFilter.FilterValue.MetricFilter.Filter(
+                                                ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                                ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "10"
+                                            ),
+                                            ReportFilter.FilterValue.MetricFilter.Filter(
+                                                ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
+                                                ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "20"
                                             )
                                         )
                                     )
@@ -440,10 +438,79 @@ abstract class TestSimpleFilter<C> {
                 )
             )
         )
+
+        JsonHelper.read(
+            """
+            {
+              "type" : "nested",
+              "value" : {
+                "connector" : "or",
+                "filters" : [ {
+                  "type" : "metric",
+                  "value" : {
+                    "connector" : "and",
+                    "filters" : [ {
+                      "type" : "dimension",
+                      "field" : {
+                        "name" : "test_int",
+                        "dataset" : "filter_tests",
+                        "relation" : null,
+                        "timeframe" : null
+                      },
+                      "operator" : "EQUALS",
+                      "value" : 1
+                    }, {
+                      "type" : "dimension",
+                      "field" : {
+                        "name" : "test_int",
+                        "dataset" : "filter_tests",
+                        "relation" : null,
+                        "timeframe" : null
+                      },
+                      "operator" : "EQUALS",
+                      "value" : 2
+                    } ]
+                  }
+                }, {
+                  "type" : "nested",
+                  "value" : {
+                    "connector" : "and",
+                    "filters" : [ {
+                      "type" : "metric",
+                      "value" : {
+                        "connector" : "or",
+                        "filters" : [ {
+                          "type" : "dimension",
+                          "field" : {
+                            "name" : "test_string",
+                            "dataset" : "filter_tests",
+                            "relation" : null,
+                            "timeframe" : null
+                          },
+                          "operator" : "EQUALS",
+                          "value" : "10"
+                        }, {
+                          "type" : "dimension",
+                          "field" : {
+                            "name" : "test_string",
+                            "dataset" : "filter_tests",
+                            "relation" : null,
+                            "timeframe" : null
+                          },
+                          "operator" : "EQUALS",
+                          "value" : "20"
+                        } ]
+                      }
+                    } ]
+                  }
+                } ]
+              }
+            }
+        """.trimIndent(), ReportFilter::class.java
+        )
         val context = context()
-        val generatedFilter = test
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
+        val generatedFilter = testingServer.bridge.renderFilter(test, table, context)
+        val encode = JsonHelper.encode(test, true)
         val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
             "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
 //        assertEquals(test.result, testingServer.runQueryFirstRow(query))

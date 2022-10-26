@@ -10,7 +10,7 @@ import com.metriql.db.JSONBSerializable
 import com.metriql.report.ReportType
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.recipe.OrFilters
-import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
+import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -23,24 +23,24 @@ import kotlin.reflect.KClass
 typealias DimensionName = String
 
 fun DimensionName.getMappingDimensionIfValid() = if (this.startsWith(":"))
-    JsonHelper.convert(this.substring(1), Model.MappingDimensions.CommonMappings::class.java)
+    JsonHelper.convert(this.substring(1), Dataset.MappingDimensions.CommonMappings::class.java)
 else null
 
 typealias MeasureName = String
-typealias ModelName = String
+typealias DatasetName = String
 typealias RelationName = String
 
-data class ModelDimension(val modelName: String, val target: Model.Target, val dimension: Model.Dimension)
-data class ModelMeasure(val modelName: String, val target: Model.Target, val measure: Model.Measure, val extraFilters: List<ReportFilter>? = null)
+data class ModelDimension(val datasetName: DatasetName, val target: Dataset.Target, val dimension: Dataset.Dimension)
+data class ModelMeasure(val datasetName: DatasetName, val target: Dataset.Target, val measure: Dataset.Measure, val extraFilters: List<ReportFilter>? = null)
 data class ModelRelation(
-    val sourceModelTarget: Model.Target,
-    val sourceModelName: ModelName,
-    val targetModelTarget: Model.Target,
-    val targetModelName: ModelName,
-    val relation: Model.Relation,
+    val sourceDatasetTarget: Dataset.Target,
+    val sourceDatasetName: DatasetName,
+    val targetDatasetTarget: Dataset.Target,
+    val targetDatasetName: DatasetName,
+    val relation: Dataset.Relation,
 )
 
-data class Model(
+data class Dataset(
     val name: String,
     val hidden: Boolean,
     val target: Target,
@@ -119,7 +119,7 @@ data class Model(
 
         @UppercaseEnum
         enum class CommonMappings(val fieldType: FieldType, val possibleNames: List<String>, val discoveredMeasure: (DimensionName) -> Measure?) {
-            EVENT_TIMESTAMP(FieldType.TIMESTAMP, listOf("_time", "timestamp"), { null }),
+            TIME_SERIES(FieldType.TIMESTAMP, listOf("_time", "timestamp"), { null }),
             INCREMENTAL(FieldType.TIMESTAMP, listOf("server_time", "_server_time"), { null }),
             USER_ID(
                 FieldType.STRING, listOf("_user", "user", "user_id"),
@@ -187,7 +187,6 @@ data class Model(
         val label: String? = null,
         val category: String? = null,
         val primary: Boolean? = null,
-        val pivot: Boolean? = null,
         val suggestions: List<String>? = null,
         val postOperations: List<String>? = null,
         val fieldType: FieldType? = null,
@@ -228,7 +227,7 @@ data class Model(
         init {
             // Validate measure filters
             filters?.forEach { filter ->
-                if (filter.value is ReportFilter.FilterValue.MetricFilter && filter.value.filters.any { it.metricType ==  ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE }) {
+                if (filter.value is ReportFilter.FilterValue.MetricFilter && filter.value.filters.any { it.metric is MeasureValue }) {
                     throw MetriqlException("Only dimension filters are supported inside filters for measure: $name", HttpResponseStatus.BAD_REQUEST)
                 }
             }
@@ -265,7 +264,7 @@ data class Model(
         val relationType: RelationType,
         @JsonAlias("join")
         val joinType: JoinType = JoinType.LEFT_JOIN,
-        val modelName: ModelName,
+        val datasetName: DatasetName,
         val type: Type,
         @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
         val value: RelationValue,

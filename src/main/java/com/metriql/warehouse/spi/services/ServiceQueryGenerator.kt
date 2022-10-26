@@ -5,16 +5,11 @@ import com.hubspot.jinjava.Jinjava
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.ModelName
-import com.metriql.util.MetriqlException
+import com.metriql.service.model.DatasetName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import io.netty.handler.codec.http.HttpResponseStatus
 
 @JSONBSerializable
-interface ServiceReportOptions {
-    @JsonIgnore
-    fun toRecipeQuery(): RecipeQuery
-
+interface ServiceQuery {
     @JsonIgnore
     fun getQueryLimit(): Int? = null
 }
@@ -22,18 +17,13 @@ interface ServiceReportOptions {
 @JSONBSerializable
 interface RecipeQuery {
     @JsonIgnore
-    fun toReportOptions(context: IQueryGeneratorContext): ServiceReportOptions
-
-    @JsonIgnore
-    fun toMaterialize(): MaterializeQuery {
-        throw MetriqlException("Report type doesn't support materialization", HttpResponseStatus.NOT_IMPLEMENTED)
-    }
+    fun toReportOptions(context: IQueryGeneratorContext): ServiceQuery
 }
 
 @JSONBSerializable
 interface MaterializeQuery {
     fun getModelName(): String? = null
-    fun toQuery(modelName: ModelName): RecipeQuery
+    fun toQuery(datasetName: DatasetName): ServiceQuery
 
     companion object {
         fun defaultModelName(modelName: String, reportType: ReportType, name: String): String {
@@ -46,7 +36,7 @@ interface ServiceSupport
 
 interface ServiceQueryDSL
 
-interface ServiceQueryGenerator<T : ServiceQueryDSL, K : ServiceReportOptions, C : ServiceSupport> {
+interface ServiceQueryGenerator<T : ServiceQueryDSL, K : ServiceQuery, C : ServiceSupport> {
     fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: T, options: K): String
     fun supports(): List<C> = listOf()
 

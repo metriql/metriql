@@ -3,6 +3,7 @@ package com.metriql.util;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,8 +26,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Throwables;
+import com.metriql.SealedClassInferenceIntrospector;
 import com.metriql.report.ReportLocator;
 import com.metriql.report.ReportType;
+import com.metriql.report.data.ReportFilter;
+import com.metriql.report.data.ReportMetric;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import kotlin.jvm.JvmClassMappingKt;
 
@@ -231,6 +235,7 @@ public class JsonHelper {
         mapper.registerModule(new SimpleModule("typeInference", Version.unknownVersion()) {
             @Override
             public void setupModule(SetupContext context) {
+//                context.insertAnnotationIntrospector(new SealedClassInferenceIntrospector());
                 context.insertAnnotationIntrospector(new PolymorphicTypeStrAnnotationIntrospector());
                 context.insertAnnotationIntrospector(new PolymorphicTypeIntAnnotationIntrospector());
                 context.insertAnnotationIntrospector(new CamelCaseEnumAnnotationIntrospector(encodeEnumAsSnakeCase));
@@ -239,7 +244,6 @@ public class JsonHelper {
         SimpleModule reportTypeModule = new SimpleModule();
         for (ReportType reportType : ReportLocator.INSTANCE.getList()) {
             reportTypeModule.registerSubtypes(new NamedType(JvmClassMappingKt.getJavaClass(reportType.getConfigClass()), reportType.getSlug()));
-            reportTypeModule.registerSubtypes(new NamedType(JvmClassMappingKt.getJavaClass(reportType.getRecipeClass()), reportType.getSlug()));
         }
         mapper.registerModule(reportTypeModule);
 
@@ -275,9 +279,9 @@ public class JsonHelper {
         protected TypeResolverBuilder<?> typeResolver(String property, JsonTypeInfo.As inclusion) {
             if (property != null) {
                 StdTypeResolverBuilder b = new StdTypeResolverBuilder();
-                b = b.init(JsonTypeInfo.Id.NAME, null);
-                b = b.inclusion(inclusion);
-                b = b.typeProperty(property);
+                b.init(JsonTypeInfo.Id.NAME, null);
+                b.inclusion(inclusion);
+                b.typeProperty(property);
                 return b;
             }
             return null;

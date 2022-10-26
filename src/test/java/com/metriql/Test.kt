@@ -1,49 +1,52 @@
 package com.metriql
 
+import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator
 import com.metriql.db.FieldType
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.IsMetriqlQueryVisitor
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
+import com.metriql.service.model.DatasetName
+import com.metriql.service.model.DimensionName
 import com.metriql.util.JsonHelper
+import com.metriql.util.PolymorphicTypeStr
+import com.metriql.util.SealedClassInference
+import com.metriql.util.StrValueEnum
+import com.metriql.util.UppercaseEnum
+import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
-import com.metriql.warehouse.spi.filter.NumberOperatorType
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
 import io.trino.sql.MetriqlSqlFormatter
 import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.parser.SqlParser
+import org.intellij.lang.annotations.Language
 import org.openapitools.codegen.ClientOptInput
-import org.openapitools.codegen.CodegenConfig
 import org.openapitools.codegen.DefaultGenerator
-import org.openapitools.codegen.cmd.Generate
-import org.openapitools.codegen.cmd.GlobalOptions
-import org.openapitools.codegen.cmd.OpenApiGeneratorCommand
-import org.openapitools.codegen.languages.OpenAPIGenerator
 import org.openapitools.codegen.languages.TypeScriptAxiosClientCodegen
-import org.openapitools.codegen.languages.TypeScriptClientCodegen
 import org.testng.annotations.Test
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.reflect.KClass
 
 class Test {
     val sqlParser = SqlParser()
 
-    val models = listOf(
+    val datasets = listOf(
         Recipe.RecipeModel(
             "tbl1",
             false,
             null,
             "select 2 as a, 4 as b",
             null,
-            measures = mapOf("sum_of_a" to Recipe.RecipeModel.Metric.RecipeMeasure(aggregation = Model.Measure.AggregationType.SUM, dimension = "a")),
+            measures = mapOf("sum_of_a" to Recipe.RecipeModel.Metric.RecipeMeasure(aggregation = Dataset.Measure.AggregationType.SUM, dimension = "a")),
             dimensions = mapOf("a" to Recipe.RecipeModel.Metric.RecipeDimension(column = "a", type = FieldType.STRING)),
             relations = mapOf("tbl2" to Recipe.RecipeModel.RecipeRelation(source = "a", target = "a", model = "tbl2"))
         ),
@@ -89,116 +92,6 @@ class Test {
     }
 
     @Test
-    fun printSegmentationConversion() {
-
-        val a = JsonHelper.read(
-            """
-           {
-             "modelName": "da69fe46-d74a-4ee0-bf79-d0bc621f017d",
-             "measures": [],
-             "dimensions": [],
-             "filters": {
-                 "type": "groupFilter",
-                 "connector": "and",
-                 "value":  {
-                     "type": "metricFilter",
-                     "value": {
-                       "connector": "or",
-                       "filters": [
-                         {
-                           "metricType": "dimension",
-                           "metricValue": {
-                             "name": "RAMP_ID",
-                             "relationName": null,
-                             "modelName": "da69fe46-d74a-4ee0-bf79-d0bc621f017d"
-                           },
-                           "valueType": "string",
-                           "operator": "in",
-                           "value": []
-                         },
-                         {
-                             "metricType": "dimension",
-                             "metricValue": {
-                                 "name": "CAR_MAKE",
-                                 "relationName": null,
-                                 "modelName": "da69fe46-d74a-4ee0-bf79-d0bc621f017d"
-                               },
-                           "valueType": "string",
-                           "operator": "in",
-                           "value": []
-                         }
-                       ]
-                     }
-                 }
-               },
-               {
-                 "type": "metricFilter",
-                 "value": {
-                   "connector": "and",
-                   "filters": [
-                     {  
-                       "metricType": "dimension",
-                       "metricValue": {
-                         "name": "GENDER",
-                         "relationName": null,
-                         "modelName": "da69fe46-d74a-4ee0-bf79-d0bc621f017d"
-                       },
-                       "valueType": "string",
-                       "operator": "in",
-                       "value": []
-                     }
-                   ]
-                 }
-               }
-             ]
-           }
-        """.trimIndent(), SegmentationReportOptions::class.java
-        )
-
-        println(JsonHelper.encode(a, true))
-        println(JsonHelper.encode(a.toRecipeQuery()))
-
-        val clean = """{
-               "dataset":"da69fe46-d74a-4ee0-bf79-d0bc621f017d",
-               "measures":[],
-               "dimensions":[],
-               "filters":{  
-                  {
-                     "dimension":"RAMP_ID",
-                     "operator":"in",
-                     "value":[]
-                  },
-                  {
-                     "dimension":"CAR_MAKE",
-                     "operator":"in",
-                     "value":[]
-                  },
-                  {
-                     "dimension":"GENDER",
-                     "operator":"in",
-                     "value":[]
-                  }
-               ]
-            }"""
-                }
-
-    @Test
-    fun segmentationRewriter() {
-        val stmt = sqlParser.createStatement(metriqlSql, ParsingOptions())
-        val context = QueryGeneratorContext(
-            ProjectAuth.singleProject(null),
-            null!!,
-            null!!,
-            JinjaRendererService(),
-            null,
-            null,
-            null
-        )
-        val output = MetriqlSqlFormatter.formatSql(stmt, null!!, context, null)
-        println(output)
-    }
-
-    @Test
     fun segmentatisonRewriter() {
 
         val readText = File("/Users/bkabak/Code/rakam-subproject/metriql/static/schema/openapi.json").bufferedReader().readText()
@@ -209,5 +102,42 @@ class Test {
         typeScriptAxiosClientCodegen.outputDir = "/Users/bkabak/Code/rakam-subproject/rakam-bi-backend/metriql/client"
         val generate = DefaultGenerator().opts(ClientOptInput().openAPI(api).config(typeScriptAxiosClientCodegen)).generate()
         println(generate)
+    }
+
+    @Test
+    fun testName() {
+        @Language("JSON5")
+        val s = """
+            {
+              "@type": "dimension",
+              "metric": {
+                "name": "tets",
+                "dataset": "test"
+              }
+            }
+        """
+        val read = JsonHelper.read(s.trimIndent(), Selam::class.java)
+        println(read)
+    }
+
+    data class Selam(
+//        @SealedClassInference
+        val metric: ReportMetric,
+    ) {
+        @UppercaseEnum
+        enum class MetricType(private val clazz: KClass<out ReportMetric>) : StrValueEnum {
+            DIMENSION(ReportMetric.ReportDimension::class);
+
+            override fun getValueClass() = clazz.java
+        }
+
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+        sealed class ReportMetric {
+            @JsonTypeName("dimension")
+            data class ReportDimension(
+                val name: DimensionName,
+                val dataset: DatasetName
+            ) : ReportMetric()
+        }
     }
 }

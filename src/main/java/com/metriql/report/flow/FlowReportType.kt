@@ -7,7 +7,6 @@ class FlowReportTypeProxy : ReportType by FlowReportType, ReportTypeProxy(FlowRe
 
 object FlowReportType : ReportType {
     override val slug = "flow"
-    override val configClass = FlowReportOptions::class
-    override val recipeClass = FlowReportOptions::class
+    override val configClass = FlowQuery::class
     override val serviceClass = FlowService::class
 }

@@ -17,7 +17,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.hubspot.jinjava.Jinjava;
-import com.metriql.service.model.Model;
+import com.metriql.service.model.Dataset;
 import com.metriql.warehouse.presto.PrestoMetriqlBridge.PrestoReverseAggregation;
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge;
 import com.metriql.warehouse.spi.function.RFunction;
@@ -29,7 +29,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContext.ADHOC;
 import static io.trino.sql.MetriqlSqlFormatter.formatSql;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -277,7 +276,7 @@ public final class MetriqlExpressionFormatter {
                 try {
                     PrestoReverseAggregation reverseAggregation = PrestoReverseAggregation.valueOf(name);
 
-                    Model.Measure.AggregationType aggregation;
+                    Dataset.Measure.AggregationType aggregation;
                     if (node.isDistinct()) {
                         aggregation = reverseAggregation.getDistinctAggregation();
                     } else {

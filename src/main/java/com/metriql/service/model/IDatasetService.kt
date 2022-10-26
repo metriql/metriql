@@ -3,13 +3,13 @@ package com.metriql.service.model
 import com.metriql.service.auth.ProjectAuth
 
 interface IDatasetService {
-    fun list(auth: ProjectAuth, target: Model.Target? = null): List<Model>
-    fun getDataset(auth: ProjectAuth, modelName: ModelName): Model?
+    fun list(auth: ProjectAuth, target: Dataset.Target? = null): List<Dataset>
+    fun getDataset(auth: ProjectAuth, datasetName: DatasetName): Dataset?
     fun update(auth: ProjectAuth)
 
-    fun listDatasetNames(auth: ProjectAuth): List<DatasetName> {
-        return list(auth).map { DatasetName(it.name, it.label ?: it.name) }.toList()
+    fun listDatasetNames(auth: ProjectAuth): List<DatasetLabel> {
+        return list(auth).map { DatasetLabel(it.name, it.label ?: it.name) }.toList()
     }
 
-    data class DatasetName(val name: String, val label: String)
+    data class DatasetLabel(val name: String, val label: String)
 }

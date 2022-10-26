@@ -10,7 +10,7 @@ import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
 import com.metriql.service.model.UpdatableDatasetService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -75,7 +75,7 @@ class DbtModelService @Inject constructor(
 
                 val renderedQuery = context.datasource.warehouse.bridge.generateQuery(context.viewModels, rawRenderedSql)
 
-                val eventTimestamp = model.mappings?.get(EVENT_TIMESTAMP)
+                val eventTimestamp = model.mappings?.get(TIME_SERIES)
 
                 val (materialized, renderedSql) = if (eventTimestamp != null) {
                     val eventTimestampDim = materialize.value.dimensions?.find { d -> d.name == eventTimestamp && d.relation == null }
@@ -83,7 +83,7 @@ class DbtModelService @Inject constructor(
                     val eventDimensionAlias = context.getDimensionAlias(
                         eventTimestamp,
                         null,
-                        eventTimestampDim.postOperation
+                        eventTimestampDim.timeframe
                     )
 
                     val renderedEventTimestampDimension = dataSource.warehouse.bridge.renderDimension(

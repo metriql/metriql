@@ -2,14 +2,14 @@ package com.metriql.tests
 
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.Dataset
+import com.metriql.service.model.DatasetName
 
-open class TestDatasetService(private var models: List<Model> = listOf()) : IDatasetService {
+open class TestDatasetService(private var datasets: List<Dataset> = listOf()) : IDatasetService {
 
-    override fun list(auth: ProjectAuth, target: Model.Target?) = models
+    override fun list(auth: ProjectAuth, target: Dataset.Target?) = datasets
 
-    override fun getDataset(auth: ProjectAuth, modelName: ModelName) = models.find { modelName.toRegex().matches(it.name) }
+    override fun getDataset(auth: ProjectAuth, datasetName: DatasetName) = datasets.find { datasetName.toRegex().matches(it.name) }
 
     override fun update(auth: ProjectAuth) {
         TODO("not implemented")

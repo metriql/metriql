@@ -1,9 +1,9 @@
 package com.metriql.service.model
 
 import com.metriql.db.FieldType
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.DEVICE_ID
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.DEVICE_ID
+import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.util.MetriqlException
 import com.metriql.util.TextUtil.toMetriqlConventionalName
 import com.metriql.util.serializableName
@@ -17,22 +17,22 @@ import java.util.logging.Logger
 
 class DiscoverService(private val dataSource: DataSource) {
 
-    fun discoverMeasuresFromScratch(dimensions: List<Model.Dimension>, mappings: Model.MappingDimensions): List<Model.Measure> {
+    fun discoverMeasuresFromScratch(dimensions: List<Dataset.Dimension>, mappings: Dataset.MappingDimensions): List<Dataset.Measure> {
         // This default applies for all
-        val measures = mutableListOf<Model.Measure>()
+        val measures = mutableListOf<Dataset.Measure>()
         measures.add(
-            Model.Measure(
+            Dataset.Measure(
                 "count_of_rows",
                 null,
                 null,
                 null,
-                Model.Measure.Type.COLUMN,
-                Model.Measure.MeasureValue.Column(Model.Measure.AggregationType.COUNT, null),
+                Dataset.Measure.Type.COLUMN,
+                Dataset.Measure.MeasureValue.Column(Dataset.Measure.AggregationType.COUNT, null),
                 null, null
             )
         )
 
-        Model.MappingDimensions.CommonMappings.values()
+        Dataset.MappingDimensions.CommonMappings.values()
             .mapNotNull { mapping -> mappings.get(mapping)?.let { mapping.discoveredMeasure.invoke(it) } }
             .forEach {
                 measures.add(it)
@@ -40,17 +40,17 @@ class DiscoverService(private val dataSource: DataSource) {
 
         // Add numeric dimensions of SUM(col)
         dimensions
-            .filter { it.type == Model.Dimension.Type.COLUMN }
+            .filter { it.type == Dataset.Dimension.Type.COLUMN }
             .filter { it.fieldType?.isNumeric == true }
             .forEach {
                 measures.add(
-                    Model.Measure(
+                    Dataset.Measure(
                         toMetriqlConventionalName("sum_of_${it.name}"),
                         null,
                         it.description,
                         null,
-                        Model.Measure.Type.DIMENSION,
-                        Model.Measure.MeasureValue.Dimension(Model.Measure.AggregationType.SUM, it.name),
+                        Dataset.Measure.Type.DIMENSION,
+                        Dataset.Measure.MeasureValue.Dimension(Dataset.Measure.AggregationType.SUM, it.name),
                         null, null
                     )
                 )
@@ -59,7 +59,7 @@ class DiscoverService(private val dataSource: DataSource) {
         return measures
     }
 
-    fun discoverDimensionFieldTypes(context: IQueryGeneratorContext, modelName: String, modelTarget: Model.Target, dimensions: List<Model.Dimension>): List<Model.Dimension> {
+    fun discoverDimensionFieldTypes(context: IQueryGeneratorContext, modelName: String, datasetTarget: Dataset.Target, dimensions: List<Dataset.Dimension>): List<Dataset.Dimension> {
         val dimensionsWithoutFieldType = dimensions
             .filter { it.fieldType == null && it.hidden != true }
 
@@ -68,7 +68,7 @@ class DiscoverService(private val dataSource: DataSource) {
         val query = dataSource.warehouse.bridge.generateDimensionMetaQuery(
             context,
             modelName,
-            modelTarget,
+            datasetTarget,
             dimensionsWithoutFieldType
         )
 
@@ -86,17 +86,17 @@ class DiscoverService(private val dataSource: DataSource) {
         }
     }
 
-    fun discoverMappingDimensions(dimensions: List<Model.Dimension>): Model.MappingDimensions {
-        val mappings = Model.MappingDimensions()
+    fun discoverMappingDimensions(dimensions: List<Dataset.Dimension>): Dataset.MappingDimensions {
+        val mappings = Dataset.MappingDimensions()
 
         val sortedDimensions = dimensions.sortedBy { it.name }
-        Model.MappingDimensions.CommonMappings.values().forEach { dim ->
+        Dataset.MappingDimensions.CommonMappings.values().forEach { dim ->
             val allAvailableDimensions = sortedDimensions.filter { dimension -> dimension.fieldType == dim.fieldType }
             val fittingDimension = allAvailableDimensions.find { dim.possibleNames.contains(it.name) }
             if (fittingDimension != null) {
                 mappings.put(dim, fittingDimension.name)
             } else {
-                if (dim == EVENT_TIMESTAMP && allAvailableDimensions.size == 1) {
+                if (dim == TIME_SERIES && allAvailableDimensions.size == 1) {
                     mappings.put(dim, allAvailableDimensions[0].name)
                 }
             }
@@ -106,7 +106,7 @@ class DiscoverService(private val dataSource: DataSource) {
     }
 
     companion object {
-        fun fillDefaultPostOperations(dimension: Model.Dimension, metriqlBridge: WarehouseMetriqlBridge): List<String>? {
+        fun fillDefaultPostOperations(dimension: Dataset.Dimension, metriqlBridge: WarehouseMetriqlBridge): List<String>? {
             return if (dimension.fieldType != null && dimension.postOperations?.isEmpty() == true) {
                 when (dimension.fieldType) {
                     FieldType.TIMESTAMP -> {
@@ -129,12 +129,12 @@ class DiscoverService(private val dataSource: DataSource) {
             }
         }
 
-        fun createDimensionsFromColumns(columns: List<TableSchema.Column>): List<Model.Dimension> {
+        fun createDimensionsFromColumns(columns: List<TableSchema.Column>): List<Dataset.Dimension> {
             return columns.map {
-                val type = if (it.sql == null) Model.Dimension.Type.COLUMN else Model.Dimension.Type.SQL
-                val value = if (it.sql == null) Model.Dimension.DimensionValue.Column(it.name) else Model.Dimension.DimensionValue.Sql(it.sql)
+                val type = if (it.sql == null) Dataset.Dimension.Type.COLUMN else Dataset.Dimension.Type.SQL
+                val value = if (it.sql == null) Dataset.Dimension.DimensionValue.Column(it.name) else Dataset.Dimension.DimensionValue.Sql(it.sql)
                 val dimensionName = toMetriqlConventionalName(it.name)
-                Model.Dimension(
+                Dataset.Dimension(
                     dimensionName,
                     type,
                     value,
@@ -145,7 +145,6 @@ class DiscoverService(private val dataSource: DataSource) {
                         else -> null
                     },
                     null,
-                    null,
                     false,
                     null,
                     null,
@@ -154,9 +153,9 @@ class DiscoverService(private val dataSource: DataSource) {
             }
         }
 
-        fun createModelFromTable(name: String, tableSchema: TableSchema, target: Model.Target): Model {
+        fun createModelFromTable(name: String, tableSchema: TableSchema, target: Dataset.Target): Dataset {
             val dimensions = createDimensionsFromColumns(tableSchema.columns)
-            return Model(
+            return Dataset(
                 name,
                 false,
                 target,
@@ -171,7 +170,7 @@ class DiscoverService(private val dataSource: DataSource) {
             )
         }
 
-        private fun discoverMapping(dimensions: List<Model.Dimension>): Model.MappingDimensions {
+        private fun discoverMapping(dimensions: List<Dataset.Dimension>): Dataset.MappingDimensions {
             val userId = dimensions.find { it.name.contains("user") && it.fieldType == FieldType.STRING }
             val eventTimestamp = dimensions.find {
                 it.name.contains("time") && it.fieldType == FieldType.TIMESTAMP ||
@@ -181,8 +180,8 @@ class DiscoverService(private val dataSource: DataSource) {
                 it.name.contains("device") && it.fieldType == FieldType.STRING
             }
 
-            val mappings = Model.MappingDimensions()
-            eventTimestamp?.name?.let { mappings.put(EVENT_TIMESTAMP, it) }
+            val mappings = Dataset.MappingDimensions()
+            eventTimestamp?.name?.let { mappings.put(TIME_SERIES, it) }
             userId?.name?.let { mappings.put(USER_ID, it) }
             deviceId?.name?.let { mappings.put(DEVICE_ID, it) }
 

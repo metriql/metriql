@@ -32,7 +32,7 @@ import com.metriql.service.jdbc.QueryService
 import com.metriql.service.jdbc.StatementService
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.DatasetName
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
@@ -43,7 +43,7 @@ import com.metriql.util.logging.LogService
 import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.epoll.Epoll
 import io.netty.channel.epoll.EpollEventLoopGroup
@@ -91,7 +91,7 @@ object HttpServer {
         val reportService = ReportService(
             deployment.getDatasetService(), JinjaRendererService(), queryTaskGenerator, services, this::getAttributes,
             object : DependencyFetcher {
-                override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
+                override fun fetch(context: IQueryGeneratorContext, model: DatasetName): Recipe.Dependencies {
                     return Recipe.Dependencies()
                 }
             }
@@ -130,7 +130,7 @@ object HttpServer {
         }
     }
 
-    private fun getReportServices(datasetService: IDatasetService): Map<ReportType, IAdHocService<out ServiceReportOptions>> {
+    private fun getReportServices(datasetService: IDatasetService): Map<ReportType, IAdHocService<out ServiceQuery>> {
         // we don't use a dependency injection system to speed up the initial start
         val segmentationService = SegmentationService()
         return mapOf(

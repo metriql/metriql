@@ -7,7 +7,6 @@ class FunnelReportTypeProxy : ReportType by FunnelReportType, ReportTypeProxy(Fu
 
 object FunnelReportType : ReportType {
     override val slug = "funnel"
-    override val configClass = FunnelReportOptions::class
-    override val recipeClass = FunnelRecipeQuery::class
+    override val configClass = FunnelQuery::class
     override val serviceClass = FunnelService::class
 }

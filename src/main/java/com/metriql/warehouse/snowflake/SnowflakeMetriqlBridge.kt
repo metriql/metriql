@@ -6,7 +6,7 @@ import com.metriql.report.flow.FlowReportType
 import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.retention.RetentionReportType
 import com.metriql.report.segmentation.SegmentationReportType
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -62,8 +62,8 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         override fun dimensionBeforePostOperation(
             context: IQueryGeneratorContext,
             metricPositionType: WarehouseMetriqlBridge.MetricPositionType,
-            dimension: Model.Dimension,
-            postOperation: ReportMetric.PostOperation?,
+            dimension: Dataset.Dimension,
+            timeframe: ReportMetric.Timeframe?,
             dimensionValue: String,
         ): String {
             val zoneId = context.auth.timezone
@@ -79,8 +79,8 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         }
     }
 
-    override fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
-        return if (aggregationType == Model.Measure.AggregationType.APPROXIMATE_UNIQUE) {
+    override fun performAggregation(columnValue: String, aggregationType: Dataset.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
+        return if (aggregationType == Dataset.Measure.AggregationType.APPROXIMATE_UNIQUE) {
             when (context) {
                 ADHOC -> "approx_count_distinct($columnValue)"
                 INTERMEDIATE_ACCUMULATE -> "hll_accumulate($columnValue)"

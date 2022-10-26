@@ -3,7 +3,7 @@ package com.metriql.report
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats.State.FINISHED
 import com.metriql.report.data.ReportFilter
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.audit.MetriqlEvents
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
@@ -15,18 +15,18 @@ import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import java.util.UUID
 
 class ReportService(
     private val datasetService: IDatasetService,
     private val rendererService: JinjaRendererService,
     private val queryTaskGenerator: SqlQueryTaskGenerator,
-    val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>,
+    val services: Map<ReportType, IAdHocService<out ServiceQuery>>,
     private val userAttributeFetcher: UserAttributeFetcher,
     private val dependencyFetcher: DependencyFetcher,
 ) {
-    fun getServiceForReportType(reportType: ReportType) = services.getValue(reportType) as IAdHocService<in ServiceReportOptions>
+    fun getServiceForReportType(reportType: ReportType) = services.getValue(reportType) as IAdHocService<in ServiceQuery>
 
     fun createContext(auth: ProjectAuth, dataSource: DataSource): QueryGeneratorContext {
         return QueryGeneratorContext(
@@ -40,7 +40,6 @@ class ReportService(
                     auth,
                     context,
                     options.toReportOptions(context),
-                    listOf(),
                 ).query
             },
             dependencyFetcher = dependencyFetcher,
@@ -48,12 +47,12 @@ class ReportService(
         )
     }
 
-    fun <T : ServiceReportOptions> queryTask(
+    fun <T : ServiceQuery> queryTask(
         auth: ProjectAuth,
         reportType: ReportType,
         dataSource: DataSource,
         options: T,
-        reportFilters: List<ReportFilter> = listOf(),
+        reportFilters: ReportFilter? = null,
         isBackgroundTask: Boolean = false,
         useCache: Boolean = true,
         context: IQueryGeneratorContext = createContext(auth, dataSource)
@@ -66,7 +65,7 @@ class ReportService(
                 reportFilters,
             )
 
-            val queryOptions = sqlQueryOptions ?: SqlReportOptions.QueryOptions(options.getQueryLimit() ?: DEFAULT_LIMIT, null, null, useCache)
+            val queryOptions = sqlQueryOptions ?: SqlQuery.QueryOptions(options.getQueryLimit() ?: DEFAULT_LIMIT, null, null, useCache)
             return queryTaskGenerator.createTask(
                 auth,
                 context,

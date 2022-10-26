@@ -1,6 +1,6 @@
 package com.metriql.warehouse.spi.services.segmentation
 
-import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -19,9 +19,9 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
             "tableAlias" to queryDSL.tableAlias,
             "joins" to queryDSL.joins,
             "limit" to (queryDSL.limit?.let { "LIMIT $it" } ?: ""),
-            "whereFilters" to queryDSL.whereFilters,
+            "whereFilter" to queryDSL.whereFilter,
             "groups" to queryDSL.groupIdx,
-            "havingFilters" to queryDSL.havingFilters,
+            "havingFilter" to queryDSL.havingFilter,
             "orderBy" to queryDSL.orderByIdx,
             /*
             * If query includes view models (WITH view as ().., ne should discard the WITH prefix while rendering the query),
@@ -34,7 +34,7 @@ open class ANSISQLSegmentationQueryGenerator : SegmentationQueryGenerator {
         )
     }
 
-    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Segmentation, options: SegmentationReportOptions): String {
+    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Segmentation, options: SegmentationQuery): String {
         return jinja.render(standard.trimIndent(), getMap(context, queryDSL)).trimIndent()
     }
 

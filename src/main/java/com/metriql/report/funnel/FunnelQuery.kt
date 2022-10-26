@@ -3,17 +3,15 @@ package com.metriql.report.funnel
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.metriql.report.data.Dataset
-import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.model.DimensionName
-import com.metriql.service.model.RelationName
 import com.metriql.util.RPeriod
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.WarehouseQueryTask
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import java.time.Duration
 
-data class FunnelReportOptions(
+data class FunnelQuery(
     val steps: List<Dataset>,
     val excludedSteps: List<ExcludedStep>?,
     val dimension: FunnelDimension?,
@@ -22,25 +20,10 @@ data class FunnelReportOptions(
     val strictlyOrdered: Boolean,
     val approximate: Boolean,
     val defaultDateRange: RPeriod? = null
-) : ServiceReportOptions {
-    override fun toRecipeQuery(): FunnelRecipeQuery {
-        return FunnelRecipeQuery(steps.map { it.toRecipe() }, excludedSteps?.map { it.toRecipe() }, dimension?.toRecipe(), window, connector, strictlyOrdered, approximate)
-    }
+) : ServiceQuery {
 
-    // If range null then all steps
-    data class ExcludedStep(val start: Int?, val step: Dataset) {
-        @JsonIgnore
-        fun toRecipe(): FunnelRecipeQuery.ExcludedStep {
-            return FunnelRecipeQuery.ExcludedStep(start, step.toRecipe())
-        }
-    }
-
-    data class FunnelDimension(val step: Int, val name: DimensionName, val relationName: RelationName?, val postOperation: ReportMetric.PostOperation?) {
-        @JsonIgnore
-        fun toRecipe(): FunnelRecipeQuery.FunnelDimension {
-            return FunnelRecipeQuery.FunnelDimension(step, Recipe.FieldReference(name, relationName, postOperation?.value?.name))
-        }
-    }
+    data class ExcludedStep(val start: Int?, val step: Dataset)
+    data class FunnelDimension(val step: Int, val reference : Recipe.FieldReference)
 
     @UppercaseEnum
     enum class WindowType(val duration: Duration) {

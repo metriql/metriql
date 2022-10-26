@@ -5,13 +5,11 @@ SELECT {% for field in projections %}
 SELECT {% for field in nonWindowProjections %}
     {{field.value}}{% if not loop.last %},{% endif %}{% endfor %}
 FROM {{tableReference}}
-{% for join in joins %} {{join}} {% endfor %}{% if whereFilters %}
-    WHERE {% for whereFilter in whereFilters %}
-        {% if not loop.first %}AND {% endif %}{{whereFilter}}{% endfor %}{% endif %}{% if groups %}
+{% for join in joins %} {{join}} {% endfor %}{% if whereFilter %}
+    WHERE {{whereFilter}}{% endif %}{% if groups %}
     GROUP BY
     {% for group in groups %}{{group}}{% if not loop.last %}, {% endif %} {% endfor %}{% endif %}{% if havingFilters %}
-    HAVING {% for havingFilter in havingFilters %}
-        {% if not loop.first %}AND {% endif %} {{havingFilter}}{% endfor %}{% endif %}{% if orderBy %}
+    HAVING {{havingFilter}}{% endif %}{% if orderBy %}
     ORDER BY {% for item in orderBy %}
         {{item}}{% if not loop.last %},{% endif %} {% endfor %}{% endif %}
 {{ limit }}

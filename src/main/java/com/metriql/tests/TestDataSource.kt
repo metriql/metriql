@@ -3,7 +3,7 @@ package com.metriql.tests
 import com.metriql.db.FieldType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.tests.Helper.assetEqualsCaseInsensitive
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import org.testng.Assert.assertEquals
@@ -65,18 +65,18 @@ abstract class TestDataSource<T> {
 
     @Test
     open fun `test generate sql reference`() {
-        val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table("a", "b", "c"))
-        val sqlTarget = testingServer.dataSource.sqlReferenceForTarget(modelTarget, "model") { "" }
+        val datasetTarget = Dataset.Target(Dataset.Target.Type.TABLE, Dataset.Target.TargetValue.Table("a", "b", "c"))
+        val sqlTarget = testingServer.dataSource.sqlReferenceForTarget(datasetTarget, "model") { "" }
         assertEquals("\"a\".\"b\".\"c\" AS \"model\"", sqlTarget)
     }
 
     @Test
     open fun `test fill defaults`() {
-        val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table(null, null, "dumb_table"))
-        val filledModelTarget = testingServer.dataSource.fillDefaultsToTarget(modelTarget).value as Model.Target.TargetValue.Table
+        val datasetTarget = Dataset.Target(Dataset.Target.Type.TABLE, Dataset.Target.TargetValue.Table(null, null, "dumb_table"))
+        val filledDatasetTarget = testingServer.dataSource.fillDefaultsToTarget(datasetTarget).value as Dataset.Target.TargetValue.Table
         val config = testingServer.dataSource.config
-        assertEquals(filledModelTarget.database, config.warehouseDatabase())
-        assertEquals(filledModelTarget.schema, config.warehouseSchema())
+        assertEquals(filledDatasetTarget.database, config.warehouseDatabase())
+        assertEquals(filledDatasetTarget.schema, config.warehouseSchema())
     }
 
     @Test

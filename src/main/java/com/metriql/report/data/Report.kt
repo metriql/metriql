@@ -2,7 +2,7 @@ package com.metriql.report.data
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.metriql.report.ReportType
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import java.time.Instant
 
 data class Report(
@@ -16,7 +16,7 @@ data class Report(
     val permission: Dashboard.Permission,
     val modelCategory: String?,
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
-    val options: ServiceReportOptions
+    val options: ServiceQuery
 ) {
     data class ReportUser(val id: Int, val name: String?, val email: String?)
 }

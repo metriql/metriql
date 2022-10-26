@@ -20,7 +20,7 @@ import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import io.netty.handler.codec.http.HttpResponseStatus
 import java.time.Duration
 import java.time.Instant
@@ -93,12 +93,12 @@ data class Dashboard(
         fun toRecipeDefinition(): RecipeFilterSchema {
             return when (value) {
                 is ReportMetric.ReportDimension -> {
-                    val dimension = FieldReference(value.name, JsonHelper.convert(value.postOperation, String::class.java))
-                    RecipeFilterSchema(value.modelName, dimension, null, operation, defaultValue, isRequired)
+                    val dimension = FieldReference(value.name, JsonHelper.convert(value.timeframe, String::class.java))
+                    RecipeFilterSchema(value.dataset, dimension, null, operation, defaultValue, isRequired)
                 }
                 is ReportMetric.ReportMappingDimension -> {
                     val dimension =
-                        FieldReference(JsonHelper.convert(value.name, String::class.java), JsonHelper.convert(value.postOperation, String::class.java))
+                        FieldReference(JsonHelper.convert(value.name, String::class.java), JsonHelper.convert(value.timeframe, String::class.java))
                     RecipeFilterSchema(null, null, dimension, operation, defaultValue, isRequired)
                 }
                 else -> throw IllegalStateException()
@@ -109,10 +109,10 @@ data class Dashboard(
         fun toFilter(context: IQueryGeneratorContext): MetricFilter {
             return when (value) {
                 is ReportMetric.ReportDimension -> {
-                    val dimension = context.getModelDimension(value.name, value.modelName!!)
+                    val dimension = context.getModelDimension(value.name, value.dataset!!)
                     val valueType = dimension.dimension.fieldType ?: FieldType.UNKNOWN
                     val operator = valueType.operatorClass?.javaObjectType?.enumConstants?.find { it.name == operation }
-                    val metricValue = ReportMetric.ReportDimension(value.name, value.modelName, null, null)
+                    val metricValue = ReportMetric.ReportDimension(value.name, value.dataset, null, null)
 
                     val filter = if (operator != null) {
                         MetricFilter.Filter(DIMENSION, metricValue, operator.name, defaultValue)
@@ -169,7 +169,7 @@ data class Dashboard(
         val component: String,
         val reportType: ReportType,
         @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
-        val reportOptions: ServiceReportOptions,
+        val reportOptions: ServiceQuery,
         val modelCategory: String?,
     ) {
         init {

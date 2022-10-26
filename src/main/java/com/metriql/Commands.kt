@@ -23,7 +23,7 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.DatasetName
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil
 import com.metriql.warehouse.WarehouseLocator
@@ -136,7 +136,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val service = DbtModelService(
                 JinjaRendererService(), null,
                 object : DependencyFetcher {
-                    override fun fetch(context: IQueryGeneratorContext, model: ModelName): Recipe.Dependencies {
+                    override fun fetch(context: IQueryGeneratorContext, model: DatasetName): Recipe.Dependencies {
                         return dependencies
                     }
                 }

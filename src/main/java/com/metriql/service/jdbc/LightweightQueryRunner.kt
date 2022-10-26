@@ -2,7 +2,7 @@ package com.metriql.service.jdbc
 
 import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.report.sql.SqlReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService
@@ -52,7 +52,7 @@ class LightweightQueryRunner(private val datasetService: IDatasetService) {
                 Status.FINISHED -> QueryResult.QueryStats.State.FINISHED
                 Status.FAILED -> QueryResult.QueryStats.State.FINISHED
             }
-            val info = QueryResult.QueryStats.QueryInfo(SqlReportType, SqlReportOptions(sql, null, null, null), sql)
+            val info = QueryResult.QueryStats.QueryInfo(SqlReportType, SqlQuery(sql, null, null, null), sql)
             return QueryResult.QueryStats(state, info)
         }
 

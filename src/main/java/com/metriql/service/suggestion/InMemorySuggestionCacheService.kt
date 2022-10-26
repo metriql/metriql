@@ -4,7 +4,7 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheBuilderSpec
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.DimensionName
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.DatasetName
 import com.metriql.util.JsonHelper
 import java.time.Instant
 
@@ -12,22 +12,22 @@ open class InMemorySuggestionCacheService(spec: CacheBuilderSpec) : SuggestionCa
     private val cache = CacheBuilder.from(spec)
         .weigher<CacheKey, CacheValue> { _, value -> value.calculateSize() }
         .build<CacheKey, CacheValue>()
-    open fun get(auth: ProjectAuth, modelName: ModelName, dimensionName: DimensionName): CacheValue? {
-        return cache.getIfPresent(CacheKey(auth.projectId, modelName, dimensionName))
+    open fun get(auth: ProjectAuth, datasetName: DatasetName, dimensionName: DimensionName): CacheValue? {
+        return cache.getIfPresent(CacheKey(auth.projectId, datasetName, dimensionName))
     }
 
-    override fun getCommon(auth: ProjectAuth, modelName: ModelName, dimensionName: DimensionName): SuggestionCacheService.Suggestion? {
-        val items = get(auth, modelName, dimensionName) ?: return null
+    override fun getCommon(auth: ProjectAuth, datasetName: DatasetName, dimensionName: DimensionName): SuggestionCacheService.Suggestion? {
+        val items = get(auth, datasetName, dimensionName) ?: return null
         return SuggestionCacheService.Suggestion(items.values.take(20), items.lastUpdated)
     }
 
-    override fun search(auth: ProjectAuth, modelName: ModelName, dimensionName: DimensionName, filter: String): SuggestionCacheService.Suggestion? {
-        val items = get(auth, modelName, dimensionName) ?: return null
+    override fun search(auth: ProjectAuth, datasetName: DatasetName, dimensionName: DimensionName, filter: String): SuggestionCacheService.Suggestion? {
+        val items = get(auth, datasetName, dimensionName) ?: return null
         return SuggestionCacheService.Suggestion(items.values.filter { it.contains(filter, ignoreCase = true) }.take(20), items.lastUpdated)
     }
 
-    override fun set(auth: ProjectAuth, modelName: ModelName, dimensionName: DimensionName, values: List<String>) {
-        cache.put(CacheKey(auth.projectId, modelName, dimensionName), CacheValue(values, Instant.now()))
+    override fun set(auth: ProjectAuth, datasetName: DatasetName, dimensionName: DimensionName, values: List<String>) {
+        cache.put(CacheKey(auth.projectId, datasetName, dimensionName), CacheValue(values, Instant.now()))
     }
 
     data class CacheKey(

@@ -4,7 +4,7 @@ import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.service.task.Task
 
 interface DataSource {
@@ -19,7 +19,7 @@ interface DataSource {
 
     fun listSchemaNames(database: String?): List<SchemaName>
 
-    fun preview(auth: ProjectAuth, target: Model.Target): Task<*, *> = throw UnsupportedOperationException()
+    fun preview(auth: ProjectAuth, target: Dataset.Target): Task<*, *> = throw UnsupportedOperationException()
 
     // Table Related
     fun listTableNames(database: String?, schema: String?): List<TableName>
@@ -29,18 +29,18 @@ interface DataSource {
     fun connectionTest(userId: Int): Boolean
 
     fun sqlReferenceForTarget(
-        target: Model.Target,
+        target: Dataset.Target,
         aliasName: String,
         columnName: String
     ): String = "${warehouse.bridge.quoteIdentifier(aliasName)}.${warehouse.bridge.quoteIdentifier(columnName)}"
 
     fun sqlReferenceForTarget(
-        target: Model.Target,
+        target: Dataset.Target,
         aliasName: String,
         renderable: (SQLRenderable) -> String
     ): String
 
-    fun fillDefaultsToTarget(target: Model.Target): Model.Target {
+    fun fillDefaultsToTarget(target: Dataset.Target): Dataset.Target {
         return target
     }
 

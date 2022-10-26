@@ -1,11 +1,11 @@
 package com.metriql.warehouse.spi.services.flow
 
-import com.metriql.report.flow.FlowReportOptions
+import com.metriql.report.flow.FlowQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class ANSISQLFlowQueryGenerator : FlowQueryGenerator {
-    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Flow, options: FlowReportOptions): String {
+    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Flow, options: FlowQuery): String {
         return jinja.render(
             genericTemplate,
             mapOf(

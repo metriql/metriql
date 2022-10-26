@@ -1,14 +1,14 @@
 package com.metriql.warehouse.spi.services.retention
 
-import com.metriql.report.retention.RetentionReportOptions
+import com.metriql.report.retention.RetentionQuery
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.services.ServiceQueryDSL
 import com.metriql.warehouse.spi.services.ServiceQueryGenerator
 import com.metriql.warehouse.spi.services.ServiceSupport
 import io.netty.handler.codec.http.HttpResponseStatus
 
-interface RetentionQueryGenerator : ServiceQueryGenerator<Retention, RetentionReportOptions, RetentionSupport> {
-    fun checkSupport(approximate: Boolean, options: RetentionReportOptions) {
+interface RetentionQueryGenerator : ServiceQueryGenerator<Retention, RetentionQuery, RetentionSupport> {
+    fun checkSupport(approximate: Boolean, options: RetentionQuery) {
         val support = supports().firstOrNull { it.approximate == approximate }
             ?: throw MetriqlException("Retention approximation type is not supported", HttpResponseStatus.BAD_REQUEST)
         if (!support.dimension && options.dimension != null) {

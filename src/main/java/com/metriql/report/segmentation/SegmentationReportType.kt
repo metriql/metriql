@@ -7,7 +7,6 @@ class SegmentationReportTypeProxy : ReportType by SegmentationReportType, Report
 
 object SegmentationReportType : ReportType {
     override val slug = "segmentation"
-    override val configClass = SegmentationReportOptions::class
-    override val recipeClass = SegmentationRecipeQuery::class
+    override val configClass = SegmentationQuery::class
     override val serviceClass = SegmentationService::class
 }

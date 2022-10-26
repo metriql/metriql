@@ -24,7 +24,7 @@ import com.metriql.db.QueryResult.QueryStats.State.FINISHED
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.service.task.Task
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -142,8 +142,8 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
             ?: throw MetriqlException("Unable to find `project_id`, please set the value in credentials", BAD_REQUEST)
     }
 
-    override fun preview(auth: ProjectAuth, target: Model.Target): Task<*, *> {
-        if (target.value is Model.Target.TargetValue.Table) {
+    override fun preview(auth: ProjectAuth, target: Dataset.Target): Task<*, *> {
+        if (target.value is Dataset.Target.TargetValue.Table) {
             return object : QueryTask(auth.projectId, auth.userId, auth.source, false) {
                 override fun run() {
                     val tableId = TableId.of(target.value.database ?: getProjectId(), target.value.schema ?: config.dataset, target.value.table)
@@ -353,13 +353,13 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
     }
 
     override fun sqlReferenceForTarget(
-        target: Model.Target,
+        target: Dataset.Target,
         aliasName: String,
         renderSQL: (SQLRenderable) -> String
     ): String {
         return when (target.value) {
-            is Model.Target.TargetValue.Sql -> renderSQL.invoke(target.value.sql)
-            is Model.Target.TargetValue.Table -> {
+            is Dataset.Target.TargetValue.Sql -> renderSQL.invoke(target.value.sql)
+            is Dataset.Target.TargetValue.Table -> {
                 "${bridge.quoteIdentifier(target.value.database ?: getProjectId())}." +
                     "${bridge.quoteIdentifier(target.value.schema ?: config.dataset)}." +
                     "${bridge.quoteIdentifier(target.value.table)} AS ${bridge.quoteIdentifier(aliasName)}"
@@ -367,10 +367,10 @@ class BigQueryDataSource(override val config: BigQueryWarehouse.BigQueryConfig) 
         }
     }
 
-    override fun fillDefaultsToTarget(target: Model.Target): Model.Target {
+    override fun fillDefaultsToTarget(target: Dataset.Target): Dataset.Target {
         return when (target.value) {
-            is Model.Target.TargetValue.Sql -> target
-            is Model.Target.TargetValue.Table -> {
+            is Dataset.Target.TargetValue.Sql -> target
+            is Dataset.Target.TargetValue.Table -> {
                 target.copy(value = target.value.copy(database = target.value.database ?: config.project, schema = target.value.schema ?: config.dataset))
             }
         }

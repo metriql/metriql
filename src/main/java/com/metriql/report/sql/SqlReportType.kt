@@ -7,7 +7,6 @@ class SqlReportTypeProxy : ReportType by SqlReportType, ReportTypeProxy(SqlRepor
 
 object SqlReportType : ReportType {
     override val slug = "sql"
-    override val configClass = SqlReportOptions::class
-    override val recipeClass = SqlReportOptions::class
+    override val configClass = SqlQuery::class
     override val serviceClass = SqlService::class
 }

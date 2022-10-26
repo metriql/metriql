@@ -1,29 +1,29 @@
 package com.metriql.report.flow
 
 import com.metriql.report.IAdHocService
-import com.metriql.report.data.ReportFilters
+import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.report.segmentation.SegmentationRecipeQuery
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.DatasetName
 import com.metriql.util.ValidationUtil.stripLiteral
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.flow.Flow
 import com.metriql.warehouse.spi.services.flow.FlowQueryGenerator
 import javax.inject.Inject
 
-class FlowService @Inject constructor(private val segmentationService: SegmentationService) : IAdHocService<FlowReportOptions> {
+class FlowService @Inject constructor(private val segmentationService: SegmentationService) : IAdHocService<FlowQuery> {
 
     override fun renderQuery(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
-        reportOptions: FlowReportOptions,
-        reportFilters: ReportFilters
+        reportOptions: FlowQuery,
+        reportFilters: ReportFilter?
     ): IAdHocService.RenderedQuery {
         reportOptions.event
 
-        context.getModel(reportOptions.event.modelName)
+        context.getModel(reportOptions.event.dataset)
 
         val requiredDimensions = listOf(
             // TODO: connector
@@ -32,39 +32,33 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
         )
 
         val followingEvents = reportOptions.events.joinToString(" UNION ALL ") { event ->
-            val dimension = event.dimension?.let { "CONCAT('${stripLiteral(event.modelName)}', CONCAT(' ', ${context.getDimensionAlias(it.name, it.relationName, null)}))" }
-                ?: "'${stripLiteral(event.modelName)}'"
+            val dimension = event.dimension?.let { "CONCAT('${stripLiteral(event.dataset)}', CONCAT(' ', ${context.getDimensionAlias(it.name, it.relation, null)}))" }
+                ?: "'${stripLiteral(event.dataset)}'"
 
             """SELECT user_id, event_timestamp, $dimension as event_type FROM (${
-            segmentationService.renderQuery(
-                auth,
-                context,
-                SegmentationRecipeQuery(
-                    event.modelName,
-                    listOf(),
-                    requiredDimensions + (event.dimension?.let { listOf(it.toReference()) } ?: listOf()),
-                    null!!
-//                    event.filters.mapNotNull { it.toReference() }
-                ).toReportOptions(context),
-                reportFilters,
-                useAggregate = false, forAccumulator = false
-            ).second
+                segmentationService.renderQuery(
+                    auth,
+                    context,
+                    SegmentationQuery(
+                        event.dataset,
+                        (requiredDimensions + (event.dimension?.let { listOf(it) } ?: listOf())),
+                        listOf(),
+                        event.filters
+                    ),
+                    reportFilters,
+                    useAggregate = false, forAccumulator = false
+                ).second
             }) t"""
         }
 
         val firstEvent = """SELECT user_id, event_timestamp, null as event_type FROM (${
-        segmentationService.renderQuery(
-            auth,
-            context,
-            SegmentationRecipeQuery(reportOptions.event.modelName, listOf(), requiredDimensions, 
-                null!!
-//                reportOptions.event.filters.mapNotNull { it.toReference() }
-            ).toReportOptions(
-                context
-            ),
-            reportFilters,
-            useAggregate = false, forAccumulator = false
-        ).second
+            segmentationService.renderQuery(
+                auth,
+                context,
+                SegmentationQuery(reportOptions.event.dataset, listOf(), requiredDimensions, reportOptions.event.filters),
+                reportFilters,
+                useAggregate = false, forAccumulator = false
+            ).second
         })"""
 
         val flow = Flow(allEventsReference = """$firstEvent t UNION ALL $followingEvents""")
@@ -76,7 +70,7 @@ class FlowService @Inject constructor(private val segmentationService: Segmentat
         return IAdHocService.RenderedQuery(sqlQuery, listOf())
     }
 
-    override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: FlowReportOptions): Set<ModelName> {
-        return reportOptions.events.map { it.modelName }.toSet() + setOf(reportOptions.event.modelName)
+    override fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: FlowQuery): Set<DatasetName> {
+        return reportOptions.events.map { it.dataset }.toSet() + setOf(reportOptions.event.dataset)
     }
 }

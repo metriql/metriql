@@ -3,7 +3,7 @@ package com.metriql.tests
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.data.ReportMetric.ReportDimension
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.DatasetName
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.filter.BooleanOperatorType
 import com.metriql.warehouse.spi.filter.DateOperatorType
@@ -26,44 +26,44 @@ object SimpleFilterTests {
     val testTimestamp = testInt.map { LocalDateTime.ofEpochSecond((it * 60 * 60).toLong(), 0, ZoneOffset.UTC) }
 
     interface OperatorTests {
-        fun filter(modelName: ModelName): List<ReportFilter>
+        fun filter(datasetName: DatasetName): List<ReportFilter>
         val result: Any?
     }
 
     enum class ComplexTest : OperatorTests {
         COMPLEX_1 {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.EQUALS.name, 1
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.EQUALS.name, 1
                                 ),
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.EQUALS.name, 2
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.EQUALS.name, 2
                                 ),
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.EQUALS.name, 3
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.EQUALS.name, 3
                                 )
                             )
                         )
                     ),
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.EQUALS.name, "charlie"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.EQUALS.name, "charlie"
                                 )
                             )
                         )
@@ -74,38 +74,38 @@ object SimpleFilterTests {
             override val result: List<String> = listOf("charlie")
         },
         COMPLEX_2 {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.EQUALS.name, 1
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.EQUALS.name, 1
                                 ),
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.EQUALS.name, 2
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.EQUALS.name, 2
                                 ),
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.LESS_THAN.name, 6
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.LESS_THAN.name, 6
                                 )
                             )
                         )
                     ),
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.EQUALS.name, "charlie"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.EQUALS.name, "charlie"
                                 )
                             )
                         )
@@ -119,17 +119,17 @@ object SimpleFilterTests {
 
     enum class AnyOperatorTest : OperatorTests {
         IS_SET {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), AnyOperatorType.IS_SET.name, null
+                                    ReportDimension("test_int", datasetName, null, null), AnyOperatorType.IS_SET.name, null
                                 )
                             )
                         )
@@ -141,17 +141,17 @@ object SimpleFilterTests {
         },
 
         IS_NOT_SET {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), AnyOperatorType.IS_NOT_SET.name, null
+                                    ReportDimension("test_int", datasetName, null, null), AnyOperatorType.IS_NOT_SET.name, null
                                 )
                             )
                         )
@@ -165,16 +165,16 @@ object SimpleFilterTests {
 
     enum class StringOperatorTest : OperatorTests {
         EQUALS {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.EQUALS.name, "alpha"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.EQUALS.name, "alpha"
                                 )
                             )
                         )
@@ -186,28 +186,28 @@ object SimpleFilterTests {
         },
 
         NOT_EQUALS {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.NOT_EQUALS.name, "alpha"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.NOT_EQUALS.name, "alpha"
                                 )
                             )
                         ),
                     ),
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.EQUALS.name, "bravo"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.EQUALS.name, "bravo"
                                 )
                             )
                         ),
@@ -219,17 +219,17 @@ object SimpleFilterTests {
         },
 
         CONTAINS {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.CONTAINS.name, "liet"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.CONTAINS.name, "liet"
                                 )
                             )
                         )
@@ -241,17 +241,17 @@ object SimpleFilterTests {
         },
 
         STARTS_WITH {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.STARTS_WITH.name, "charli"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.STARTS_WITH.name, "charli"
                                 )
                             )
                         )
@@ -263,17 +263,17 @@ object SimpleFilterTests {
         },
 
         ENDS_WITH {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.ENDS_WITH.name, "trot"
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.ENDS_WITH.name, "trot"
                                 )
                             )
                         )
@@ -285,17 +285,17 @@ object SimpleFilterTests {
         },
 
         IN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.IN.name, listOf("alpha")
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.IN.name, listOf("alpha")
                                 )
                             )
                         )
@@ -307,17 +307,17 @@ object SimpleFilterTests {
         },
 
         NOT_IN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.NOT_IN.name, listOf("alpha")
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.NOT_IN.name, listOf("alpha")
                                 )
                             )
                         )
@@ -329,17 +329,17 @@ object SimpleFilterTests {
         },
 
         EQUALS_MULTI {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_string", modelName, null, null), StringOperatorType.IN.name, listOf("alpha")
+                                    ReportDimension("test_string", datasetName, null, null), StringOperatorType.IN.name, listOf("alpha")
                                 )
                             )
                         )
@@ -353,17 +353,17 @@ object SimpleFilterTests {
 
     enum class BooleanTest : OperatorTests {
         EQUALS {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_bool", modelName, null, null), BooleanOperatorType.EQUALS.name, true
+                                    ReportDimension("test_bool", datasetName, null, null), BooleanOperatorType.EQUALS.name, true
                                 )
                             )
                         )
@@ -374,17 +374,17 @@ object SimpleFilterTests {
             override val result = listOf(9.0)
         },
         NOT_EQUALS {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_bool", modelName, null, null), BooleanOperatorType.NOT_EQUALS.name, false
+                                    ReportDimension("test_bool", datasetName, null, null), BooleanOperatorType.NOT_EQUALS.name, false
                                 )
                             )
                         )
@@ -398,17 +398,17 @@ object SimpleFilterTests {
 
     enum class NumberTest : OperatorTests {
         EQUALS_INT {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_double", modelName, null, null), NumberOperatorType.EQUALS.name, 1
+                                    ReportDimension("test_double", datasetName, null, null), NumberOperatorType.EQUALS.name, 1
                                 )
                             )
                         )
@@ -420,17 +420,17 @@ object SimpleFilterTests {
         },
 
         EQUALS_DOUBLE {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_double", modelName, null, null), NumberOperatorType.EQUALS.name, 1.0
+                                    ReportDimension("test_double", datasetName, null, null), NumberOperatorType.EQUALS.name, 1.0
                                 )
                             )
                         )
@@ -442,17 +442,17 @@ object SimpleFilterTests {
         },
 
         GREATER_THAN_INT {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.GREATER_THAN.name, 0
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.GREATER_THAN.name, 0
                                 )
                             )
                         )
@@ -464,17 +464,17 @@ object SimpleFilterTests {
         },
 
         GREATER_THAN_DOUBLE {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_double", modelName, null, null), NumberOperatorType.GREATER_THAN.name, 0
+                                    ReportDimension("test_double", datasetName, null, null), NumberOperatorType.GREATER_THAN.name, 0
                                 )
                             )
                         )
@@ -486,17 +486,17 @@ object SimpleFilterTests {
         },
 
         LESS_THAN_INT {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.LESS_THAN.name, 1
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.LESS_THAN.name, 1
                                 )
                             )
                         )
@@ -508,17 +508,17 @@ object SimpleFilterTests {
         },
 
         LESS_THAN_DOUBLE {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_double", modelName, null, null), NumberOperatorType.LESS_THAN.name, 1.0
+                                    ReportDimension("test_double", datasetName, null, null), NumberOperatorType.LESS_THAN.name, 1.0
                                 )
                             )
                         )
@@ -530,30 +530,30 @@ object SimpleFilterTests {
         },
 
         GREATER_THAN_AND_LESS_THAN_INT {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.GREATER_THAN.name, 3
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.GREATER_THAN.name, 3
                                 )
                             )
                         )
                     ),
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_int", modelName, null, null), NumberOperatorType.LESS_THAN.name, 5
+                                    ReportDimension("test_int", datasetName, null, null), NumberOperatorType.LESS_THAN.name, 5
                                 )
                             )
                         )
@@ -565,30 +565,30 @@ object SimpleFilterTests {
         },
 
         GREATER_THAN_AND_LESS_THAN_DOUBLE {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_double", modelName, null, null), NumberOperatorType.GREATER_THAN.name, 3.0
+                                    ReportDimension("test_double", datasetName, null, null), NumberOperatorType.GREATER_THAN.name, 3.0
                                 )
                             )
                         )
                     ),
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_double", modelName, null, null), NumberOperatorType.LESS_THAN.name, 5.0
+                                    ReportDimension("test_double", datasetName, null, null), NumberOperatorType.LESS_THAN.name, 5.0
                                 )
                             )
                         )
@@ -602,17 +602,17 @@ object SimpleFilterTests {
 
     enum class TimestampOperatorTest : OperatorTests {
         GREATER_THAN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_timestamp", modelName, null, null),
+                                    ReportDimension("test_timestamp", datasetName, null, null),
                                     TimestampOperatorType.GREATER_THAN.name,
                                     testTimestamp.last().format(DateTimeFormatter.ISO_DATE_TIME)
                                 )
@@ -626,17 +626,17 @@ object SimpleFilterTests {
         },
 
         LESS_THAN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_timestamp", modelName, null, null),
+                                    ReportDimension("test_timestamp", datasetName, null, null),
                                     TimestampOperatorType.LESS_THAN.name,
                                     testTimestamp[1].toString()
                                 )
@@ -650,17 +650,17 @@ object SimpleFilterTests {
         },
 
         GREATER_THAN_AND_LESS_THAN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_timestamp", modelName, null, null),
+                                    ReportDimension("test_timestamp", datasetName, null, null),
                                     TimestampOperatorType.GREATER_THAN.name,
                                     testTimestamp[3].toString()
                                 )
@@ -668,14 +668,14 @@ object SimpleFilterTests {
                         )
                     ),
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_timestamp", modelName, null, null),
+                                    ReportDimension("test_timestamp", datasetName, null, null),
                                     TimestampOperatorType.LESS_THAN.name,
                                     testTimestamp[5].toString()
                                 )
@@ -691,16 +691,16 @@ object SimpleFilterTests {
 
     enum class DateOperatorTests : OperatorTests {
         GREATER_THAN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_date", modelName, null, null), DateOperatorType.GREATER_THAN.name, testDate.last().toString()
+                                    ReportDimension("test_date", datasetName, null, null), DateOperatorType.GREATER_THAN.name, testDate.last().toString()
                                 )
                             )
                         )
@@ -712,17 +712,17 @@ object SimpleFilterTests {
         },
 
         LESS_THAN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_date", modelName, null, null), DateOperatorType.LESS_THAN.name, testDate[1].toString()
+                                    ReportDimension("test_date", datasetName, null, null), DateOperatorType.LESS_THAN.name, testDate[1].toString()
                                 )
                             )
                         )
@@ -734,17 +734,17 @@ object SimpleFilterTests {
         },
 
         GREATER_THAN_AND_LESS_THAN {
-            override fun filter(modelName: ModelName): List<ReportFilter> {
+            override fun filter(datasetName: DatasetName): List<ReportFilter> {
                 return listOf(
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
                             listOf(
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_date", modelName, null, null),
+                                    ReportDimension("test_date", datasetName, null, null),
                                     DateOperatorType.GREATER_THAN.name,
                                     testDate[3].toString()
                                 )
@@ -752,7 +752,7 @@ object SimpleFilterTests {
                         )
                     ),
                     ReportFilter(
-                        ReportFilter.Type.METRIC_FILTER,
+                        ReportFilter.Type.METRIC,
                         MetricFilter(
                             MetricFilter.Connector.AND,
 
@@ -760,7 +760,7 @@ object SimpleFilterTests {
 
                                 MetricFilter.Filter(
                                     MetricFilter.MetricType.DIMENSION,
-                                    ReportDimension("test_date", modelName, null, null), DateOperatorType.LESS_THAN.name, testDate[5].toString()
+                                    ReportDimension("test_date", datasetName, null, null), DateOperatorType.LESS_THAN.name, testDate[5].toString()
                                 )
                             )
                         )

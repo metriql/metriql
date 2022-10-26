@@ -3,10 +3,10 @@ package com.metriql.service.jinja
 import com.hubspot.jinjava.interpret.TemplateStateException
 import com.metriql.report.data.ReportFilter
 import com.metriql.service.auth.UserAttributeValues
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.service.model.ModelDimension
 import com.metriql.service.model.ModelMeasure
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.DatasetName
 import com.metriql.service.model.ModelRelation
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -50,7 +50,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
 
         fun toString(metricPositionType: WarehouseMetriqlBridge.MetricPositionType): String {
             return when (value) {
-                is Model -> context.getSQLReference(value.target, value.name, value.name, null)
+                is Dataset -> context.getSQLReference(value.target, value.name, value.name, null)
                 is ModelDimension -> {
                     if (renderAlias) {
                         context.getDimensionAlias(value.dimension.name, null, null)
@@ -58,7 +58,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                         try {
                             "(" + context.warehouseBridge.renderDimension(
                                 context,
-                                value.modelName,
+                                value.datasetName,
                                 value.dimension.name,
                                 null,
                                 null,
@@ -77,7 +77,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                         try {
                             "(" + context.warehouseBridge.renderMeasure(
                                 context,
-                                value.modelName,
+                                value.datasetName,
                                 value.measure.name,
                                 null,
                                 metricPositionType,
@@ -119,20 +119,20 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
                 }
                 ContextType.DIMENSION -> {
                     when (value) {
-                        is Model -> DimensionContext(value.name, null, context, renderAlias, modelAlias)
-                        is ModelRelation -> DimensionContext(value.targetModelName, value.relation, context, renderAlias, modelAlias)
+                        is Dataset -> DimensionContext(value.name, null, context, renderAlias, modelAlias)
+                        is ModelRelation -> DimensionContext(value.targetDatasetName, value.relation, context, renderAlias, modelAlias)
                         else -> throw TemplateStateException("only models can have dimensions", -1)
                     }
                 }
                 ContextType.MEASURE -> {
                     when (value) {
-                        is Model -> MeasureContext(value.name, null, context, renderAlias, modelAlias)
-                        is ModelRelation -> MeasureContext(value.sourceModelName, value.relation, context, renderAlias, modelAlias)
+                        is Dataset -> MeasureContext(value.name, null, context, renderAlias, modelAlias)
+                        is ModelRelation -> MeasureContext(value.sourceDatasetName, value.relation, context, renderAlias, modelAlias)
                         else -> throw TemplateStateException("only models can have measures", -1)
                     }
                 }
                 ContextType.RELATION -> {
-                    if (value is Model) {
+                    if (value is Dataset) {
                         RelationContext(value.name, context, renderAlias, modelAlias)
                     } else {
                         throw TemplateStateException("only models can have relations", -1)
@@ -154,32 +154,32 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
         private val modelAlias: String?,
     ) : MetriqlJinjaContext() {
         override fun get(key: String): Any? {
-            val model: Model
+            val dataset: Dataset
             try {
-                model = context.getModel(key)
+                dataset = context.getModel(key)
             } catch (e: NoSuchElementException) {
                 throw TemplateStateException(e.message, -1)
             } catch (e: MetriqlException) {
                 throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
             }
-            return DecisionContext(model, context, renderAlias, modelAlias)
+            return DecisionContext(dataset, context, renderAlias, modelAlias)
         }
     }
 
     // Nullable model-name, if dimension context is accessed from root e.g: dimension.dimensionx.filterValue
     class RelationContext(
-        private val modelName: ModelName?,
+        private val datasetName: DatasetName?,
         private val context: IQueryGeneratorContext,
         private val renderAlias: Boolean,
         private val modelAlias: String?,
     ) : MetriqlJinjaContext() {
         override fun get(key: String): Any? {
-            if (modelName == null) {
+            if (datasetName == null) {
                 throw TemplateStateException("missing modelName in context to render relation $key", -1)
             }
             val modelRelation: ModelRelation
             try {
-                modelRelation = context.getRelation(modelName, key)
+                modelRelation = context.getRelation(datasetName, key)
             } catch (e: NoSuchElementException) {
                 throw TemplateStateException(e.message, -1)
             } catch (e: MetriqlException) {
@@ -191,15 +191,15 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
 
     // Nullable model-name, if dimension context is accessed from root e.g: dimension.dimensionx.filterValue
     class DimensionContext(
-        private val modelName: ModelName,
-        private val relation: Model.Relation?,
+        private val datasetName: DatasetName,
+        private val relation: Dataset.Relation?,
         private val context: IQueryGeneratorContext,
         private val renderAlias: Boolean,
         private val modelAlias: String?
     ) : MetriqlJinjaContext() {
         override fun get(key: String): Any? {
             val modelDimension = try {
-                context.getModelDimension(key, relation?.modelName ?: modelName)
+                context.getModelDimension(key, relation?.datasetName ?: datasetName)
             } catch (e: NoSuchElementException) {
                 throw TemplateStateException(e.message, -1)
             } catch (e: MetriqlException) {
@@ -220,8 +220,8 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
 
     // Nullable model-name, if measure context is accessed from root e.g: measure.name.filterValue
     class MeasureContext(
-        private val modelName: ModelName,
-        private val relation: Model.Relation?,
+        private val datasetName: DatasetName,
+        private val relation: Dataset.Relation?,
         private val context: IQueryGeneratorContext,
         private val renderAlias: Boolean,
         private val modelAlias: String?,
@@ -230,7 +230,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
 
         override fun get(key: String): Any? {
             val modelMeasure = try {
-                context.getModelMeasure(key, relation?.modelName ?: modelName)
+                context.getModelMeasure(key, relation?.datasetName ?: datasetName)
             } catch (e: MetriqlException) {
                 throw TemplateStateException(e.errors.first().title ?: e.errors.first().detail, -1)
             }

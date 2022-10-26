@@ -1,7 +1,7 @@
 package com.metriql.warehouse
 
 import com.metriql.db.FieldType
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.filter.ArrayOperatorType
@@ -19,7 +19,7 @@ data class WarehouseSupports(
     val dbtTypes: Set<DBTType>,
     val services: Map<String, List<ServiceSupport>>,
     val aliasQuote: Char?,
-    val aggregations: List<Model.Measure.AggregationType>
+    val aggregations: List<Dataset.Measure.AggregationType>
 ) {
     data class Filters(
         val any: Set<AnyOperatorType>,

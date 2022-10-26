@@ -9,14 +9,14 @@ import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException
 import com.metriql.util.SuccessMessage
 import com.metriql.warehouse.spi.services.RecipeQuery
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import io.netty.handler.codec.http.HttpResponseStatus
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.annotations.Api
@@ -38,7 +38,7 @@ open class QueryHttpService(
     val reportService: ReportService,
     val taskQueueService: TaskQueueService,
     private val suggestionService: SuggestionService,
-    val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>
+    val services: Map<ReportType, IAdHocService<out ServiceQuery>>
 ) : HttpService() {
     private val startTime: Instant = Instant.now()
     private var lastMetadataChangeTime: Instant = Instant.now()
@@ -46,14 +46,14 @@ open class QueryHttpService(
     @ApiOperation(value = "Get metadata")
     @GET
     @Path("/metadata")
-    fun metadata(@Named("userContext") auth: ProjectAuth): List<Model> {
+    fun metadata(@Named("userContext") auth: ProjectAuth): List<Dataset> {
         return deployment.getDatasetService().list(auth)
     }
 
     @ApiOperation(value = "Get datasets")
     @GET
     @Path("/metadata/datasets")
-    fun metadataDatasetNames(@Named("userContext") auth: ProjectAuth): List<IDatasetService.DatasetName> {
+    fun metadataDatasetNames(@Named("userContext") auth: ProjectAuth): List<IDatasetService.DatasetLabel> {
         return deployment.getDatasetService().listDatasetNames(auth)
     }
 
@@ -67,7 +67,7 @@ open class QueryHttpService(
     @ApiOperation(value = "Get datasets")
     @GET
     @Path("/metadata/dataset")
-    fun metadataDataset(@Named("userContext") auth: ProjectAuth, @QueryParam("name") name: String): Model {
+    fun metadataDataset(@Named("userContext") auth: ProjectAuth, @QueryParam("name") name: String): Dataset {
         return deployment.getDatasetService().getDataset(auth, name) ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
     }
 
@@ -93,56 +93,20 @@ open class QueryHttpService(
     @ApiOperation(value = "Generate SQL")
     @JsonRequest
     @Path("/sql")
-    fun sql(@Named("userContext") auth: ProjectAuth, @BodyParam query: Query): String {
-        val context = reportService.createContext(auth, deployment.getDataSource(auth))
-        val compiled = reportService.getServiceForReportType(query.type).renderQuery(
-            auth,
-            context,
-            query.report.toReportOptions(context),
-            listOf(),
-        )
-
-        return compiled.query
-    }
-
-    @ApiOperation(value = "Generate SQL")
-    @JsonRequest
-    @Path("/sql/internal")
     fun sql(@Named("userContext") auth: ProjectAuth, @BodyParam query: InternalQuery): String {
         val context = reportService.createContext(auth, deployment.getDataSource(auth))
         val compiled = reportService.getServiceForReportType(query.type).renderQuery(
             auth,
             context,
             query.report,
-            listOf(),
         )
 
         return compiled.query
     }
 
-    @ApiOperation(value = "Run metriql queries")
-    @JsonRequest
-    @Path("/query")
-    fun query(
-        @Named("userContext") auth: ProjectAuth,
-        @BodyParam query: Query,
-        @QueryParam("useCache", required = false) useCache: Boolean?,
-        @QueryParam("initialWaitInSeconds", required = false) initialWaitInSeconds: Long?
-    ): CompletableFuture<Task.TaskTicket<QueryResult>> {
-        val context = reportService.createContext(auth, deployment.getDataSource(auth))
-        val task = reportService.queryTask(
-            auth, query.type, context.datasource, query.report.toReportOptions(context),
-            isBackgroundTask = false,
-            useCache = useCache ?: true,
-            context = context
-        )
-
-        return taskQueueService.execute(task, initialWaitInSeconds ?: 60).thenApply { it.taskTicket() }
-    }
-
     @ApiOperation(value = "Run metriql internal queries")
     @JsonRequest
-    @Path("/query/internal")
+    @Path("/query")
     fun query(
         @Named("userContext") auth: ProjectAuth,
         @BodyParam query: InternalQuery,
@@ -163,7 +127,7 @@ open class QueryHttpService(
     data class InternalQuery(
         val type: ReportType,
         @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
-        val report: ServiceReportOptions
+        val report: ServiceQuery
     )
 
     data class Query(

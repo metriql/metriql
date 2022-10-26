@@ -8,7 +8,7 @@ import com.metriql.report.ReportType
 import com.metriql.report.data.Dashboard
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -47,7 +47,7 @@ data class RecipeDashboard(
                     val dim = dimension.toDimension(modelName, dimension.getType(context, modelName))
                     Pair(
                         ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                        ReportMetric.ReportDimension(dim.name, modelName, null, dim.postOperation)
+                        ReportMetric.ReportDimension(dim.name, modelName, null, dim.timeframe)
                     )
                 }
                 mappingDimension != null -> {
@@ -56,7 +56,7 @@ data class RecipeDashboard(
                         ReportMetric.ReportMappingDimension(
                             JsonHelper.convert(
                                 mappingDimension.name,
-                                Model.MappingDimensions.CommonMappings::class.java
+                                Dataset.MappingDimensions.CommonMappings::class.java
                             ),
                             null
                         )

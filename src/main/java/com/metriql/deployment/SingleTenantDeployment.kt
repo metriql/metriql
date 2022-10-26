@@ -14,7 +14,7 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.ProjectAuth.Companion.PASSWORD_CREDENTIAL
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.service.model.UpdatableDatasetService
 import com.metriql.service.suggestion.InMemorySuggestionCacheService
 import com.metriql.service.suggestion.SuggestionCacheService
@@ -131,7 +131,7 @@ class SingleTenantDeployment(
             } else it
         }
 
-        fun getPreparedModels(dataSource: DataSource, auth: ProjectAuth, recipe: Recipe): List<Model> {
+        fun getPreparedModels(dataSource: DataSource, auth: ProjectAuth, recipe: Recipe): List<Dataset> {
             val metriqlModels = recipe.models?.map {
                 resolveExtends(recipe.models, it, recipe.packageName ?: "").toModel(recipe.packageName ?: "", dataSource.warehouse.bridge)
             } ?: listOf()
@@ -180,7 +180,7 @@ class SingleTenantDeployment(
             } catch (manifestEx: DbtYamlParser.ParseException) {
                 // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
                 try {
-                    JsonHelper.read(content, object : TypeReference<List<Model>>() {}).map { Recipe.RecipeModel.fromModel(it) }
+                    JsonHelper.read(content, object : TypeReference<List<Dataset>>() {}).map { Recipe.RecipeModel.fromModel(it) }
                 } catch (metriqlModelEx: Exception) {
                     throw manifestEx
                 }

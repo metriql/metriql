@@ -8,8 +8,8 @@ import com.metriql.UserContext
 import com.metriql.deployment.SingleTenantDeployment.Companion.parseRecipe
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.Dataset
+import com.metriql.service.model.DatasetName
 import com.metriql.service.suggestion.InMemorySuggestionCacheService
 import com.metriql.service.suggestion.SuggestionCacheService
 import com.metriql.util.MetriqlException
@@ -24,7 +24,7 @@ import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
-typealias ManifestCacheHolder = Optional<Pair<Instant, List<Model>>>
+typealias ManifestCacheHolder = Optional<Pair<Instant, List<Dataset>>>
 
 class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration: Duration, private val cacheSpec: CacheBuilderSpec) : Deployment {
     private val cache = CacheBuilder.newBuilder().expireAfterWrite(cacheExpiration.toMillis(), TimeUnit.MILLISECONDS)
@@ -101,12 +101,12 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
 
     inner class MultiTenantDatasetService : IDatasetService {
 
-        override fun list(auth: ProjectAuth, target: Model.Target?): List<Model> {
-            return cache.getIfPresent(auth.userId as String)!!.get().models
+        override fun list(auth: ProjectAuth, target: Dataset.Target?): List<Dataset> {
+            return cache.getIfPresent(auth.userId as String)!!.get().datasets
         }
 
-        override fun getDataset(auth: ProjectAuth, modelName: ModelName): Model? {
-            val regex = modelName.toRegex()
+        override fun getDataset(auth: ProjectAuth, datasetName: DatasetName): Dataset? {
+            val regex = datasetName.toRegex()
             return list(auth).find { regex.matches(it.name) }
         }
 
@@ -119,7 +119,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
         Commands.logger.info("Started multi-tenant Metriql deployment")
     }
 
-    data class AdapterManifest(val dataSource: DataSource, val models: List<Model>, val modelsUpdatedAt: Instant?)
+    data class AdapterManifest(val dataSource: DataSource, val datasets: List<Dataset>, val modelsUpdatedAt: Instant?)
 
     data class Response(val manifest: ManifestLocation, val connection_parameters: WarehouseConfig) {
         data class ManifestLocation(val url: String, val updated_at: Instant?)

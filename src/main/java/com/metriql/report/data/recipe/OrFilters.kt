@@ -7,8 +7,8 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
-import com.metriql.service.model.Model
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.Dataset
+import com.metriql.service.model.DatasetName
 import com.metriql.util.JsonHelper
 import com.metriql.util.JsonUtil
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -19,7 +19,7 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
     @JsonIgnore
     fun toReportFilter(
         context: IQueryGeneratorContext,
-        modelName: ModelName,
+        datasetName: DatasetName,
     ): ReportFilter {
         val orFilters = map { filter ->
             val metricType = when {
@@ -31,11 +31,11 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
 
             var metricValue = when {
                 filter.dimension != null ->
-                    filter.dimension.toDimension(modelName, filter.dimension.getType(context, modelName))
+                    filter.dimension.toDimension(datasetName, filter.dimension.getType(context, datasetName))
                 filter.measure != null ->
-                    filter.measure.toMeasure(modelName)
+                    filter.measure.toMeasure(datasetName)
                 filter.mapping != null -> {
-                    val type = JsonHelper.convert(filter.mapping, Model.MappingDimensions.CommonMappings::class.java)
+                    val type = JsonHelper.convert(filter.mapping, Dataset.MappingDimensions.CommonMappings::class.java)
                     ReportMetric.ReportMappingDimension(type, null)
                 }
                 else -> {
@@ -46,7 +46,7 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
         }
 
         return ReportFilter(
-            ReportFilter.Type.METRIC_FILTER,
+            ReportFilter.Type.METRIC,
             ReportFilter.FilterValue.MetricFilter(
                 ReportFilter.FilterValue.MetricFilter.Connector.OR,
                 orFilters

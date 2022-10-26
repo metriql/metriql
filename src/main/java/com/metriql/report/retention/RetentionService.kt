@@ -6,17 +6,17 @@ import com.metriql.report.IAdHocService
 import com.metriql.report.data.Dataset
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
-import com.metriql.report.data.getUsedModels
-import com.metriql.report.retention.RetentionReportOptions.DateUnit.DAY
-import com.metriql.report.retention.RetentionReportOptions.DateUnit.MONTH
-import com.metriql.report.retention.RetentionReportOptions.DateUnit.WEEK
-import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.retention.RetentionQuery.DateUnit.DAY
+import com.metriql.report.retention.RetentionQuery.DateUnit.MONTH
+import com.metriql.report.retention.RetentionQuery.DateUnit.WEEK
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.model.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.function.TimestampPostOperation
@@ -24,7 +24,6 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.retention.Retention
 import com.metriql.warehouse.spi.services.retention.RetentionQueryGenerator
 import io.netty.handler.codec.http.HttpResponseStatus
-import java.time.LocalDate
 import java.util.ArrayList
 import java.util.Arrays
 import javax.inject.Inject
@@ -32,35 +31,35 @@ import javax.inject.Inject
 class RetentionService @Inject constructor(
     private val datasetService: IDatasetService,
     private val segmentationService: SegmentationService,
-) : IAdHocService<RetentionReportOptions> {
+) : IAdHocService<RetentionQuery> {
 
     override fun renderQuery(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
-        report: RetentionReportOptions,
-        reportFilters: List<ReportFilter>,
+        report: RetentionQuery,
+        reportFilters: ReportFilter?,
     ): IAdHocService.RenderedQuery {
         fun stepForRetentionStep(aStep: Dataset, isFirst: Boolean): Retention.Step {
-            val mappings = datasetService.getDataset(auth, aStep.modelName)?.mappings
+            val mappings = datasetService.getDataset(auth, aStep.dataset)?.mappings
             val connectorDimensionName = report.connector ?: (
                 mappings?.get(USER_ID)
                     ?: throw MetriqlException("userId dimension is required for using connectors", HttpResponseStatus.BAD_REQUEST)
                 )
-            val eventTimeStampDimensionName = mappings?.get(EVENT_TIMESTAMP)
+            val eventTimeStampDimensionName = mappings?.get(TIME_SERIES)
                 ?: throw MetriqlException("userId dimension is required for using connectors", HttpResponseStatus.BAD_REQUEST)
-            val contextModelName = aStep.modelName
+            val contextModelName = aStep.dataset
 
-            val eventTimestampPostOperation = when (report.dateUnit) {
-                DAY -> ReportMetric.PostOperation(ReportMetric.PostOperation.Type.TIMESTAMP, TimestampPostOperation.DAY)
-                WEEK -> ReportMetric.PostOperation(ReportMetric.PostOperation.Type.TIMESTAMP, TimestampPostOperation.WEEK)
-                MONTH -> ReportMetric.PostOperation(ReportMetric.PostOperation.Type.TIMESTAMP, TimestampPostOperation.MONTH)
+            val eventTimestampTimeframe = when (report.dateUnit) {
+                DAY -> ReportMetric.Timeframe(ReportMetric.Timeframe.Type.TIMESTAMP, TimestampPostOperation.DAY)
+                WEEK -> ReportMetric.Timeframe(ReportMetric.Timeframe.Type.TIMESTAMP, TimestampPostOperation.WEEK)
+                MONTH -> ReportMetric.Timeframe(ReportMetric.Timeframe.Type.TIMESTAMP, TimestampPostOperation.MONTH)
             }
 
-            val eventTimestampReportDimension = ReportMetric.ReportDimension(eventTimeStampDimensionName, contextModelName, null, eventTimestampPostOperation)
-            val connectorReportDimension = ReportMetric.ReportDimension(connectorDimensionName, contextModelName, null, null)
+            val eventTimestampReportDimension = ReportMetric.ReportDimension(eventTimeStampDimensionName, contextModelName, null, eventTimestampTimeframe).toReference()
+            val connectorReportDimension = Recipe.FieldReference(connectorDimensionName)
             val dimensionsToRender = if (report.dimension != null) {
                 listOf(
-                    ReportMetric.ReportDimension(report.dimension, contextModelName, null, null),
+                    Recipe.FieldReference(report.dimension),
                     connectorReportDimension,
                     eventTimestampReportDimension
                 )
@@ -68,47 +67,13 @@ class RetentionService @Inject constructor(
                 listOf(connectorReportDimension, eventTimestampReportDimension)
             }
 
-            // If the eventTimestamp is in the past, we need to include the next days for the returningStep
-            // in order to calculate the retention for the following days
-            val normalizedReportFilters = if (!isFirst) {
-                val now = LocalDate.now()
-                reportFilters.flatMap { reportFilter ->
-                    ((reportFilter.value as? ReportFilter.FilterValue.MetricFilter)?.filters)?.map {
-                        if ((it.metricValue as? ReportMetric.ReportMappingDimension)?.name == EVENT_TIMESTAMP) {
-                            reportFilter.copy(
-                                value = reportFilter.value.copy(
-                                    filters = reportFilter.value.filters.map {
-                                        if (it.operator.lowercase() == "between" && it.value is Map<*, *>) {
-                                            val endDate = LocalDate.parse(it.value["end"].toString())
-                                            val maximumEnd = when (report.dateUnit) {
-                                                DAY -> endDate.plusDays(14)
-                                                WEEK -> endDate.plusWeeks(14)
-                                                MONTH -> endDate.plusMonths(14)
-                                            }
-                                            val finalEnd = if (now > maximumEnd) maximumEnd else now
-                                            it.copy(value = mapOf("start" to it.value["start"], "end" to finalEnd.toString()))
-                                        } else {
-                                            it
-                                        }
-                                    }
-                                )
-                            )
-                        } else {
-                            reportFilter
-                        }
-                    } ?: listOf()
-                }
-            } else {
-                reportFilters
-            }
-
             return Retention.Step(
                 model = "(${
                     segmentationService.renderQuery(
                         auth,
                         context,
-                        SegmentationReportOptions(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters ?: listOf()),
-                        normalizedReportFilters,
+                        SegmentationQuery(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters),
+                        reportFilters,
                         useAggregate = false, forAccumulator = false
                     ).second
                 }) AS $contextModelName",
@@ -120,7 +85,7 @@ class RetentionService @Inject constructor(
                     context.getDimensionAlias(
                         eventTimeStampDimensionName,
                         null,
-                        eventTimestampPostOperation
+                        eventTimestampTimeframe
                     )
                 ),
                 dimension = if (report.dimension != null) {
@@ -195,7 +160,7 @@ class RetentionService @Inject constructor(
         }
     }
 
-    override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: RetentionReportOptions): Set<ModelName> {
-        return (getUsedModels(reportOptions.firstStep, context) + getUsedModels(reportOptions.returningStep, context)).toSet()
+    override fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: RetentionQuery): Set<DatasetName> {
+        return (reportOptions.firstStep.getUsedModels(context) + reportOptions.returningStep.getUsedModels(context)).toSet()
     }
 }

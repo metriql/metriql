@@ -1,11 +1,11 @@
 package com.metriql.warehouse.spi.services.funnel
 
-import com.metriql.report.funnel.FunnelReportOptions
+import com.metriql.report.funnel.FunnelQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class ANSISQLFunnelQueryGenerator(private val template: String? = null, private val partitionSuffix: String? = null) : FunnelQueryGenerator {
-    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Funnel, options: FunnelReportOptions): String {
+    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Funnel, options: FunnelQuery): String {
 
         checkSupport(options.strictlyOrdered, options)
         return jinja.render(

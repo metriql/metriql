@@ -6,7 +6,7 @@ import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -28,9 +28,10 @@ data class ReportFilter(
 
     @UppercaseEnum
     enum class Type(private val clazz: KClass<out FilterValue>) : StrValueEnum {
-        SQL_FILTER(FilterValue.SqlFilter::class),
-        GROUP_FILTER(FilterValue.GroupFilter::class),
-        METRIC_FILTER(FilterValue.MetricFilter::class);
+        SQL(FilterValue.SqlFilter::class),
+        NESTED(FilterValue.NestedFilter::class),
+        METRIC(FilterValue.MetricFilter::class);
+
         override fun getValueClass() = clazz.java
     }
 
@@ -43,13 +44,16 @@ data class ReportFilter(
                 } else {
                     val references = OrFilters()
                     value.filters.map {
-                        val item = when (val metricValue = it.metricValue) {
+                        val item = when (val metricValue = it.metric) {
                             is ReportMetric.ReportDimension ->
                                 Recipe.FilterReference(dimension = metricValue.toReference(), operator = it.operator, value = it.value)
+
                             is ReportMetric.ReportMeasure ->
                                 Recipe.FilterReference(measure = metricValue.toMetricReference(), operator = it.operator, value = it.value)
+
                             is ReportMetric.ReportMappingDimension ->
                                 Recipe.FilterReference(mapping = metricValue.name.name, operator = it.operator, value = it.value)
+
                             is ReportMetric.Function -> TODO()
                             is ReportMetric.Unary -> TODO()
                         }
@@ -61,7 +65,7 @@ data class ReportFilter(
                 }
             }
 
-            is FilterValue.GroupFilter -> TODO()
+            is FilterValue.NestedFilter -> TODO()
         }
     }
 
@@ -76,7 +80,7 @@ data class ReportFilter(
             }
         }
 
-        data class GroupFilter(val connector: MetricFilter.Connector, val filters: ReportFilters) : FilterValue() {
+        data class NestedFilter(val connector: MetricFilter.Connector, val filters: List<ReportFilter>) : FilterValue() {
             override fun subtract(filter: ReportFilter): ReportFilter? {
                 return if (filter.value == this) {
                     null
@@ -99,9 +103,9 @@ data class ReportFilter(
             }
 
             data class Filter(
-                val metricType: MetricType,
-                @PolymorphicTypeStr<MetricType>(externalProperty = "metricType", valuesEnum = MetricType::class)
-                val metricValue: ReportMetric,
+                val type: MetricType,
+                @PolymorphicTypeStr<MetricType>(externalProperty = "type", valuesEnum = MetricType::class)
+                val metric: ReportMetric,
                 val operator: String,
                 val value: Any?
             ) {
@@ -133,16 +137,17 @@ data class ReportFilter(
     }
 
     companion object {
-        fun extractDateRangeForEventTimestamp(filters: List<ReportFilter>): DateRange? {
-            return filters.firstNotNullOfOrNull { filter ->
-                if (filter.value is FilterValue.MetricFilter) {
-                    filter.value.filters.find {
-                        it.metricType == FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION &&
-                            it.metricValue is ReportMetric.ReportMappingDimension &&
-                            it.metricValue.name == Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-                    }
-                } else null
-            }?.let {
+        fun extractDateRangeForEventTimestamp(filter: ReportFilter?): DateRange? {
+            if(filter == null) return null
+            // todo: process nested filter as well
+            val dateRange: FilterValue.MetricFilter.Filter? = if (filter.value is FilterValue.MetricFilter) {
+                filter.value.filters.find {
+                        it.metric is ReportMetric.ReportMappingDimension &&
+                        it.metric.name == Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+                }
+            } else null
+
+            return dateRange?.let {
                 val (type, operation) = getOperation(FieldType.TIMESTAMP, it.operator)
                 ANSISQLFilters.convertTimestampFilterToDates(operation as TimestampOperatorType, it.value)
             }

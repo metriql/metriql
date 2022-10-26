@@ -3,7 +3,7 @@ package com.metriql.warehouse.spi.querycontext
 import com.metriql.report.ReportType
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.report.segmentation.SegmentationRecipeQuery
+import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
 import com.metriql.service.auth.UserAttributeValues
@@ -12,10 +12,10 @@ import com.metriql.service.jinja.SQLRenderable
 import com.metriql.service.model.DimensionName
 import com.metriql.service.model.IDatasetService
 import com.metriql.service.model.MeasureName
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.service.model.ModelDimension
 import com.metriql.service.model.ModelMeasure
-import com.metriql.service.model.ModelName
+import com.metriql.service.model.DatasetName
 import com.metriql.service.model.ModelRelation
 import com.metriql.service.model.RelationName
 import com.metriql.util.MetriqlException
@@ -33,31 +33,31 @@ interface IQueryGeneratorContext {
     val dependencyFetcher: DependencyFetcher?
     val datasetService: IDatasetService
     val renderer: JinjaRendererService
-    val referencedDimensions: Map<Pair<ModelName, DimensionName>, ModelDimension>
-    val referencedMeasures: Map<Pair<ModelName, MeasureName>, ModelMeasure>
-    val referencedRelations: Map<Pair<ModelName, RelationName>, ModelRelation>
+    val referencedDimensions: Map<Pair<DatasetName, DimensionName>, ModelDimension>
+    val referencedMeasures: Map<Pair<DatasetName, MeasureName>, ModelMeasure>
+    val referencedRelations: Map<Pair<DatasetName, RelationName>, ModelRelation>
 
-    val viewModels: LinkedHashMap<ModelName, String>
-    val aliases: LinkedHashMap<Pair<ModelName, RelationName?>, String>
+    val viewModels: LinkedHashMap<DatasetName, String>
+    val aliases: LinkedHashMap<Pair<DatasetName, RelationName?>, String>
     val comments: MutableList<String>
     val warehouseBridge: WarehouseMetriqlBridge get() = datasource.warehouse.bridge
 
-    fun getDependencies(modelName: ModelName): Recipe.Dependencies
-    fun getMappingDimensions(modelName: ModelName): Model.MappingDimensions
-    fun getModelDimension(dimensionName: DimensionName, modelName: ModelName): ModelDimension
-    fun getModelMeasure(measureName: MeasureName, modelName: ModelName): ModelMeasure
-    fun getRelation(sourceModelName: ModelName, relationName: RelationName): ModelRelation
+    fun getDependencies(datasetName: DatasetName): Recipe.Dependencies
+    fun getMappingDimensions(datasetName: DatasetName): Dataset.MappingDimensions
+    fun getModelDimension(dimensionName: DimensionName, datasetName: DatasetName): ModelDimension
+    fun getModelMeasure(measureName: MeasureName, datasetName: DatasetName): ModelMeasure
+    fun getRelation(sourceDatasetName: DatasetName, relationName: RelationName): ModelRelation
 
     // Could use only dimensionName but post-operations may be used more than once
-    fun getDimensionAlias(dimensionName: DimensionName, relationName: RelationName?, postOperation: ReportMetric.PostOperation?): String
+    fun getDimensionAlias(dimensionName: DimensionName, relationName: RelationName?, timeframe: ReportMetric.Timeframe?): String
 
     // Syntax sugar for measure. We don't need it actually.
     fun getMeasureAlias(measureName: MeasureName, relationName: String?): String
-    fun getModel(modelName: ModelName): Model
-    fun getAggregatesForModel(target: Model.Target, type: ReportType): List<Triple<ModelName, String, SegmentationRecipeQuery.SegmentationMaterialize>>
-    fun addModel(model: Model)
+    fun getModel(datasetName: DatasetName): Dataset
+    fun getAggregatesForModel(target: Dataset.Target, type: ReportType): List<Triple<DatasetName, String, SegmentationMaterialize>>
+    fun addModel(dataset: Dataset)
     fun getSQLReference(
-        modelTarget: Model.Target,
+        datasetTarget: Dataset.Target,
         aliasName: String,
         modelName: String,
         columnName: String?,
@@ -68,7 +68,7 @@ interface IQueryGeneratorContext {
     fun renderSQL(
         sqlRenderable: SQLRenderable,
         alias: String?,
-        modelName: ModelName?,
+        datasetName: DatasetName?,
         inQueryDimensionNames: List<String>? = null,
         dateRange: DateRange? = null,
         // Instead of actual values, render alias

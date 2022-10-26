@@ -7,7 +7,7 @@ import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
 import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model
+import com.metriql.service.model.Dataset
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.toSnakeCase
@@ -40,7 +40,7 @@ import java.util.Optional
 
 class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTablesProvider {
 
-    private fun getModels(session: ConnectorSession): List<Model> {
+    private fun getModels(session: ConnectorSession): List<Dataset> {
         // TODO: Find a way to pass projects
 //        val projectId = session.getProperty("project", Int::class.java)
         return datasetService.list(ProjectAuth.systemUser("", session.user)).filter { !it.hidden }
@@ -69,9 +69,9 @@ class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTable
         return if (schemaName == "public") null else schemaName
     }
 
-    class TablePropertiesTable(val model: Model) : SystemTable {
+    class TablePropertiesTable(val dataset: Dataset) : SystemTable {
         private val metadata = ConnectorTableMetadata(
-            SchemaTableName(model.category ?: "public", model.name),
+            SchemaTableName(dataset.category ?: "public", dataset.name),
             ImmutableList.of(
                 ColumnMetadata("comment", VarcharType.VARCHAR)
             )
@@ -85,12 +85,12 @@ class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTable
 
         override fun cursor(transactionHandle: ConnectorTransactionHandle, session: ConnectorSession, constraint: TupleDomain<Int>): RecordCursor {
             val table = InMemoryRecordSet.builder(metadata)
-            table.addRow(model.description)
+            table.addRow(dataset.description)
             return table.build().cursor()
         }
     }
 
-    class ModelProxy(val models: List<Model>, val model: Model, val distinct: Boolean = false) : SystemTable {
+    class ModelProxy(val datasets: List<Dataset>, val dataset: Dataset, val distinct: Boolean = false) : SystemTable {
 
         override fun pageSource(transactionHandle: ConnectorTransactionHandle, session: ConnectorSession, constraint: TupleDomain<Int>): ConnectorPageSource {
             throw UnsupportedOperationException("Metadata queries doesn't support data processing")
@@ -98,7 +98,7 @@ class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTable
 
         override fun getDistribution() = SystemTable.Distribution.SINGLE_COORDINATOR
 
-        private fun toColumnMetadata(it: Model.Measure, relation: String? = null): ColumnMetadata? {
+        private fun toColumnMetadata(it: Dataset.Measure, relation: String? = null): ColumnMetadata? {
             return ColumnMetadata.builder()
                 .setName(relation?.let { _ -> "$relation.${it.name}" } ?: it.name)
                 .setComment(Optional.ofNullable(it.description))
@@ -110,7 +110,7 @@ class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTable
                 .build()
         }
 
-        private fun toColumnMetadata(it: Model.Dimension, relation: String? = null, timeframe: String? = null): ColumnMetadata {
+        private fun toColumnMetadata(it: Dataset.Dimension, relation: String? = null, timeframe: String? = null): ColumnMetadata {
             val relationPrefix = relation?.let { "$it." } ?: ""
             val timeframeSuffix = timeframe?.let { "::${toSnakeCase(it)}" } ?: ""
             return ColumnMetadata.builder()
@@ -124,8 +124,8 @@ class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTable
                 .build()
         }
 
-        private fun addColumnsForModel(columns: MutableList<ColumnMetadata>, model: Model, relation: Model.Relation?) {
-            model.dimensions.forEach { dimension ->
+        private fun addColumnsForModel(columns: MutableList<ColumnMetadata>, dataset: Dataset, relation: Dataset.Relation?) {
+            dataset.dimensions.forEach { dimension ->
                 if (relation?.fields?.contains(dimension.name) != false) {
                     if (dimension.postOperations != null && !distinct) {
                         dimension.postOperations.forEach { timeframe ->
@@ -137,25 +137,25 @@ class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTable
                 }
             }
 
-            model.measures.filter { relation?.fields?.contains(it.name) != false }.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
+            dataset.measures.filter { relation?.fields?.contains(it.name) != false }.mapNotNull { toColumnMetadata(it, relation?.name) }.forEach { columns.add(it) }
         }
 
         override fun getTableMetadata(): ConnectorTableMetadata {
             val columns = mutableListOf<ColumnMetadata>()
 
-            addColumnsForModel(columns, model, null)
+            addColumnsForModel(columns, dataset, null)
 
-            model.relations?.forEach { relation ->
-                models.find { it.name == relation.modelName }?.let { model ->
+            dataset.relations?.forEach { relation ->
+                datasets.find { it.name == relation.datasetName }?.let { model ->
                     addColumnsForModel(columns, model, relation)
                 }
             }
 
             return ConnectorTableMetadata(
-                SchemaTableName(model.category ?: "public", model.name),
+                SchemaTableName(dataset.category ?: "public", dataset.name),
                 columns,
-                mapOf("label" to model.label),
-                Optional.ofNullable(model.description)
+                mapOf("label" to dataset.label),
+                Optional.ofNullable(dataset.description)
             )
         }
     }

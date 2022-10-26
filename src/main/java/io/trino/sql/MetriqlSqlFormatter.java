@@ -17,7 +17,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metriql.service.model.Model;
+import com.metriql.service.model.Dataset;
 import com.metriql.util.MetriqlException;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -201,7 +201,7 @@ public final class MetriqlSqlFormatter {
             if (from == null || from instanceof TableSubquery) {
                 internalVisitQuerySpecification(node, indent);
             } else {
-                Pair<Model, List<String>> modelAlias = SqlToSegmentation.Companion.getModel(context, from);
+                Pair<Dataset, List<String>> modelAlias = SqlToSegmentation.Companion.getModel(context, from);
                 List<String> finalAlias;
                 if (alias != null) {
                     finalAlias = ImmutableList.of(alias);
