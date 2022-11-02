@@ -25,6 +25,9 @@ interface MaterializeQuery {
     fun getModelName(): String? = null
     fun toQuery(datasetName: DatasetName): ServiceQuery
 
+    fun check() {
+    }
+
     companion object {
         fun defaultModelName(modelName: String, reportType: ReportType, name: String): String {
             return "${modelName}_${reportType.slug}_$name"
@@ -41,6 +44,7 @@ interface ServiceQueryGenerator<T : ServiceQueryDSL, K : ServiceQuery, C : Servi
     fun supports(): List<C> = listOf()
 
     val jinja: Jinjava get() = defaultJinja
+
     companion object {
         private val defaultJinja = Jinjava()
     }

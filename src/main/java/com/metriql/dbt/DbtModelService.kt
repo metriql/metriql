@@ -6,6 +6,7 @@ import com.hubspot.jinjava.lib.filter.Filter
 import com.metriql.db.FieldType
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
@@ -64,12 +65,12 @@ class DbtModelService @Inject constructor(
         val errors = mutableListOf<HttpServer.JsonAPIError>()
 
         recipe.models?.forEach { model ->
-            model.getMaterializes().forEach { materialize ->
+            model.materializes?.entries?.forEach { entry -> entry.value.entries.forEach { materialize ->
                 val modelName = model.name!!
                 val (target, rawRenderedSql) = try {
-                    segmentationService.generateMaterializeQuery(auth.projectId, context, modelName, materialize.name, materialize.value)
+                    segmentationService.generateMaterializeQuery(auth.projectId, context, modelName, materialize.key, materialize.value)
                 } catch (e: MetriqlException) {
-                    errors.add(HttpServer.JsonAPIError.title("Unable to create materialize ${model.name}.${materialize.name}: $e"))
+                    errors.add(HttpServer.JsonAPIError.title("Unable to create materialize ${model.name}.${materialize.key}: $e"))
                     return@forEach
                 }
 
@@ -102,12 +103,12 @@ class DbtModelService @Inject constructor(
                     "table" to renderedQuery
                 }
 
-                val materializedModelName = materialize.value.getModelName() ?: defaultModelName(modelName, materialize.reportType, materialize.name)
+                val materializedModelName = materialize.value.getModelName() ?: defaultModelName(modelName, SegmentationReportType, materialize.key)
                 val schema = recipe.getDependenciesWithFallback().dbtDependency().aggregateSchema()
                 val config = modelConfigMapper.invoke(Triple(materializedModelName, target.copy(schema = schema), mapOf("materialized" to materialized)))
                 val configs = jinja.render(CONFIG_TEMPLATE, mapOf("configs" to config, "tagName" to tagName))
                 committer.addFile("$directory/$materializedModelName.sql", configs + "\n" + renderedSql)
-            }
+            } }
         }
 
         return errors

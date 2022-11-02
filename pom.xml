@@ -15,7 +15,7 @@
 
     <properties>
         <project.scm.id>github</project.scm.id>
-        <dep.jackson.version>2.10.3</dep.jackson.version>
+        <dep.jackson.version>2.12.2</dep.jackson.version>
         <dep.log4j2.version>2.16.0</dep.log4j2.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <air.version>200</air.version>

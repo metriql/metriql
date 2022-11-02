@@ -21,7 +21,6 @@ data class SegmentationQuery(
     val dimensions: List<Recipe.FieldReference>?,
     val measures: List<Recipe.FieldReference>?,
     val filters: ReportFilter? = null,
-    val report: ReportOptions? = null,
     val defaultDateRange: RPeriod? = null,
     val limit: Int? = null,
     val orders: Map<Recipe.FieldReference, Recipe.OrderType>? = null

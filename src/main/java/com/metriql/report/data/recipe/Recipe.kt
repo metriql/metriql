@@ -124,7 +124,6 @@ data class Recipe(
         val columns: List<DbtManifest.DbtColumn>? = null,
         val measures: Map<String, Metric.RecipeMeasure>? = null,
         val materializes: Map<String, Map<String, SegmentationMaterialize>>? = null,
-        val aggregates: Map<String, SegmentationMaterialize>? = null,
         val tags: List<String>? = null,
         @JsonAlias("always_filters")
         val alwaysFilters: List<OrFilters>? = null,
@@ -132,56 +131,6 @@ data class Recipe(
         val _path: String? = null,
         val package_name: String? = null,
     ) {
-
-        @JsonIgnore
-        fun getMaterializes(): List<Dataset.Materialize> {
-            val aggregates = this.aggregates?.let { mapOf(SegmentationReportType to it) } ?: mapOf()
-            val allMaterializes = ((materializes ?: mapOf()) + aggregates).flatMap { it.value.entries }?.map {
-                Dataset.Materialize(
-                    it.key,
-                    SegmentationReportType,
-                    it.value
-                )
-            }
-
-            allMaterializes.forEach { materialize ->
-                when (materialize.reportType) {
-                    SegmentationReportType -> {
-                        val eventTimestamp = mappings?.get(TIME_SERIES)
-                        if (eventTimestamp != null) {
-                            val hasEventTimestampDimension = materialize.value.dimensions?.any {
-                                // TODO: if the dimension type is timestamp
-                                if (false) {
-                                    val timeframe = it.timeframe ?: throw MetriqlException(
-                                        "Timeframe is required for ${it.name} dimension",
-                                        BAD_REQUEST
-                                    )
-                                    val enum = JsonHelper.convert(timeframe, TimestampPostOperation::class.java)
-                                    if (enum != HOUR && !enum.isInclusive(TimestampPostOperation.YEAR)) {
-                                        throw MetriqlException(
-                                            "One of HOUR, DAY, WEEK, MONTH or YEAR timeframe of the eventTimestamp is required for incremental models",
-                                            BAD_REQUEST
-                                        )
-                                    }
-
-                                    true
-                                } else {
-                                    false
-                                }
-                            } ?: false
-                        }
-                    }
-
-                    else -> throw MetriqlException(
-                        "Only segmentation materializes are allowed at the moment.",
-                        HttpResponseStatus.NOT_IMPLEMENTED
-                    )
-                }
-            }
-
-            return allMaterializes
-        }
-
         @JsonIgnore
         fun validate(): List<String> {
             val errors = mutableListOf<String>()
@@ -434,7 +383,6 @@ data class Recipe(
                     }
                 }.toMap()
 
-                val aggregates = dataset.materializes?.filter { it.reportType == SegmentationReportType }?.associate { it.name to it.value }
                 return RecipeModel(
                     dataset.name,
                     if (dataset.hidden === true) true else null,
@@ -450,8 +398,7 @@ data class Recipe(
                     recipeDimensions,
                     null,
                     recipeMeasures,
-                    null,
-                    aggregates,
+                    dataset.materializes,
                     dataset.tags,
                     dataset.alwaysFilters,
                     dataset.location
@@ -493,7 +440,7 @@ data class Recipe(
                 relations = modelRelations,
                 dimensions = ((dimensions ?: mapOf()) + dbtDimensions)?.map { (dimensionName, dimension) -> dimension.toDimension(dimensionName, bridge) },
                 measures = ((measures ?: mapOf()) + dbtMeasures)?.map { (measureName, measure) -> measure.toMeasure(measureName, modelName) },
-                materializes = getMaterializes(),
+                materializes = materializes,
                 alwaysFilters = alwaysFilters,
                 tags = tags,
                 location = _path

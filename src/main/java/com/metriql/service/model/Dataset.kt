@@ -51,14 +51,11 @@ data class Dataset(
     val relations: List<Relation>,
     val dimensions: List<Dimension>,
     val measures: List<Measure>,
-    val materializes: List<Materialize>? = null,
+    val materializes: Map<String, Map<String, SegmentationMaterialize>>? = null,
     val alwaysFilters: List<OrFilters>? = null,
     val tags: List<String>? = null,
     val location: String? = null,
 ) {
-
-    data class Materialize(val name: String, val reportType: ReportType, val value: SegmentationMaterialize)
-
     @JSONBSerializable
     data class Target(
         val type: Type,

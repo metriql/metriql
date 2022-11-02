@@ -140,8 +140,8 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val whereFilters = where.orElse(null)?.let { processWhereExpression(context, rewriter, parameterMap, references, model, it) } ?: listOf()
         val havingFilters = having.orElse(null)?.let { processWhereExpression(context, rewriter, parameterMap, references, model, it) } ?: listOf()
 
-        val (havingFilterProjections, havingFiltersPushdown) = havingFilters.groupBy { it.type == SQL }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
-        val (whereFilterProjections, whereFiltersPushdown) = whereFilters.groupBy { it.type == SQL }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
+        val (havingFilterProjections, havingFiltersPushdown) = havingFilters.groupBy { it.value is ReportFilter.FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
+        val (whereFilterProjections, whereFiltersPushdown) = whereFilters.groupBy { it.value is ReportFilter.FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
 
         val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, projectionColumns, orderBy)
         val query = SegmentationQuery(

@@ -78,13 +78,13 @@ class QueryGeneratorContext(
     }
 
     override fun getAggregatesForModel(target: Dataset.Target, reportType: ReportType): List<Triple<DatasetName, String, SegmentationMaterialize>> {
-        val allModels = datasetService.list(auth, target = target)
-
-        return allModels.filter { it.target == target }
-            .flatMap { model ->
-                model.materializes?.filter { m -> m.reportType == reportType }
-                    ?.map { Triple(model.name, it.name, it.value) } ?: listOf()
-            }
+        return listOf()
+        //        val allModels = datasetService.list(auth, target = target)
+        //        return allModels.filter { it.target == target }
+        //            .flatMap { model ->
+        //                model.materializes?.filter { m -> m.reportType == reportType }
+        //                    ?.map { Triple(model.name, it.name, it.value) } ?: listOf()
+        //            }
     }
 
     override fun getDimensionAlias(dimensionName: DimensionName, relationName: RelationName?, timeframe: ReportMetric.Timeframe?): String {

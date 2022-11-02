@@ -1,36 +1,29 @@
 package com.metriql
 
-import com.fasterxml.jackson.annotation.JsonAlias
-import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator
 import com.metriql.db.FieldType
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.report.segmentation.SegmentationQuery
-import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.IsMetriqlQueryVisitor
-import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.model.Dataset
 import com.metriql.service.model.DatasetName
 import com.metriql.service.model.DimensionName
 import com.metriql.util.JsonHelper
-import com.metriql.util.PolymorphicTypeStr
-import com.metriql.util.SealedClassInference
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
-import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
-import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
-import io.trino.sql.MetriqlSqlFormatter
 import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.parser.SqlParser
 import org.intellij.lang.annotations.Language
 import org.openapitools.codegen.ClientOptInput
 import org.openapitools.codegen.DefaultGenerator
 import org.openapitools.codegen.languages.TypeScriptAxiosClientCodegen
+import org.testng.Assert.assertEquals
 import org.testng.annotations.Test
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
@@ -140,4 +133,28 @@ class Test {
             ) : ReportMetric()
         }
     }
+
+    @Test
+    fun main() {
+        val json = "{\"animals\": [{\"name\": \"Sparky\"}, {\"name\": \"Polly\", \"wingspan\": 5.25}]}"
+        val zooPen: ZooPen = JsonHelper.getMapper().readValue(json, ZooPen::class.java) // Currently throws InvalidTypeIdException
+        assertEquals(Animal::class.java, zooPen.animals!![0].javaClass)
+        assertEquals(Animal.Bird::class.java, zooPen.animals!![1].javaClass)
+    }
+
+    class ZooPen {
+        var animals: List<Animal>? = null
+    }
+
+    @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION, defaultImpl = Animal::class)
+//    @JsonSubTypes(JsonSubTypes.Type(value = Animal.Bird::class))
+    sealed class  Animal {
+        var name: String? = null
+
+        class Bird : Animal() {
+            var wingspan = 0.0
+        }
+    }
+
+
 }

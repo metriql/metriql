@@ -160,12 +160,11 @@ class DiscoverService(private val dataSource: DataSource) {
                 false,
                 target,
                 null,
-                if (tableSchema.comment != null && tableSchema.comment.isNotBlank()) tableSchema.comment else null,
+                if (!tableSchema.comment.isNullOrBlank()) tableSchema.comment else null,
                 null,
                 discoverMapping(dimensions),
                 listOf(),
                 dimensions,
-                listOf(),
                 listOf()
             )
         }
