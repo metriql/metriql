@@ -7,8 +7,8 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.JsonHelper
 import com.metriql.util.JsonUtil
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext

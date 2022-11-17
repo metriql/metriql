@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.RPeriod
@@ -24,14 +24,12 @@ data class SegmentationQuery(
     val defaultDateRange: RPeriod? = null,
     val limit: Int? = null,
     val orders: Map<Recipe.FieldReference, Recipe.OrderType>? = null
-) : ServiceQuery {
+) : ServiceQuery() {
     init {
         if (limit != null && (limit < 0 || limit > WarehouseQueryTask.MAX_LIMIT)) {
             throw MetriqlException("Segmentation limit can not be less than 0 or more than ${WarehouseQueryTask.MAX_LIMIT}", HttpResponseStatus.BAD_REQUEST)
         }
     }
-
-    override fun getQueryLimit(): Int? = limit
 
     data class Order(
         val type: Type,

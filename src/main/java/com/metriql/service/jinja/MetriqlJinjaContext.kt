@@ -3,11 +3,11 @@ package com.metriql.service.jinja
 import com.hubspot.jinjava.interpret.TemplateStateException
 import com.metriql.report.data.ReportFilter
 import com.metriql.service.auth.UserAttributeValues
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.ModelDimension
-import com.metriql.service.model.ModelMeasure
-import com.metriql.service.model.DatasetName
-import com.metriql.service.model.ModelRelation
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.ModelDimension
+import com.metriql.service.dataset.ModelMeasure
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.ModelRelation
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.UppercaseEnum

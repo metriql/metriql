@@ -2,11 +2,10 @@ package com.metriql.warehouse.snowflake
 
 import com.metriql.db.FieldType
 import com.metriql.report.data.ReportMetric
-import com.metriql.report.flow.FlowReportType
 import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.retention.RetentionReportType
 import com.metriql.report.segmentation.SegmentationReportType
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -16,7 +15,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionType.PROJECTION
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 import io.trino.spi.type.StandardTypes
@@ -45,8 +43,7 @@ object SnowflakeMetriqlBridge : ANSISQLMetriqlBridge() {
         FunnelReportType.slug to ANSISQLFunnelQueryGenerator(
             template = SnowflakeMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/snowflake/generic.jinja2").readText()
         ),
-        RetentionReportType.slug to SnowflakeRetentionQueryGenerator(),
-        FlowReportType.slug to ANSISQLFlowQueryGenerator(),
+        RetentionReportType.slug to SnowflakeRetentionQueryGenerator()
     )
 
     override val functions = super.functions + mapOf(

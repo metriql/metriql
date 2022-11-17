@@ -10,9 +10,9 @@ import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
-import com.metriql.service.model.UpdatableDatasetService
+import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.UpdatableDatasetService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.YamlHelper

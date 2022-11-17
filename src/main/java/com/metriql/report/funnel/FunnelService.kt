@@ -11,10 +11,10 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.USER_ID
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.funnel.Funnel

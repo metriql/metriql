@@ -1,12 +1,18 @@
 package com.metriql.report.data
 
+import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DatabindContext
+import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
+import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Connector
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -20,6 +26,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import kotlin.reflect.KClass
 
 @JSONBSerializable
+@JsonDeserialize(using = ReportFilter.FilterValueJsonDeserializer::class)
 data class ReportFilter(
     val type: Type,
     @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
@@ -35,7 +42,7 @@ data class ReportFilter(
         override fun getValueClass() = clazz.java
     }
 
-    fun toReference(): OrFilters? {
+    fun toReference(): OrFilters? {// nested
         return when (value) {
             is FilterValue.SqlFilter -> throw UnsupportedOperationException()
             is FilterValue.MetricFilter -> {
@@ -69,6 +76,34 @@ data class ReportFilter(
         }
     }
 
+    data class Test(val and : List<ReportFilter>, val or : List<ReportFilter>, )
+
+    class FilterValueJsonDeserializer : JsonDeserializer<ReportFilter>() {
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ReportFilter {
+            if(p.isExpectedStartObjectToken) {
+                val nextFieldName = p.nextFieldName()
+                val connector = try {
+                    JsonHelper.convert(nextFieldName, Connector::class.java)
+                } catch (e: Exception) {
+                    null
+                }
+
+                return if(connector != null) {
+//                    ctxt.readValue<Connector>(p, ctxt.constructType(Connector::class.java))
+                    p.nextValue()
+                    val filters = p.readValuesAs(object : com.fasterxml.jackson.core.type.TypeReference<ReportFilter>() {}).asSequence().toList()
+                    ReportFilter(Type.NESTED, FilterValue.NestedFilter(connector, filters))
+                } else {
+                    ReportFilter(Type.METRIC, FilterValue.MetricFilter(Connector.AND, null!!))
+                }
+            } else
+                if(p.isExpectedStartArrayToken) {
+
+                }
+            return null!!
+        }
+    }
+
     sealed class FilterValue {
         data class SqlFilter(val sql: String) : FilterValue() {
             override fun subtract(filter: ReportFilter): ReportFilter? {
@@ -80,7 +115,7 @@ data class ReportFilter(
             }
         }
 
-        data class NestedFilter(val connector: MetricFilter.Connector, val filters: List<ReportFilter>) : FilterValue() {
+        data class NestedFilter(val connector: Connector, val filters: List<ReportFilter>) : FilterValue() {
             override fun subtract(filter: ReportFilter): ReportFilter? {
                 return if (filter.value == this) {
                     null
@@ -105,6 +140,7 @@ data class ReportFilter(
             data class Filter(
                 val type: MetricType,
                 @PolymorphicTypeStr<MetricType>(externalProperty = "type", valuesEnum = MetricType::class)
+                @JsonAlias("dimension")
                 val metric: ReportMetric,
                 val operator: String,
                 val value: Any?

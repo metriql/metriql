@@ -12,10 +12,10 @@ import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQueryReWriter.MaterializeTableCache
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
-import com.metriql.service.model.Dataset.Target.TargetValue.Table
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.Dataset.Target.TargetValue.Table
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge

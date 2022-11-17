@@ -3,7 +3,7 @@ package com.metriql.tests
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.data.ReportMetric.ReportDimension
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.filter.BooleanOperatorType
 import com.metriql.warehouse.spi.filter.DateOperatorType

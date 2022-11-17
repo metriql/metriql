@@ -7,6 +7,6 @@ class RetentionReportTypeProxy : ReportType by RetentionReportType, ReportTypePr
 
 object RetentionReportType : ReportType {
     override val slug = "retention"
-    override val configClass = RetentionQuery::class
+    override val dataClass = RetentionQuery::class
     override val serviceClass = RetentionService::class
 }

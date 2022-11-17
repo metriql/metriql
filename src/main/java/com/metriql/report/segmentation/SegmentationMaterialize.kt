@@ -2,7 +2,7 @@ package com.metriql.report.segmentation
 
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.function.TimestampPostOperation

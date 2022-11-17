@@ -6,10 +6,10 @@ import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
 import com.metriql.report.data.ReportFilter.Type.METRIC
 import com.metriql.report.data.ReportMetric
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
-import com.metriql.service.model.Dataset.Target.TargetValue.Table
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.Dataset.Target.TargetValue.Table
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.JsonHelper.encode
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DbtSettings.Companion.generateSchemaForModel

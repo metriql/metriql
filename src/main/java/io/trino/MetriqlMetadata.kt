@@ -6,8 +6,8 @@ import com.metriql.db.FieldType
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.dataset.Dataset
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.toSnakeCase
@@ -41,9 +41,8 @@ import java.util.Optional
 class MetriqlMetadata(private val datasetService: IDatasetService) : SystemTablesProvider {
 
     private fun getModels(session: ConnectorSession): List<Dataset> {
-        // TODO: Find a way to pass projects
-//        val projectId = session.getProperty("project", Int::class.java)
-        return datasetService.list(ProjectAuth.systemUser("", session.user)).filter { !it.hidden }
+        val auth = JsonHelper.read(session.identity.extraCredentials["metriql"], ProjectAuth::class.java)
+        return datasetService.list(auth).filter { !it.hidden }
     }
 
     override fun listSystemTables(session: ConnectorSession): Set<SystemTable> {

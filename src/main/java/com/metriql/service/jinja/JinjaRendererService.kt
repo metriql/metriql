@@ -4,7 +4,7 @@ import com.hubspot.jinjava.Jinjava
 import com.hubspot.jinjava.RecursiveJinjava
 import com.hubspot.jinjava.lib.fn.ELFunctionDefinition
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext

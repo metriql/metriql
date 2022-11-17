@@ -1,13 +1,11 @@
 package com.metriql.report.data
 
-import com.fasterxml.jackson.annotation.JsonAlias
-import com.fasterxml.jackson.annotation.JsonCreator
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.MeasureName
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.DatasetName
-import com.metriql.service.model.RelationName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.MeasureName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -21,16 +19,6 @@ import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 
 sealed class ReportMetric {
-    private companion object {
-        @JsonCreator
-        @JvmStatic
-        fun findBySimpleClassName(simpleName: String): ReportMetric? {
-            return ReportMetric::class.sealedSubclasses.first {
-                it.simpleName == simpleName
-            }.objectInstance
-        }
-    }
-
     data class ReportMappingDimension(
         val name: Dataset.MappingDimensions.CommonMappings,
         val timeframe: Timeframe?

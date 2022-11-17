@@ -1,6 +1,6 @@
 package com.metriql.warehouse.snowflake
 
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.tests.JdbcTestDataSource
 import org.testng.annotations.Test
 import kotlin.test.assertEquals

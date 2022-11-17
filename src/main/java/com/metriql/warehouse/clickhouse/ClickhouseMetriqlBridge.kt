@@ -4,7 +4,7 @@ import com.metriql.db.FieldType
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.segmentation.SegmentationReportType
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.util.DefaultJinja
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge

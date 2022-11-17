@@ -5,14 +5,11 @@ import com.hubspot.jinjava.Jinjava
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 @JSONBSerializable
-interface ServiceQuery {
-    @JsonIgnore
-    fun getQueryLimit(): Int? = null
-}
+typealias ServiceQuery = Any
 
 @JSONBSerializable
 interface RecipeQuery {

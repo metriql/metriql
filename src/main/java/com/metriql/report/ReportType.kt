@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
 @JsonDeserialize(using = ReportType.ReportTypeJsonDeserializer::class)
 interface ReportType {
     val slug: String
-    val configClass: KClass<out ServiceQuery>
+    val dataClass: KClass<out ServiceQuery>
     val serviceClass: KClass<out IAdHocService<out ServiceQuery>>
 
     @JsonValue

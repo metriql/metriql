@@ -8,8 +8,8 @@ import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.dataset.Dataset
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService

@@ -1,4 +1,4 @@
-package com.metriql.service.model
+package com.metriql.service.dataset
 
 import com.metriql.service.auth.ProjectAuth
 

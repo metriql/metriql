@@ -8,7 +8,7 @@ import com.google.cloud.bigquery.Schema
 import com.google.cloud.bigquery.StandardTableDefinition
 import com.google.cloud.bigquery.TableId
 import com.google.cloud.bigquery.TableInfo
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.tests.SimpleFilterTests
 import com.metriql.tests.TestDataSource
 import com.metriql.util.`try?`

@@ -17,7 +17,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.hubspot.jinjava.Jinjava;
-import com.metriql.service.model.Dataset;
+import com.metriql.service.dataset.Dataset;
 import com.metriql.warehouse.presto.PrestoMetriqlBridge.PrestoReverseAggregation;
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge;
 import com.metriql.warehouse.spi.function.RFunction;

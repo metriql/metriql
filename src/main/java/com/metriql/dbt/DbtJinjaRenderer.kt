@@ -6,7 +6,7 @@ import com.hubspot.jinjava.JinjavaConfig
 import com.hubspot.jinjava.el.ext.NamedParameter
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
 import com.hubspot.jinjava.interpret.RenderResult
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.CryptUtil
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil

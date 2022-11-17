@@ -6,7 +6,8 @@ import com.metriql.report.data.ReportFilter
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
-import com.metriql.service.model.DatasetName
+import com.metriql.service.jdbc.StatementService.Companion.isMetadataQuery
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.WarehouseQueryTask.Companion.MAX_LIMIT
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -31,19 +32,24 @@ class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : 
         val statement = parser.createStatement(reportOptions.query, defaultParsingOptions)
         val parameterMap: Map<NodeRef<Parameter>, Expression> = ParameterUtils.parameterExtractor(statement, reportOptions.variables ?: listOf())
 
-        val compiledQuery = try {
-            MetriqlSqlFormatter.formatSql(statement, reWriter, context, parameterMap)
-        } catch (e: MetriqlException) {
-            throw e
-        } catch (e: Exception) {
-            logger.log(Level.WARNING, "Unable to parse MQL query", e)
-            throw MetriqlException("Unable to parse query: $e", HttpResponseStatus.BAD_REQUEST)
+        val compiledQuery = if(isMetadataQuery(statement, "metriql")) {
+            reportOptions.query
+        } else {
+            try {
+                MetriqlSqlFormatter.formatSql(statement, reWriter, context, parameterMap)
+            } catch (e: MetriqlException) {
+                throw e
+            } catch (e: Exception) {
+                logger.log(Level.WARNING, "Unable to parse MQL query", e)
+                throw MetriqlException("Unable to parse query: $e", HttpResponseStatus.BAD_REQUEST)
+            }
         }
 
         val opt = reportOptions.queryOptions?.copy(limit = reportOptions.queryOptions?.limit ?: MAX_LIMIT)
             ?: MqlQuery.QueryOptions(MAX_LIMIT, null, null, true)
         val queryOptions = SqlQuery.QueryOptions(opt.limit, opt.defaultDatabase, opt.defaultSchema, opt.useCache)
-        return IAdHocService.RenderedQuery(compiledQuery, queryOptions = queryOptions)
+
+        return IAdHocService.RenderedQuery(compiledQuery, queryOptions = queryOptions, target = MqlQueryTaskGenerator::class)
     }
 
     override fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: MqlQuery): Set<DatasetName> = setOf()

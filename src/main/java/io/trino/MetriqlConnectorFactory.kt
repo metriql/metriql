@@ -1,6 +1,6 @@
 package io.trino
 
-import com.metriql.service.model.IDatasetService
+import com.metriql.service.dataset.IDatasetService
 import io.trino.connector.system.SystemHandleResolver
 import io.trino.connector.system.SystemPageSourceProvider
 import io.trino.connector.system.SystemSplitManager
@@ -16,8 +16,10 @@ import io.trino.spi.connector.ConnectorSplitManager
 import io.trino.spi.connector.ConnectorTransactionHandle
 import io.trino.spi.session.PropertyMetadata
 import io.trino.spi.transaction.IsolationLevel
+import io.trino.spi.type.MapType
 import io.trino.transaction.InternalConnector
 import io.trino.transaction.TransactionId
+import io.trino.type.MapParametricType
 
 class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManager, val datasetService: IDatasetService) : ConnectorFactory {
     override fun getName() = "metriql"
@@ -41,10 +43,6 @@ class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManag
             return SystemSplitManager(nodeManager, metadata)
         }
 
-        override fun beginTransaction(isolationLevel: IsolationLevel?, readOnly: Boolean): ConnectorTransactionHandle {
-            return super.beginTransaction(isolationLevel, readOnly)
-        }
-
         override fun getPageSourceProvider(): ConnectorPageSourceProvider {
             return SystemPageSourceProvider(metadata)
         }
@@ -56,5 +54,6 @@ class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManag
 
     companion object {
         val QUERY_TYPE_PROPERTY: PropertyMetadata<String> = PropertyMetadata.stringProperty("query_mode", "Switch query mode", "mql", false)
+        val METRIQL_AUTH_PROPERTY: PropertyMetadata<String> = PropertyMetadata.stringProperty("metriql", "Metriql info", null, true)
     }
 }

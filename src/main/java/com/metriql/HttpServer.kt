@@ -12,6 +12,7 @@ import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.funnel.FunnelService
+import com.metriql.report.mql.MqlQueryTaskGenerator
 import com.metriql.report.mql.MqlReportType
 import com.metriql.report.mql.MqlService
 import com.metriql.report.retention.RetentionReportType
@@ -27,12 +28,13 @@ import com.metriql.service.auth.UserAttributeDefinition
 import com.metriql.service.auth.UserAttributeValues
 import com.metriql.service.cache.InMemoryCacheService
 import com.metriql.service.integration.IntegrationHttpService
+import com.metriql.service.jdbc.LightweightQueryRunner
 import com.metriql.service.jdbc.NodeInfoService
 import com.metriql.service.jdbc.QueryService
 import com.metriql.service.jdbc.StatementService
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
@@ -58,7 +60,7 @@ import org.rakam.server.http.HttpService
 import java.time.ZoneId
 
 object HttpServer {
-    private fun getServices(deployment: Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?, cacheSpec : CacheBuilderSpec): Pair<Set<HttpService>, () -> Unit> {
+    private fun getServices(deployment: Deployment, enableJdbc: Boolean, catalogs: CatalogFile.Catalogs?, cacheSpec: CacheBuilderSpec): Pair<Set<HttpService>, () -> Unit> {
         val services = mutableSetOf<HttpService>()
         val postRun = mutableListOf<() -> Unit>()
 
@@ -66,30 +68,36 @@ object HttpServer {
         services.add(BaseHttpService())
         services.add(IntegrationHttpService(deployment))
 
-        val queryService = getQueryService(deployment, cacheSpec)
+        val runner = LightweightQueryRunner(deployment.getDatasetService())
+
+        val queryService = getQueryService(deployment, cacheSpec, runner)
         services.add(queryService)
 
         services.add(TaskHttpService(queryService.taskQueueService))
 
+
         if (enableJdbc) {
-            val jdbcServices = jdbcServices(queryService, catalogs)
-            jdbcServices.first.forEach { services.add(it) }
-            postRun.add(jdbcServices.second)
+            val jdbcServices = jdbcServices(queryService, runner)
+            jdbcServices.forEach { services.add(it) }
         }
+
+        runner.start(catalogs)
 
         return services to { postRun.forEach { it.invoke() } }
     }
 
-    private fun getQueryService(deployment: Deployment, cacheSpec : CacheBuilderSpec): QueryHttpService {
+    private fun getQueryService(deployment: Deployment, cacheSpec: CacheBuilderSpec, runner: LightweightQueryRunner): QueryHttpService {
         val taskExecutor = TaskExecutorService()
         val taskQueueService = TaskQueueService(taskExecutor)
 
         val cacheService = InMemoryCacheService(cacheSpec)
+        val sqlQueryTaskGenerator = SqlQueryTaskGenerator(cacheService)
+        val taskGenerators = listOf(sqlQueryTaskGenerator, MqlQueryTaskGenerator(runner)) + deployment.getTaskGenerators()
+
         val services = getReportServices(deployment.getDatasetService())
 
-        val queryTaskGenerator = SqlQueryTaskGenerator(cacheService)
         val reportService = ReportService(
-            deployment.getDatasetService(), JinjaRendererService(), queryTaskGenerator, services, this::getAttributes,
+            deployment.getDatasetService(), JinjaRendererService(),  taskGenerators, services, this::getAttributes,
             object : DependencyFetcher {
                 override fun fetch(context: IQueryGeneratorContext, model: DatasetName): Recipe.Dependencies {
                     return Recipe.Dependencies()
@@ -101,20 +109,20 @@ object HttpServer {
             deployment,
             services[SegmentationReportType] as SegmentationService,
             reportService,
-            queryTaskGenerator,
+            sqlQueryTaskGenerator,
             taskQueueService
         )
         return QueryHttpService(deployment, reportService, taskQueueService, suggestionService, services)
     }
 
-    private fun jdbcServices(queryService: QueryHttpService, catalogs: CatalogFile.Catalogs?): Pair<Set<HttpService>, () -> Unit> {
-        val statementService = StatementService(queryService.taskQueueService, queryService.reportService, queryService.deployment)
+    private fun jdbcServices(queryService: QueryHttpService, runner: LightweightQueryRunner): Set<HttpService> {
+        val statementService = StatementService(queryService.taskQueueService, queryService.reportService, queryService.deployment, runner)
         val services = setOf(
             NodeInfoService(),
             QueryService(queryService.taskQueueService),
             statementService,
         )
-        return services to { statementService.startServices(catalogs) }
+        return services
     }
 
     private fun getAttributes(auth: ProjectAuth): UserAttributeValues {

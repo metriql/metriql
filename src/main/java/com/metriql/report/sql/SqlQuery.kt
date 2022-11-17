@@ -16,12 +16,8 @@ data class SqlQuery(
     val queryOptions: QueryOptions?,
     val variables: List<Variable<*>>?,
     val reportOptions: ReportOptions?
-) : ServiceQuery, RecipeQuery {
+) : ServiceQuery(), RecipeQuery {
     override fun toReportOptions(context: IQueryGeneratorContext) = this
-
-    override fun getQueryLimit(): Int? {
-        return queryOptions?.limit
-    }
 
     @JsonIgnoreProperties(value = ["segmentedColumnOptions"])
     data class ReportOptions(

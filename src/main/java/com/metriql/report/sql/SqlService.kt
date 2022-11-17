@@ -3,7 +3,7 @@ package com.metriql.report.sql
 import com.metriql.report.IAdHocService
 import com.metriql.report.data.ReportFilter
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 class SqlService : IAdHocService<SqlQuery> {

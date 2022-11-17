@@ -17,7 +17,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metriql.service.model.Dataset;
+import com.metriql.service.dataset.Dataset;
 import com.metriql.util.MetriqlException;
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext;
 import io.netty.handler.codec.http.HttpResponseStatus;

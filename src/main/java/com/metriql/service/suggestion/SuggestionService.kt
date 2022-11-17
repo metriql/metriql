@@ -13,9 +13,9 @@ import com.metriql.report.segmentation.SegmentationService
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.DatasetName
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException

@@ -5,9 +5,9 @@ import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportMetric
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.Dataset.Dimension.DimensionValue.Column
-import com.metriql.service.model.Dataset.Dimension.Type.COLUMN
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.Dimension.DimensionValue.Column
+import com.metriql.service.dataset.Dataset.Dimension.Type.COLUMN
 import com.metriql.util.JsonHelper
 import com.metriql.warehouse.spi.filter.NumberOperatorType
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext

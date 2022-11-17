@@ -1,7 +1,7 @@
 package com.metriql.warehouse
 
 import com.metriql.db.FieldType
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.filter.AnyOperatorType
 import com.metriql.warehouse.spi.filter.ArrayOperatorType

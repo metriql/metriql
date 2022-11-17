@@ -8,8 +8,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeDimension
 import com.metriql.report.data.recipe.Recipe.RecipeModel.Metric.RecipeMeasure
-import com.metriql.service.model.Dataset.Relation.JoinType
-import com.metriql.service.model.Dataset.Relation.RelationType
+import com.metriql.service.dataset.Dataset.Relation.JoinType
+import com.metriql.service.dataset.Dataset.Relation.RelationType
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil
 import com.metriql.util.UppercaseEnum

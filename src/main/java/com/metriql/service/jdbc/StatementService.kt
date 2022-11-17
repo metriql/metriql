@@ -6,7 +6,6 @@ import com.metriql.db.QueryResult
 import com.metriql.deployment.Deployment
 import com.metriql.report.ReportLocator
 import com.metriql.report.ReportService
-import com.metriql.report.ReportType
 import com.metriql.report.mql.MqlQuery
 import com.metriql.report.mql.MqlReportType
 import com.metriql.report.sql.SqlQuery
@@ -16,7 +15,6 @@ import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
-import com.metriql.warehouse.metriql.CatalogFile
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap
 import io.airlift.json.ObjectMapperProvider
 import io.netty.handler.codec.http.HttpHeaders
@@ -64,33 +62,10 @@ import javax.ws.rs.core.MultivaluedMap
 class StatementService(
     private val taskQueueService: TaskQueueService,
     private val reportService: ReportService,
-    private val deployment: Deployment
+    private val deployment: Deployment,
+    private val runner : LightweightQueryRunner,
 ) : HttpService() {
-    private val runner = LightweightQueryRunner(deployment.getDatasetService())
     private val mapper = ObjectMapperProvider().get()
-    private val groupProviderManager = TestingGroupProvider()
-
-    fun startServices(catalogs: CatalogFile.Catalogs?) {
-        runner.start(catalogs)
-    }
-
-    companion object {
-        val defaultParsingOptions = ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL)
-        private val logger = Logger.getLogger(this::class.java.name)
-    }
-
-    private fun isMetadataQuery(reportType: ReportType, statement: Statement?, defaultCatalog: String): Boolean {
-        val isMetadata = AtomicReference<Boolean?>()
-
-        return if (statement != null && statement !is Query) {
-            true
-        } else {
-            if (reportType == MqlReportType && statement != null) {
-                IsMetriqlQueryVisitor(defaultCatalog).process(statement, isMetadata)
-                isMetadata.get()?.let { !it } ?: false
-            } else false
-        }
-    }
 
     private fun createSessionContext(request: RakamHttpRequest): HttpRequestSessionContext {
         val headerMap: MultivaluedMap<String, String> = GuavaMultivaluedMap()
@@ -104,7 +79,7 @@ class StatementService(
         )
         return HttpRequestSessionContext(
             headerMap, Optional.of("Presto"), request.uri,
-            Optional.of(Identity.ofUser("default")), groupProviderManager
+            Optional.of(Identity.ofUser("default")), runner.groupProviderManager
         )
     }
 
@@ -134,7 +109,7 @@ class StatementService(
                 runner.runner.sqlParser.createStatement(ps, defaultParsingOptions) to rawStmt.parameters
             } else rawStmt to null
 
-            val task = if (isMetadataQuery(reportType, statement, "metriql")) {
+            val task = if (reportType == MqlReportType && isMetadataQuery(statement, "metriql")) {
                 runner.createTask(auth, sessionContext, sql)
             } else {
                 val dataSource = deployment.getDataSource(auth)
@@ -147,7 +122,7 @@ class StatementService(
                 val options = when (reportType) {
                     MqlReportType -> MqlQuery(finalSql, null, parameters, null)
                     SqlReportType -> SqlQuery(finalSql, null, null, null)
-                    else -> JsonHelper.read(finalSql, reportType.configClass.java)
+                    else -> JsonHelper.read(finalSql, reportType.dataClass.java)
                 }
 
                 reportService.queryTask(
@@ -300,5 +275,23 @@ class StatementService(
     fun delete(request: RakamHttpRequest, @Named("userContext") auth: ProjectAuth, @QueryParam("id") id: String, @QueryParam("maxWait", required = false) maxWait: String?) {
         taskQueueService.cancel(UUID.fromString(id))
         request.response(byteArrayOf(), HttpResponseStatus.OK)
+    }
+
+    companion object {
+        val defaultParsingOptions = ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL)
+        private val logger = Logger.getLogger(this::class.java.name)
+
+        fun isMetadataQuery(statement: Statement?, defaultCatalog: String): Boolean {
+            val isMetadata = AtomicReference<Boolean?>()
+
+            return if (statement != null && statement !is Query) {
+                true
+            } else {
+                if (statement != null) {
+                    IsMetriqlQueryVisitor(defaultCatalog).process(statement, isMetadata)
+                    isMetadata.get()?.let { !it } ?: false
+                } else false
+            }
+        }
     }
 }

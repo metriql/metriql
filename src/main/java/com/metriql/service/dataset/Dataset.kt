@@ -1,4 +1,4 @@
-package com.metriql.service.model
+package com.metriql.service.dataset
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.CaseFormat
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
-import com.metriql.report.ReportType
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.segmentation.SegmentationMaterialize

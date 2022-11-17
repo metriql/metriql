@@ -24,7 +24,7 @@ import com.metriql.db.QueryResult.QueryStats.State.FINISHED
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.service.task.Task
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException

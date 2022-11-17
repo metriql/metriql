@@ -5,11 +5,12 @@ import com.google.common.cache.CacheBuilderSpec
 import com.google.common.net.HttpHeaders
 import com.metriql.Commands
 import com.metriql.UserContext
-import com.metriql.deployment.SingleTenantDeployment.Companion.parseRecipe
+import com.metriql.deployment.SingleTenantDbtDeployment.Companion.parseRecipe
+import com.metriql.report.jinja.JinjaApps
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
 import com.metriql.service.suggestion.InMemorySuggestionCacheService
 import com.metriql.service.suggestion.SuggestionCacheService
 import com.metriql.util.MetriqlException
@@ -26,7 +27,7 @@ import java.util.concurrent.TimeUnit
 
 typealias ManifestCacheHolder = Optional<Pair<Instant, List<Dataset>>>
 
-class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration: Duration, private val cacheSpec: CacheBuilderSpec) : Deployment {
+class MultiTenantDbtDeployment(private val multiTenantUrl: String, cacheExpiration: Duration, private val cacheSpec: CacheBuilderSpec) : Deployment {
     private val cache = CacheBuilder.newBuilder().expireAfterWrite(cacheExpiration.toMillis(), TimeUnit.MILLISECONDS)
         .build<String, Optional<AdapterManifest>>()
     private val manifestCache = ConcurrentHashMap<String, ManifestCacheHolder>()
@@ -75,7 +76,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
                         synchronized(updateAtAndModelPair) {
 
                             val recipe = parseRecipe(dataSource, manifestUrl)
-                            val models = SingleTenantDeployment.getPreparedModels(dataSource, auth, recipe)
+                            val models = SingleTenantDbtDeployment.getPreparedModels(dataSource, auth, recipe)
                             request.body.manifest.updated_at?.let {
                                 manifestCache[manifestUrl] = Optional.of(it to models)
                             }
@@ -98,6 +99,7 @@ class MultiTenantDeployment(private val multiTenantUrl: String, cacheExpiration:
     }
 
     override fun getDataSource(auth: ProjectAuth) = cache.getIfPresent(auth.userId as String)!!.get().dataSource
+    override fun getApps(auth: ProjectAuth) = JinjaApps(listOf())
 
     inner class MultiTenantDatasetService : IDatasetService {
 

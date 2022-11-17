@@ -4,7 +4,7 @@ import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.service.task.Task
 
 interface DataSource {

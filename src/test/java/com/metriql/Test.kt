@@ -6,11 +6,12 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator
 import com.metriql.db.FieldType
+import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.jdbc.IsMetriqlQueryVisitor
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.DatasetName
-import com.metriql.service.model.DimensionName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
 import com.metriql.util.JsonHelper
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
@@ -136,10 +137,9 @@ class Test {
 
     @Test
     fun main() {
-        val json = "{\"animals\": [{\"name\": \"Sparky\"}, {\"name\": \"Polly\", \"wingspan\": 5.25}]}"
-        val zooPen: ZooPen = JsonHelper.getMapper().readValue(json, ZooPen::class.java) // Currently throws InvalidTypeIdException
-        assertEquals(Animal::class.java, zooPen.animals!![0].javaClass)
-        assertEquals(Animal.Bird::class.java, zooPen.animals!![1].javaClass)
+        val json = "{\"and\": [{\"dimension\": \"test\", \"operator\": \"equals\", \"operator\": \"operator\"}, {\"and\": []}]}"
+        val zooPen = JsonMapper().readValue(json, ReportFilter::class.java) // Currently throws InvalidTypeIdException
+        assertEquals(Animal::class.java, zooPen::class.java)
     }
 
     class ZooPen {
@@ -147,12 +147,15 @@ class Test {
     }
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION, defaultImpl = Animal::class)
-//    @JsonSubTypes(JsonSubTypes.Type(value = Animal.Bird::class))
-    sealed class  Animal {
-        var name: String? = null
+    @JsonSubTypes(*[JsonSubTypes.Type(value = Animal.Bird::class), JsonSubTypes.Type(value = Animal.WildAnimal::class)])
+    sealed class Animal {
 
         class Bird : Animal() {
             var wingspan = 0.0
+        }
+
+        class WildAnimal : Animal() {
+            var name = "mahmut"
         }
     }
 

@@ -1,6 +1,6 @@
 package com.metriql.warehouse.spi
 
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.Dataset
 import com.metriql.util.UppercaseEnum
 
 data class DbtSettings(

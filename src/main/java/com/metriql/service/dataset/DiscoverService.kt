@@ -1,9 +1,9 @@
-package com.metriql.service.model
+package com.metriql.service.dataset
 
 import com.metriql.db.FieldType
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.DEVICE_ID
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
-import com.metriql.service.model.Dataset.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.DEVICE_ID
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.util.MetriqlException
 import com.metriql.util.TextUtil.toMetriqlConventionalName
 import com.metriql.util.serializableName

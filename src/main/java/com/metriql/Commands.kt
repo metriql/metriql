@@ -15,15 +15,15 @@ import com.google.common.net.HostAndPort
 import com.metriql.dbt.DbtModelService
 import com.metriql.dbt.FileHandler
 import com.metriql.deployment.Deployment
-import com.metriql.deployment.MultiTenantDeployment
-import com.metriql.deployment.SingleTenantDeployment
-import com.metriql.deployment.SingleTenantDeployment.Companion.getProfileConfigForSingleTenant
-import com.metriql.deployment.SingleTenantDeployment.Companion.parseRecipe
+import com.metriql.deployment.MultiTenantDbtDeployment
+import com.metriql.deployment.SingleTenantDbtDeployment
+import com.metriql.deployment.SingleTenantDbtDeployment.Companion.getProfileConfigForSingleTenant
+import com.metriql.deployment.SingleTenantDbtDeployment.Companion.parseRecipe
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil
 import com.metriql.warehouse.WarehouseLocator
@@ -114,7 +114,7 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val auth = ProjectAuth.singleProject()
             val config = try {
-                getProfileConfigForSingleTenant(projectDir, super.profilesContent, profilesDir, vars, profile)
+                getProfileConfigForSingleTenant(projectDir, super.profilesContent, profilesDir, SingleTenantDbtDeployment.getVarMap(vars), profile)
             } catch (e: IllegalArgumentException) {
                 echo(e.message, err = true)
                 exitProcess(1)
@@ -235,9 +235,9 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
 
             val arg = manifestJson ?: File(projectDir, "target/manifest.json").toURI().toString()
             val deployment = deployment ?: if (multiTenantUrl != null) {
-                MultiTenantDeployment(multiTenantUrl!!, Duration.valueOf(multiTenantCacheDuration), cacheSpec)
+                MultiTenantDbtDeployment(multiTenantUrl!!, Duration.valueOf(multiTenantCacheDuration), cacheSpec)
             } else {
-                SingleTenantDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile, cacheSpec)
+                SingleTenantDbtDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile, cacheSpec)
             }
 
             val catalogFile = when {

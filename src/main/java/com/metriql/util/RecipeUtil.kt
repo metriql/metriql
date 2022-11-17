@@ -1,7 +1,7 @@
 package com.metriql.util
 
-import com.metriql.service.model.DiscoverService
-import com.metriql.service.model.Dataset
+import com.metriql.service.dataset.DiscoverService
+import com.metriql.service.dataset.Dataset
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus

@@ -4,14 +4,16 @@ import com.metriql.report.data.ReportFilter
 import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.Dataset
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.ServiceQuery
 import io.netty.handler.codec.http.HttpResponseStatus
+import kotlin.reflect.KClass
 
 interface IAdHocService<T : ServiceQuery> {
+
     /**
      * A factory pattern queryTask generator. Given reportOptions, passes options to corresponding service.
      * Service then builds up the query and passes to SQLQueryExecutor to pass the final limits and checks the short-lived
@@ -44,5 +46,5 @@ interface IAdHocService<T : ServiceQuery> {
         throw MetriqlException("This report type doesn't support materialization", HttpResponseStatus.NOT_IMPLEMENTED)
     }
 
-    data class RenderedQuery(val query: String, val postProcessors: List<PostProcessor> = listOf(), val queryOptions: SqlQuery.QueryOptions? = null)
+    data class RenderedQuery(val query: String, val postProcessors: List<PostProcessor> = listOf(), val queryOptions: SqlQuery.QueryOptions? = null, val target: KClass<out QueryTaskGenerator> = SqlQueryTaskGenerator::class)
 }

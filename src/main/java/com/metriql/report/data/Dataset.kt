@@ -2,7 +2,7 @@ package com.metriql.report.data
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.DatasetName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 data class Dataset(

@@ -5,11 +5,12 @@ import com.metriql.report.QueryTask
 import com.metriql.report.sql.SqlQuery
 import com.metriql.report.sql.SqlReportType
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IDatasetService
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.warehouse.metriql.CatalogFile
 import com.metriql.warehouse.metriql.ExternalConnectorFactory
 import io.trino.LocalTrinoQueryRunner
 import io.trino.MetriqlConnectorFactory
+import io.trino.MetriqlConnectorFactory.Companion.METRIQL_AUTH_PROPERTY
 import io.trino.MetriqlConnectorFactory.Companion.QUERY_TYPE_PROPERTY
 import io.trino.MetriqlMetadata.Companion.getMetriqlType
 import io.trino.execution.warnings.WarningCollector
@@ -17,6 +18,7 @@ import io.trino.server.HttpRequestSessionContext
 import io.trino.spiller.NodeSpillConfig
 import io.trino.sql.analyzer.FeaturesConfig
 import io.trino.sql.planner.plan.OutputNode
+import io.trino.testing.TestingGroupProvider
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -26,10 +28,13 @@ class LightweightQueryRunner(private val datasetService: IDatasetService) {
     val runner: LocalTrinoQueryRunner by lazy {
         var internalRunner = LocalTrinoQueryRunner(FeaturesConfig(), NodeSpillConfig())
         internalRunner.addSystemProperty(QUERY_TYPE_PROPERTY)
+        internalRunner.addSystemProperty(METRIQL_AUTH_PROPERTY)
         internalRunner.createCatalog("metriql", MetriqlConnectorFactory(internalRunner.nodeManager, datasetService), mapOf())
         // internalRunner.createCatalog("tpch", TpchConnectorFactory(), mapOf("tpch.produce-pages" to "true"))
         internalRunner
     }
+
+    val groupProviderManager = TestingGroupProvider()
 
     fun createTask(auth: ProjectAuth, sessionContext: HttpRequestSessionContext, sql: String): QueryTask {
         return TrinoQueryTask(sessionContext, sql, auth)
