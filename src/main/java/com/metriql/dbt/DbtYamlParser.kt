@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.hubspot.jinjava.interpret.TemplateError
 import com.metriql.dbt.DbtManifest.Companion.getModelName
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.report.data.recipe.RecipeDashboard
 import com.metriql.util.JsonHelper
 import com.metriql.util.JsonPath
 import com.metriql.util.JsonUtil
@@ -33,14 +32,6 @@ object DbtYamlParser {
     fun parseMetriqlConfig(text: String): Recipe.Config {
         return try {
             YamlHelper.mapper.readValue(text, Recipe.Config::class.java)
-        } catch (e: Exception) {
-            throw ParseException(JsonUtil.convertToUserFriendlyError(e))
-        }
-    }
-
-    fun parseDashboard(text: String): RecipeDashboard {
-        return try {
-            YamlHelper.mapper.readValue(text, RecipeDashboard::class.java)
         } catch (e: Exception) {
             throw ParseException(JsonUtil.convertToUserFriendlyError(e))
         }

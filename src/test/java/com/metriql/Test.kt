@@ -24,6 +24,7 @@ import org.intellij.lang.annotations.Language
 import org.openapitools.codegen.ClientOptInput
 import org.openapitools.codegen.DefaultGenerator
 import org.openapitools.codegen.languages.TypeScriptAxiosClientCodegen
+import org.testcontainers.shaded.com.fasterxml.jackson.core.type.TypeReference
 import org.testng.Assert.assertEquals
 import org.testng.annotations.Test
 import java.io.File
@@ -99,51 +100,23 @@ class Test {
     }
 
     @Test
-    fun testName() {
-        @Language("JSON5")
-        val s = """
-            {
-              "@type": "dimension",
-              "metric": {
-                "name": "tets",
-                "dataset": "test"
-              }
-            }
-        """
-        val read = JsonHelper.read(s.trimIndent(), Selam::class.java)
-        println(read)
-    }
-
-    data class Selam(
-//        @SealedClassInference
-        val metric: ReportMetric,
-    ) {
-        @UppercaseEnum
-        enum class MetricType(private val clazz: KClass<out ReportMetric>) : StrValueEnum {
-            DIMENSION(ReportMetric.ReportDimension::class);
-
-            override fun getValueClass() = clazz.java
-        }
-
-        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
-        sealed class ReportMetric {
-            @JsonTypeName("dimension")
-            data class ReportDimension(
-                val name: DimensionName,
-                val dataset: DatasetName
-            ) : ReportMetric()
-        }
+    fun main() {
+        val json = "{\"and\": [{\"dimension\": \"test\", \"operator\": \"equals\", \"value\": \"test\"}, {\"or\": []}]}"
+        val zooPen = JsonHelper.read(json, ReportFilter::class.java)
+        println(zooPen)
     }
 
     @Test
-    fun main() {
-        val json = "{\"and\": [{\"dimension\": \"test\", \"operator\": \"equals\", \"operator\": \"operator\"}, {\"and\": []}]}"
-        val zooPen = JsonMapper().readValue(json, ReportFilter::class.java) // Currently throws InvalidTypeIdException
-        assertEquals(Animal::class.java, zooPen::class.java)
+    fun small() {
+        val json = "[{\"dimension\": \"test\", \"operator\": \"equals\", \"value\": \"operator\"}]"
+        val zooPen = JsonHelper.read(json, ReportFilter::class.java)
+        println(zooPen)
     }
 
-    class ZooPen {
-        var animals: List<Animal>? = null
+    @Test
+    fun deduction() {
+        val json = "[{\"wingspan\": 1}, {\"name\": \"equals\"}]"
+        val zooPen = JsonHelper.read(json, object : com.fasterxml.jackson.core.type.TypeReference<List<Animal>>() {}) // Currently throws InvalidTypeIdException
     }
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION, defaultImpl = Animal::class)

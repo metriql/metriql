@@ -52,7 +52,7 @@ class FunnelService @Inject constructor(
                 },
             hasDimension = options.dimension != null,
             windowInSeconds = options.window?.toSeconds(),
-            sorting = if (options.dimension?.reference?.getType(context, options.steps[0].dataset) != FieldType.TIMESTAMP) "dimension" else "step1",
+            sorting = if (options.dimension?.reference?.getType(context, options.steps[0].dataset)?.second != FieldType.TIMESTAMP) "dimension" else "step1",
         )
 
         val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[FunnelReportType.slug]
@@ -85,7 +85,7 @@ class FunnelService @Inject constructor(
             Recipe.FieldReference(eventTimeStampDimensionName)
         ) + (
             if (!isExcludeStep && options.dimension != null && options.dimension.step == idx) {
-                val dimension = options.dimension.reference.toDimension(contextModelName, options.dimension.reference.getType(context, contextModelName))
+                val dimension = options.dimension.reference.toDimension(contextModelName, options.dimension.reference.getType(context, contextModelName).second)
                 listOf(
                     ReportMetric.ReportDimension(
                         dimension.name,
@@ -121,7 +121,7 @@ class FunnelService @Inject constructor(
             eventTimestamp = context.datasource.warehouse.bridge.quoteIdentifier(eventTimeStampDimensionName),
 
             dimension = if (!isExcludeStep && options.dimension != null && options.dimension.step == idx) {
-                val dimension = options.dimension.reference.toDimension(contextModelName, options.dimension.reference.getType(context, contextModelName))
+                val dimension = options.dimension.reference.toDimension(contextModelName, options.dimension.reference.getType(context, contextModelName).second)
 
                 // Pass context models as nulls while funnel does not support joins
                 val alias = context.getDimensionAlias(

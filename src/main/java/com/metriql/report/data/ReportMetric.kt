@@ -26,26 +26,6 @@ sealed class ReportMetric {
         override fun toMetricReference() = Recipe.FieldReference.mappingDimension(name, null)
     }
 
-    data class Function(val name: SqlFunction, val parameters: List<ReportMetric>) : ReportMetric() {
-        enum class SqlFunction(aggregation: Boolean) {
-            COUNT(true)
-        }
-
-        override fun toMetricReference(): Recipe.FieldReference {
-            TODO("not implemented")
-        }
-    }
-
-    data class Unary(val operator: Operator, val left: ReportMetric, val right: ReportMetric) : ReportMetric() {
-        enum class Operator(name: String) {
-            PLUS("+"), MINUS("-")
-        }
-
-        override fun toMetricReference(): Recipe.FieldReference {
-            TODO("not implemented")
-        }
-    }
-
     data class ReportDimension(
         val name: DimensionName,
         val dataset: DatasetName,

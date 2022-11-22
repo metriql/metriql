@@ -6,7 +6,6 @@ import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.Companion.extractDateRangeForEventTimestamp
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Connector.AND
 import com.metriql.report.data.ReportFilter.FilterValue.NestedFilter
-import com.metriql.report.data.ReportFilter.Type.NESTED
 import com.metriql.report.data.ReportMetric.ReportDimension
 import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.report.data.recipe.Recipe
@@ -149,7 +148,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
 
         val usedModels = getUsedDatasets(auth, context, reportOptions)
         val alwaysFilters = usedModels.flatMap { model -> context.getModel(model).alwaysFilters?.map { it.toReportFilter(context, model) } ?: listOf() }
-        val allFilters = ReportFilter(NESTED, NestedFilter(AND, listOfNotNull(reportOptions.filters, reportFilters) + alwaysFilters))
+        val allFilters = ReportFilter(NestedFilter(AND, listOfNotNull(reportOptions.filters, reportFilters) + alwaysFilters))
 
         val (materializeQuery, aggregateModel) = if (useAggregate) {
             try {
@@ -195,7 +194,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
 
         // 1. Render measures, dimensions and filters.
         // Each of them will generate a projection value and a join relation if available.
-        val dimensions = dimensionsRefs.map { it.toDimension(modelName, it.getType(context, modelName)) }
+        val dimensions = dimensionsRefs.map { it.toDimension(modelName, it.getType(context, modelName).second) }
         val measures = measuresRefs.map { it.toMeasure(modelName) }
 
         val renderedDimensions =
@@ -385,7 +384,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
             val targetModel = context.getModel(fieldModel)
             when {
                 targetModel.dimensions.any { it.name == order.key.name } -> {
-                    SegmentationQuery.Order(SegmentationQuery.Order.Type.DIMENSION, order.key.toDimension(source.name, order.key.getType(context, source.name)), order.value == Recipe.OrderType.ASC)
+                    SegmentationQuery.Order(SegmentationQuery.Order.Type.DIMENSION, order.key.toDimension(source.name, order.key.getType(context, source.name).second), order.value == Recipe.OrderType.ASC)
                 }
                 targetModel.measures.any { it.name == order.key.name } -> {
                     SegmentationQuery.Order(SegmentationQuery.Order.Type.MEASURE, order.key.toMeasure(source.name), order.value == Recipe.OrderType.ASC)

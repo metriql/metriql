@@ -28,10 +28,10 @@ abstract class TestDataSource<T> {
             items.map { if (it) 1 else 0 }
         } else items
     }
-    val testDouble = SimpleFilterTests.testInt.map { it * 1.0 }
-    val testDate = SimpleFilterTests.testInt.map { LocalDate.of(2000, 1, it + 1) }
-    val testTimestamp = SimpleFilterTests.testInt.map { Instant.ofEpochMilli((it * 1000 * 60 * 60).toLong()) }
-    val testTime = SimpleFilterTests.testInt.map { LocalTime.of(it, it) }
+    val testDouble = SampleDataset.testInt.map { it * 1.0 }
+    val testDate = SampleDataset.testInt.map { LocalDate.of(2000, 1, it + 1) }
+    val testTimestamp = SampleDataset.testInt.map { Instant.ofEpochMilli((it * 1000 * 60 * 60).toLong()) }
+    val testTime = SampleDataset.testInt.map { LocalTime.of(it, it) }
 
     val columnTypes = mapOf(
         "test_int" to listOf(FieldType.INTEGER, FieldType.LONG),

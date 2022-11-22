@@ -1,16 +1,9 @@
 package com.metriql.report.segmentation
 
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Connector.AND
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Filter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
-import com.metriql.report.data.ReportFilter.Type.METRIC
-import com.metriql.report.data.ReportMetric
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
 import com.metriql.service.dataset.Dataset.Target.TargetValue.Table
 import com.metriql.service.dataset.DatasetName
-import com.metriql.util.JsonHelper.encode
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DbtSettings.Companion.generateSchemaForModel
 import com.metriql.warehouse.spi.function.IPostOperation
@@ -178,19 +171,19 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
 //        )
     }
 
-    private fun getFilterForDimension(materializeQuery: SegmentationMaterialize, metricValue: ReportMetric.ReportDimension, filters: List<Filter>): ReportFilter {
-        val reference = metricValue.toReference()
-        if (materializeQuery.dimensions?.any { it.name == reference.name } == true) {
-            return ReportFilter(
-                METRIC,
-                ReportFilter.FilterValue.MetricFilter(
-                    AND, filters.map { it.copy(DIMENSION, metricValue.copy(relation = null)) }
-                )
-            )
-        } else {
-            throw IllegalArgumentException("Materialize doesn't include query dimension ${encode(reference)}")
-        }
-    }
+//    private fun getFilterForDimension(materializeQuery: SegmentationMaterialize, metricValue: ReportMetric.ReportDimension, filters: List<Filter>): ReportFilter {
+//        val reference = metricValue.toReference()
+//        if (materializeQuery.dimensions?.any { it.name == reference.name } == true) {
+//            return ReportFilter(
+//                METRIC,
+//                ReportFilter.FilterValue.MetricFilter(
+//                    AND, filters.map { it.copy(DIMENSION, metricValue.copy(relation = null)) }
+//                )
+//            )
+//        } else {
+//            throw IllegalArgumentException("Materialize doesn't include query dimension ${encode(reference)}")
+//        }
+//    }
 
     private fun getModel(modelName: String, materializeQuery: SegmentationMaterialize, query: SegmentationQuery): Dataset {
         val sourceModel = context.getModel(query.dataset)
@@ -198,7 +191,7 @@ class SegmentationQueryReWriter(val context: IQueryGeneratorContext) {
         val reportOptions = materializeQuery.toQuery(modelName) as SegmentationQuery
 
         val dimensions = materializeQuery.dimensions?.map {
-            val type = it.getType(context, sourceModel.name)
+            val type = it.getType(context, sourceModel.name).second
             val dimension = it.toDimension(sourceModel.name, type)
             Dataset.Dimension(
                 it.name,

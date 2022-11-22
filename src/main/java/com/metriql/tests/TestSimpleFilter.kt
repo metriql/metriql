@@ -1,518 +1,213 @@
 package com.metriql.tests
 
-import com.metriql.db.FieldType
 import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportMetric
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.dataset.Dataset
-import com.metriql.service.dataset.Dataset.Dimension.DimensionValue.Column
-import com.metriql.service.dataset.Dataset.Dimension.Type.COLUMN
 import com.metriql.util.JsonHelper
-import com.metriql.warehouse.spi.filter.NumberOperatorType
+import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.trino.spi.type.StandardTypes
+import org.intellij.lang.annotations.Language
 import org.testng.Assert.assertEquals
+import org.testng.annotations.BeforeTest
 import org.testng.annotations.Test
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 abstract class TestSimpleFilter<C> {
 
     val table = "filter_tests"
+    var context : IQueryGeneratorContext = refreshContext()
     abstract val testingServer: TestingServer<C>
 
     open fun castToDouble(value: String): String {
         return "CAST($value as ${testingServer.bridge.mqlTypeMap[StandardTypes.DOUBLE]})"
     }
 
-    private fun context(): QueryGeneratorContext {
-        return QueryGeneratorContext(
+    @BeforeTest
+    fun refreshContext(): IQueryGeneratorContext {
+        context = QueryGeneratorContext(
             ProjectAuth.singleProject(timezone = ZoneId.of("UTC")), testingServer.dataSource,
-            TestDatasetService(
-                listOf(
-                    Dataset(
-                        "filter_tests", false,
-                        Dataset.Target.initWithTable(null, "rakam_test", "filter_tests"),
-                        null, null, null, Dataset.MappingDimensions.build(Dataset.MappingDimensions.CommonMappings.TIME_SERIES to "_time"), listOf(),
-                        listOf(
-                            Dataset.Dimension("test_int", COLUMN, Column("test_int"), fieldType = FieldType.INTEGER),
-                            Dataset.Dimension("test_string", COLUMN, Column("test_string"), fieldType = FieldType.STRING),
-                            Dataset.Dimension("test_double", COLUMN, Column("test_double"), fieldType = FieldType.DOUBLE),
-                            Dataset.Dimension("test_date", COLUMN, Column("test_date"), fieldType = FieldType.DATE),
-                            Dataset.Dimension("test_bool", COLUMN, Column("test_bool"), fieldType = FieldType.BOOLEAN),
-                            Dataset.Dimension("test_timestamp", COLUMN, Column("test_timestamp"), fieldType = FieldType.TIMESTAMP),
-                        ),
-                        listOf(),
-                    )
-                )
-            ),
+            SampleDataset.datasetService,
             JinjaRendererService(), null, null, null
         )
+        return context
     }
 
     @Test
     fun testAnyFiltersIsSet() {
-        val test = SimpleFilterTests.AnyOperatorTest.IS_SET
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_string"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_int", "operator": "is_set"}"""
+        check("test_int", filter, listOf(SampleDataset.testString[0]))
     }
 
     @Test
     fun testAnyFiltersIsNotSet() {
-        val test = SimpleFilterTests.AnyOperatorTest.IS_NOT_SET
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_int", "operator": "is_not_set"}"""
+        check("test_int", filter, null)
     }
 
     @Test
     fun testStringFiltersEquals() {
-        val test = SimpleFilterTests.StringOperatorTest.EQUALS
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_string", "operator": "equals", "value": "alpha"}"""
+        check("test_string", filter, listOf("alpha"))
     }
-
     @Test
     fun testStringFiltersNotEquals() {
-        val test = SimpleFilterTests.StringOperatorTest.NOT_EQUALS
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_string"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"and":  [{"dimension": "test_string", "operator": "not_equals", "value": "alpha"}, {"dimension": "test_string", "operator": "equals", "value": "bravo"}]}"""
+        check("test_string", filter, listOf("bravo"))
     }
 
     @Test
     fun testStringFiltersContains() {
-        val test = SimpleFilterTests.StringOperatorTest.CONTAINS
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_string"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_string", "operator": "contains", "value": "liet"}"""
+        check("test_string", filter, listOf("juliett"))
     }
 
     @Test
     fun testStringFiltersEndsWith() {
-        val test = SimpleFilterTests.StringOperatorTest.ENDS_WITH
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_string", "operator": "ends_with", "value": "trot"}"""
+        check("test_string", filter, listOf("foxtrot"))
     }
 
     @Test
     fun testStringFiltersStartsWith() {
-        val test = SimpleFilterTests.StringOperatorTest.STARTS_WITH
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_string"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_string", "operator": "starts_with", "value": "charli"}"""
+        check("test_string", filter, listOf("charlie"))
     }
 
     @Test
     fun testStringFiltersIn() {
-        val test = SimpleFilterTests.StringOperatorTest.IN
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_string"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
-    }
-
-    @Test
-    fun testStringFiltersEqualsMulti() {
-        val test = SimpleFilterTests.StringOperatorTest.EQUALS_MULTI
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_string"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_string", "operator": "in", "value": ["alpha"]}"""
+        check("test_string", filter, listOf("alpha"))
     }
 
     @Test
     fun testBooleanFiltersEquals() {
-        val test = SimpleFilterTests.BooleanTest.EQUALS
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT ${castToDouble("count(*)")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_bool", "operator": "equals", "value": true}"""
+        check("test_double", filter, listOf(9.0))
     }
 
     @Test
     fun testBooleanFiltersNotEquals() {
-        val test = SimpleFilterTests.BooleanTest.NOT_EQUALS
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT ${castToDouble("count(*)")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_bool", "operator": "not_equals", "value": true}"""
+        check("test_string", filter, listOf(9.0))
     }
 
     @Test
     fun testNumberFiltersEqualsInt() {
-        val test = SimpleFilterTests.NumberTest.EQUALS_INT
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT ${castToDouble("test_int")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_double", "operator": "equals", "value": 1}"""
+        check(castToDouble("test_double"), filter, listOf(1.0))
     }
 
     @Test
     fun testNumberFiltersEqualsDouble() {
-        val test = SimpleFilterTests.NumberTest.EQUALS_DOUBLE
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT ${castToDouble("test_double")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_double", "operator": "equals", "value": "1.0"}"""
+        check(castToDouble("test_double"), filter, listOf(1.0))
     }
 
     @Test
     fun testNumberFiltersGreaterThanInt() {
-        val test = SimpleFilterTests.NumberTest.GREATER_THAN_INT
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT ${castToDouble("test_int")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_int"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_int", "operator": "greater_than", "value": 0}"""
+        check(castToDouble("test_int"), filter, listOf(1.0))
     }
 
     @Test
     fun testNumberFiltersGreaterThanDouble() {
-        val test = SimpleFilterTests.NumberTest.GREATER_THAN_DOUBLE
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT ${castToDouble("test_double")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_double"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_double", "operator": "greater_than", "value": 0}"""
+        check(castToDouble("test_double"), filter, listOf(1.0))
     }
 
     @Test
     fun testNumberFiltersLessThanInt() {
-        val test = SimpleFilterTests.NumberTest.LESS_THAN_INT
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT ${castToDouble("test_int")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_int", "operator": "less_than", "value": 1}"""
+        check(castToDouble("test_double"), filter, listOf(0.0))
     }
 
     @Test
     fun testNumberFiltersLessThanDouble() {
-        val test = SimpleFilterTests.NumberTest.LESS_THAN_DOUBLE
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT ${castToDouble("test_double")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_double", "operator": "less_than", "value": 1}"""
+        check(castToDouble("test_double"), filter, listOf(0.0))
     }
 
     @Test
     fun testNumberFiltersGreaterThanAndLessThanInt() {
-        val test = SimpleFilterTests.NumberTest.GREATER_THAN_AND_LESS_THAN_INT
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT ${castToDouble("test_double")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_double"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"and": [{"dimension": "test_int", "operator": "greater_than", "value": 3}, {"dimension": "test_int", "operator": "less_than", "value": 5}]}"""
+        check(castToDouble("test_double"), filter,  listOf(4.0))
     }
 
     @Test
     fun testNumberFiltersGreaterThanAndLessThanDouble() {
-        val test = SimpleFilterTests.NumberTest.GREATER_THAN_AND_LESS_THAN_DOUBLE
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT ${castToDouble("test_double")} FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter ORDER BY test_double"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"and": [{"dimension": "test_double", "operator": "greater_than", "value": 3}, {"dimension": "test_double", "operator": "less_than", "value": 5}]}"""
+        check(castToDouble("test_double"), filter, listOf(4.0))
     }
 
     @Test
     fun testTimestampGreaterThan() {
-        val test = SimpleFilterTests.TimestampOperatorTest.GREATER_THAN
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_timestamp FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-
-        val actual = testingServer.runQueryFirstRow(query)
-        assertEquals(test.result, actual)
+        @Language("JSON5")
+        val filter = """{"dimension": "test_timestamp", "operator": "greater_than", "value": ${SampleDataset.testTimestamp.last().format(DateTimeFormatter.ISO_DATE_TIME)}}"""
+        check("test_timestamp", filter, null)
     }
 
     @Test
     fun testTimestampLessThan() {
-        val test = SimpleFilterTests.TimestampOperatorTest.LESS_THAN
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_timestamp FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_timestamp", "operator": "greater_than", "value": ${SampleDataset.testTimestamp[1]}}"""
+        check("test_timestamp", filter, listOf(SampleDataset.testTimestamp.first()))
     }
 
     @Test
     fun testTimestampGreaterThanAndLessThan() {
-        val test = SimpleFilterTests.TimestampOperatorTest.GREATER_THAN_AND_LESS_THAN
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query =
-            "SELECT test_timestamp FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-                "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"and": [{"dimension": "test_timestamp", "operator": "greater_than", "value": ${SampleDataset.testTimestamp[3]}}, {"dimension": "test_timestamp", "operator": "less_than", "value": ${SampleDataset.testTimestamp[5]}}]}"""
+        check(castToDouble("test_timestamp"), filter, listOf(SampleDataset.testTimestamp[4]))
     }
 
     @Test
     fun testDateGreaterThan() {
-        val test = SimpleFilterTests.DateOperatorTests.GREATER_THAN
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_date FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_date", "operator": "greater_than", "value": ${SampleDataset.testDate.last()}"""
+        check(castToDouble("test_date"), filter, null)
     }
 
     @Test
     fun testDateLessThan() {
-        val test = SimpleFilterTests.DateOperatorTests.LESS_THAN
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map {
-                testingServer.bridge.renderFilter(it, table, context)
-            }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_date FROM " +
-            "${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"dimension": "test_date", "operator": "less_than", "value": ${SampleDataset.testDate[1]}"""
+        check(castToDouble("test_date"), filter, listOf(SampleDataset.testDate.first()))
     }
 
     @Test
     fun testDateGreaterThanAndLessThan() {
-        val test = SimpleFilterTests.DateOperatorTests.GREATER_THAN_AND_LESS_THAN
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_date FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        @Language("JSON5")
+        val filter = """{"and": [{"dimension": "test_date", "operator": "greater_than", "value": ${SampleDataset.testDate[3]}}, {"dimension": "test_date", "operator": "less_than", "value": ${SampleDataset.testDate[5]}}]}"""
+        check(castToDouble("test_date"), filter, listOf(SampleDataset.testDate[4]))
     }
 
-    @Test
-    fun testComplexFilters1() {
-        val test = SimpleFilterTests.ComplexTest.COMPLEX_1
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
+    private fun check(column : String, filter : String, result : List<Any?>?) {
+        val filter = JsonHelper.read(filter, ReportFilter::class.java)
+        val generatedFilter = testingServer.bridge.renderFilter(filter, table, context)
+        val query = "SELECT $column FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
             "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
+        assertEquals(result, testingServer.runQueryFirstRow(query))
     }
 
-    @Test
-    fun testComplexFilters2() {
-        val test = SimpleFilterTests.ComplexTest.COMPLEX_2
-        val context = context()
-        val generatedFilter = test.filter(table)
-            .map { testingServer.bridge.renderFilter(it, table, context) }
-            .joinToString(" AND ") { "(${it.whereFilter})" }
-        val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-        assertEquals(test.result, testingServer.runQueryFirstRow(query))
-    }
 
-    @Test
-    fun testComplexFilters3() {
-        val test = ReportFilter(
-            ReportFilter.Type.NESTED,
-            ReportFilter.FilterValue.NestedFilter(
-                ReportFilter.FilterValue.MetricFilter.Connector.OR,
-                listOf(
-                    ReportFilter(
-                        ReportFilter.Type.METRIC, ReportFilter.FilterValue.MetricFilter(
-                            ReportFilter.FilterValue.MetricFilter.Connector.AND,
-                            listOf(
-                                ReportFilter.FilterValue.MetricFilter.Filter(
-                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                    ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 1
-                                ),
-                                ReportFilter.FilterValue.MetricFilter.Filter(
-                                    ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                    ReportMetric.ReportDimension("test_int", table, null, null), NumberOperatorType.EQUALS.name, 2
-                                )
-                            )
-                        )
-                    ),
-                    ReportFilter(
-                        ReportFilter.Type.NESTED, ReportFilter.FilterValue.NestedFilter(
-                            ReportFilter.FilterValue.MetricFilter.Connector.AND,
-                            listOf(
-                                ReportFilter(
-                                    ReportFilter.Type.METRIC, ReportFilter.FilterValue.MetricFilter(
-                                        ReportFilter.FilterValue.MetricFilter.Connector.OR,
-                                        listOf(
-                                            ReportFilter.FilterValue.MetricFilter.Filter(
-                                                ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                                ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "10"
-                                            ),
-                                            ReportFilter.FilterValue.MetricFilter.Filter(
-                                                ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                                ReportMetric.ReportDimension("test_string", table, null, null), NumberOperatorType.EQUALS.name, "20"
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-
-        JsonHelper.read(
-            """
-            {
-              "type" : "nested",
-              "value" : {
-                "connector" : "or",
-                "filters" : [ {
-                  "type" : "metric",
-                  "value" : {
-                    "connector" : "and",
-                    "filters" : [ {
-                      "type" : "dimension",
-                      "field" : {
-                        "name" : "test_int",
-                        "dataset" : "filter_tests",
-                        "relation" : null,
-                        "timeframe" : null
-                      },
-                      "operator" : "EQUALS",
-                      "value" : 1
-                    }, {
-                      "type" : "dimension",
-                      "field" : {
-                        "name" : "test_int",
-                        "dataset" : "filter_tests",
-                        "relation" : null,
-                        "timeframe" : null
-                      },
-                      "operator" : "EQUALS",
-                      "value" : 2
-                    } ]
-                  }
-                }, {
-                  "type" : "nested",
-                  "value" : {
-                    "connector" : "and",
-                    "filters" : [ {
-                      "type" : "metric",
-                      "value" : {
-                        "connector" : "or",
-                        "filters" : [ {
-                          "type" : "dimension",
-                          "field" : {
-                            "name" : "test_string",
-                            "dataset" : "filter_tests",
-                            "relation" : null,
-                            "timeframe" : null
-                          },
-                          "operator" : "EQUALS",
-                          "value" : "10"
-                        }, {
-                          "type" : "dimension",
-                          "field" : {
-                            "name" : "test_string",
-                            "dataset" : "filter_tests",
-                            "relation" : null,
-                            "timeframe" : null
-                          },
-                          "operator" : "EQUALS",
-                          "value" : "20"
-                        } ]
-                      }
-                    } ]
-                  }
-                } ]
-              }
-            }
-        """.trimIndent(), ReportFilter::class.java
-        )
-        val context = context()
-        val generatedFilter = testingServer.bridge.renderFilter(test, table, context)
-        val encode = JsonHelper.encode(test, true)
-        val query = "SELECT test_string FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
-            "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"
-//        assertEquals(test.result, testingServer.runQueryFirstRow(query))
-    }
 }

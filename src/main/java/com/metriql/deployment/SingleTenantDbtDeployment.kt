@@ -192,16 +192,7 @@ class SingleTenantDbtDeployment(
                 }
             }
 
-            val models = try {
-                DbtManifestParser.parse(dataSource, content, modelsFilter)
-            } catch (manifestEx: DbtYamlParser.ParseException) {
-                // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
-                try {
-                    JsonHelper.read(content, object : TypeReference<List<Dataset>>() {}).map { Recipe.RecipeModel.fromModel(it) }
-                } catch (metriqlModelEx: Exception) {
-                    throw manifestEx
-                }
-            }
+            val models = DbtManifestParser.parse(dataSource, content, modelsFilter)
 
             return Recipe("local://metriql", "master", null, Recipe.Config(packageName), packageName, models = models)
         }

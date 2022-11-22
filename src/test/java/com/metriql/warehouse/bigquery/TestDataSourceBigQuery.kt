@@ -9,7 +9,7 @@ import com.google.cloud.bigquery.StandardTableDefinition
 import com.google.cloud.bigquery.TableId
 import com.google.cloud.bigquery.TableInfo
 import com.metriql.service.dataset.Dataset
-import com.metriql.tests.SimpleFilterTests
+import com.metriql.tests.SampleDataset
 import com.metriql.tests.TestDataSource
 import com.metriql.util.`try?`
 import org.testng.annotations.BeforeSuite
@@ -70,7 +70,7 @@ class TestDataSourceBigQuery : TestDataSource<BigQuery>() {
         `try?` { bigQuery.getTable(tableId).delete() }
         bigQuery.create(tableInfo)
 
-        val rows = SimpleFilterTests.testInt.mapIndexed { index, i ->
+        val rows = SampleDataset.testInt.mapIndexed { index, i ->
             InsertAllRequest.RowToInsert.of(
                 UUID.randomUUID().toString(),
                 mapOf(

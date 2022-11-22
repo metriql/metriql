@@ -7,8 +7,6 @@ import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType
-import com.metriql.report.data.ReportFilter.Type.METRIC
-import com.metriql.report.data.ReportFilter.Type.SQL
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.mql.MqlService
 import com.metriql.report.segmentation.SegmentationQuery
@@ -148,7 +146,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             model.name,
             measures.toSet().map { Recipe.FieldReference.fromName(it) },
             dimensions.toSet().map { Recipe.FieldReference.fromName(it) },
-            ReportFilter(ReportFilter.Type.NESTED, ReportFilter.FilterValue.NestedFilter(MetricFilter.Connector.AND,  whereFiltersPushdown + havingFiltersPushdown)),
+            ReportFilter(ReportFilter.FilterValue.NestedFilter(MetricFilter.Connector.AND,  whereFiltersPushdown + havingFiltersPushdown)),
             limit = parseLimit(limit.orElse(null)),
             orders = orders
         )
@@ -291,7 +289,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 MetricType.DIMENSION -> {
                     dimensions.add(reference.second)
                     val ref = Recipe.FieldReference.fromName(value)
-                    val dimension = ref.toDimension(dataset.name, ref.getType(queryContext, dataset.name))
+                    val dimension = ref.toDimension(dataset.name, ref.getType(queryContext, dataset.name).second)
                     queryContext.getDimensionAlias(dimension.name, dimension.relation, dimension.timeframe)
                 }
                 MetricType.MEASURE -> {
@@ -379,19 +377,18 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val (type, metricValue) = when (metricReference.first) {
             MetricType.DIMENSION -> {
                 val fromName = Recipe.FieldReference.fromName(metricReference.second)
-                val type = fromName.getType(context, dataset.name)
-                type to fromName.toDimension(dataset.name, type)
+                val (_, type) = fromName.getType(context, dataset.name)
+                type to fromName
             }
-            MetricType.MEASURE -> FieldType.DOUBLE to Recipe.FieldReference.fromName(metricReference.second).toMeasure(dataset.name)
+            MetricType.MEASURE -> FieldType.DOUBLE to Recipe.FieldReference.fromName(metricReference.second)
             else -> throw IllegalStateException()
         }
 
         return listOf(
             ReportFilter(
-                METRIC,
                 MetricFilter(
                     MetricFilter.Connector.AND,
-                    listOf(MetricFilter.Filter(metricReference.first, metricValue, operatorFunction.invoke(type).name, value))
+                    listOf(MetricFilter.Filter(metricValue, operatorFunction.invoke(type).name, value))
                 )
             )
         )
@@ -463,7 +460,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                                 is ReportFilter.FilterValue.NestedFilter -> TODO()
                             }
                         }
-                        listOf(ReportFilter(METRIC, MetricFilter(MetricFilter.Connector.OR, filters = filters)))
+                        listOf(ReportFilter(MetricFilter(MetricFilter.Connector.OR, filters = filters)))
                     }
                 }
             }
@@ -485,7 +482,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     false -> null
                     else -> {
                         val metricReference =
-                            references[exp.left] ?: references[exp.right] ?: return listOf(ReportFilter(SQL, ReportFilter.FilterValue.SqlFilter(rewriter.process(exp))))
+                            references[exp.left] ?: references[exp.right] ?: return listOf(ReportFilter(ReportFilter.FilterValue.SqlFilter(rewriter.process(exp))))
                         val value = getFilterValue(parameterMap, if (references.containsKey(exp.left)) exp.right else exp.left)
                         getReportFilter(context, dataset, metricReference, { convertMetriqlOperator(exp.operator, it.operatorClass.java) }, value)
                     }

@@ -114,34 +114,25 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 val havings = mutableListOf<String>()
 
                 filter.value.filters.forEach {
-                    when (val metricValue = it.metric) {
-                        is ReportMetric.ReportDimension -> {
-                            // hacky way to find out relation if the dimension doesn't belong to context model
-                            val relationName = if (contextDatasetName != metricValue.dataset) {
-                                context.referencedRelations
-                                    .filter { it.value.sourceDatasetName == contextDatasetName && it.value.targetDatasetName == metricValue.dataset }
-                                    .map { it.value }
-                                    .firstOrNull()?.relation?.name
+                    val (clazz, type) = it.metric.getType(context, contextDatasetName)
+                    when (clazz) {
+                        ReportMetric.ReportDimension::class -> {
 
-                                // TODO: find out if the dimension is from the parent model before throwing exception
-                                // the filter is not applicable to this model
-//                                throw MetriqlException("Dimension is not applicable for context model: $metricValue", HttpResponseStatus.BAD_REQUEST)
-                                null
-                            } else metricValue.relation
+                            val dimension = it.metric.toDimension(contextDatasetName, type)
 
-                            val (dim, _) = generateModelDimension(contextDatasetName, metricValue.name, metricValue.relation, context)
+                            val (dim, _) = generateModelDimension(contextDatasetName, it.metric.name, it.metric.relation, context)
 
                             val renderedMetric = renderDimension(
                                 context,
                                 contextDatasetName,
-                                metricValue.name,
-                                relationName,
-                                metricValue.timeframe,
+                                dimension.name,
+                                dimension.relation,
+                                dimension.timeframe,
                                 MetricPositionType.FILTER
                             )
 
                             val value = if (it.value is SQLRenderable) {
-                                context.renderSQL(it.value, context.getOrGenerateAlias(contextDatasetName, relationName), contextDatasetName)
+                                context.renderSQL(it.value, context.getOrGenerateAlias(contextDatasetName, it.metric.relation), contextDatasetName)
                             } else {
                                 it.value
                             }
@@ -162,38 +153,12 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                                 )
                             )
                         }
-
-                        is ReportMetric.ReportMappingDimension -> {
-                            val mappingType = metricValue.name
-                            val postOperation = metricValue.timeframe
-                            val dimensionName = context.getMappingDimensions(contextDatasetName).get(mappingType)
-                                ?: throw MetriqlException("'${mappingType.serializableName}' mapping type not found for model $contextDatasetName", HttpResponseStatus.BAD_REQUEST)
-                            val renderedMetric = renderDimension(
-                                context,
-                                contextDatasetName,
-                                dimensionName,
-                                null,
-                                postOperation,
-                                MetricPositionType.FILTER
-                            )
-                            val (_, operator) = getOperation(metricValue.name.fieldType, it.operator)
-
-                            wheres.add(
-                                filters.generateFilter(
-                                    context,
-                                    operator as FilterOperator,
-                                    renderedMetric.value,
-                                    it.value
-                                )
-                            )
-                        }
-
-                        is ReportMeasure -> {
+                        ReportMeasure::class -> {
                             val renderedMetric = renderMeasure(
                                 context,
                                 contextDatasetName,
-                                metricValue.name,
-                                metricValue.relation,
+                                it.metric.name,
+                                it.metric.relation,
                                 MetricPositionType.FILTER,
                                 ADHOC
                             )
@@ -215,9 +180,6 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
                             havings.add(havingFilters)
                         }
-
-                        is ReportMetric.Function -> TODO()
-                        is ReportMetric.Unary -> TODO()
                     }
                 }
 
@@ -370,14 +332,9 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             val renderedFilters = filters.flatMap {
                 // Measure filters only have metric filter
                 (it.value as ReportFilter.FilterValue.MetricFilter).filters.map { metricValue ->
-                    val filterDimensionsModelName = if (metricValue.metric is ReportMetric.ReportDimension) {
-                        metricValue.metric.dataset
-                    } else {
-                        contextDatasetName
-                    }
                     renderFilter(
                         it,
-                        filterDimensionsModelName,
+                        contextDatasetName,
                         context
                     )
                 }

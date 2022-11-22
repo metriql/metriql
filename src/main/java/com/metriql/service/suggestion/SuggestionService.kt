@@ -122,15 +122,11 @@ class SuggestionService @Inject constructor(
 
         val filters = if (canUseIncrementalFilter) {
             ReportFilter(
-                ReportFilter.Type.METRIC,
                 MetricFilter(
                     MetricFilter.Connector.AND,
                     listOf(
                         MetricFilter.Filter(
-                            MetricFilter.MetricType.MAPPING_DIMENSION,
-                            ReportMetric.ReportMappingDimension(
-                                TIME_SERIES, null
-                            ),
+                            Recipe.FieldReference.mappingDimension(TIME_SERIES, null),
                             TimestampOperatorType.BETWEEN.name,
                             "P2W"
                         )

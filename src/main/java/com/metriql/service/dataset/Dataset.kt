@@ -11,12 +11,9 @@ import com.metriql.report.data.ReportFilter
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.util.JsonHelper
-import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
-import io.netty.handler.codec.http.HttpResponseStatus
-import java.util.HashMap
 import kotlin.reflect.KClass
 
 typealias DimensionName = String
@@ -130,34 +127,6 @@ data class Dataset(
                         null, null
                     )
                 }
-            ),
-            DEVICE_ID(
-                FieldType.STRING, listOf("device_id"),
-                {
-                    Measure(
-                        "unique_devices",
-                        null,
-                        null,
-                        null,
-                        Measure.Type.DIMENSION,
-                        Measure.MeasureValue.Column(Measure.AggregationType.COUNT_UNIQUE, it),
-                        null, null
-                    )
-                }
-            ),
-            SESSION_ID(
-                FieldType.STRING, listOf("session_id"),
-                {
-                    Measure(
-                        "unique_sessions",
-                        null,
-                        null,
-                        null,
-                        Measure.Type.DIMENSION,
-                        Measure.MeasureValue.Column(Measure.AggregationType.COUNT_UNIQUE, it),
-                        null, null
-                    )
-                }
             );
         }
 
@@ -219,16 +188,6 @@ data class Dataset(
         val hidden: Boolean? = null,
         val tags: List<String>? = null
     ) {
-
-        init {
-            // Validate measure filters
-            filters?.forEach { filter ->
-                if (filter.value is ReportFilter.FilterValue.MetricFilter && filter.value.filters.any { it.metric is MeasureValue }) {
-                    throw MetriqlException("Only dimension filters are supported inside filters for measure: $name", HttpResponseStatus.BAD_REQUEST)
-                }
-            }
-        }
-
         @UppercaseEnum
         enum class Type(private val clazz: KClass<out MeasureValue>) : StrValueEnum {
             COLUMN(MeasureValue.Column::class), // This is not dimension, raw column

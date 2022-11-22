@@ -5,24 +5,21 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.SqlQueryTaskGenerator
 import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
-import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.cache.InMemoryCacheService
-import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.Dataset.Dimension.DimensionValue.Column
 import com.metriql.service.dataset.Dataset.Dimension.Type.COLUMN
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
-import com.metriql.warehouse.spi.filter.TimestampOperatorType
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -52,19 +49,7 @@ abstract class TestSegmentation {
     private val service: SegmentationService get() = SegmentationService()
 
     private fun generateReportFilter(dateRange: DateRange): ReportFilter {
-        return ReportFilter(
-            ReportFilter.Type.METRIC,
-            MetricFilter(
-                MetricFilter.Connector.AND,
-                listOf(
-                    MetricFilter.Filter(
-                        MetricFilter.MetricType.MAPPING_DIMENSION,
-                        ReportMetric.ReportMappingDimension(TIME_SERIES, null), TimestampOperatorType.BETWEEN.name,
-                        mapOf("start" to dateRange.start.toString(), "end" to dateRange.end.toString())
-                    )
-                )
-            )
-        )
+        return JsonHelper.read("""{"mapping":":time_series", "operator: "between", "value": ${JsonHelper.encode(dateRange)}}""", ReportFilter::class.java)
     }
 
     @Test

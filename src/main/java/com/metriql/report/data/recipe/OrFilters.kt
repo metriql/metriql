@@ -22,31 +22,10 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
         datasetName: DatasetName,
     ): ReportFilter {
         val orFilters = map { filter ->
-            val metricType = when {
-                filter.dimension != null -> ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION
-                filter.measure != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE
-                filter.mapping != null -> ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION
-                else -> throw IllegalStateException("One of dimension, measure or mapping is required")
-            }
-
-            var metricValue = when {
-                filter.dimension != null ->
-                    filter.dimension.toDimension(datasetName, filter.dimension.getType(context, datasetName))
-                filter.measure != null ->
-                    filter.measure.toMeasure(datasetName)
-                filter.mapping != null -> {
-                    val type = JsonHelper.convert(filter.mapping, Dataset.MappingDimensions.CommonMappings::class.java)
-                    ReportMetric.ReportMappingDimension(type, null)
-                }
-                else -> {
-                    throw IllegalStateException("One of dimension, measure or mapping is required")
-                }
-            }
-            ReportFilter.FilterValue.MetricFilter.Filter(metricType, metricValue, filter.operator, filter.value)
+            filter.toFilter(context, datasetName)
         }
 
         return ReportFilter(
-            ReportFilter.Type.METRIC,
             ReportFilter.FilterValue.MetricFilter(
                 ReportFilter.FilterValue.MetricFilter.Connector.OR,
                 orFilters

@@ -1,7 +1,6 @@
 package com.metriql.service.dataset
 
 import com.metriql.db.FieldType
-import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.DEVICE_ID
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.util.MetriqlException
@@ -175,14 +174,10 @@ class DiscoverService(private val dataSource: DataSource) {
                 it.name.contains("time") && it.fieldType == FieldType.TIMESTAMP ||
                     it.name.contains("date") && it.fieldType == FieldType.DATE
             }
-            val deviceId = dimensions.find {
-                it.name.contains("device") && it.fieldType == FieldType.STRING
-            }
 
             val mappings = Dataset.MappingDimensions()
             eventTimestamp?.name?.let { mappings.put(TIME_SERIES, it) }
             userId?.name?.let { mappings.put(USER_ID, it) }
-            deviceId?.name?.let { mappings.put(DEVICE_ID, it) }
 
             return mappings
         }

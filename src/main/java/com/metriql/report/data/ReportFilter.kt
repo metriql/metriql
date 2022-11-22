@@ -2,6 +2,8 @@ package com.metriql.report.data
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
+import com.fasterxml.jackson.core.util.JsonParserSequence
 import com.fasterxml.jackson.databind.DatabindContext
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JavaType
@@ -10,7 +12,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
 import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Connector
-import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.dataset.Dataset
 import com.metriql.util.JsonHelper
@@ -28,59 +29,13 @@ import kotlin.reflect.KClass
 @JSONBSerializable
 @JsonDeserialize(using = ReportFilter.FilterValueJsonDeserializer::class)
 data class ReportFilter(
-    val type: Type,
-    @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
     val value: FilterValue
 ) {
-
-    @UppercaseEnum
-    enum class Type(private val clazz: KClass<out FilterValue>) : StrValueEnum {
-        SQL(FilterValue.SqlFilter::class),
-        NESTED(FilterValue.NestedFilter::class),
-        METRIC(FilterValue.MetricFilter::class);
-
-        override fun getValueClass() = clazz.java
-    }
-
-    fun toReference(): OrFilters? {// nested
-        return when (value) {
-            is FilterValue.SqlFilter -> throw UnsupportedOperationException()
-            is FilterValue.MetricFilter -> {
-                if (value.filters.isEmpty()) {
-                    null
-                } else {
-                    val references = OrFilters()
-                    value.filters.map {
-                        val item = when (val metricValue = it.metric) {
-                            is ReportMetric.ReportDimension ->
-                                Recipe.FilterReference(dimension = metricValue.toReference(), operator = it.operator, value = it.value)
-
-                            is ReportMetric.ReportMeasure ->
-                                Recipe.FilterReference(measure = metricValue.toMetricReference(), operator = it.operator, value = it.value)
-
-                            is ReportMetric.ReportMappingDimension ->
-                                Recipe.FilterReference(mapping = metricValue.name.name, operator = it.operator, value = it.value)
-
-                            is ReportMetric.Function -> TODO()
-                            is ReportMetric.Unary -> TODO()
-                        }
-
-                        references.add(item)
-                    }
-
-                    references
-                }
-            }
-
-            is FilterValue.NestedFilter -> TODO()
-        }
-    }
-
-    data class Test(val and : List<ReportFilter>, val or : List<ReportFilter>, )
-
     class FilterValueJsonDeserializer : JsonDeserializer<ReportFilter>() {
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ReportFilter {
-            if(p.isExpectedStartObjectToken) {
+            if (p.isExpectedStartObjectToken) {
+                val tb = ctxt.bufferForInputBuffering(p)
+
                 val nextFieldName = p.nextFieldName()
                 val connector = try {
                     JsonHelper.convert(nextFieldName, Connector::class.java)
@@ -88,19 +43,39 @@ data class ReportFilter(
                     null
                 }
 
-                return if(connector != null) {
-//                    ctxt.readValue<Connector>(p, ctxt.constructType(Connector::class.java))
-                    p.nextValue()
-                    val filters = p.readValuesAs(object : com.fasterxml.jackson.core.type.TypeReference<ReportFilter>() {}).asSequence().toList()
-                    ReportFilter(Type.NESTED, FilterValue.NestedFilter(connector, filters))
+                return if (connector != null) {
+                    p.nextToken()
+                    val filters: List<ReportFilter> = p.readValueAs(object : com.fasterxml.jackson.core.type.TypeReference<List<ReportFilter>>() {})
+                    ReportFilter(FilterValue.NestedFilter(connector, filters))
                 } else {
-                    ReportFilter(Type.METRIC, FilterValue.MetricFilter(Connector.AND, null!!))
+                    tb.copyCurrentStructure(p)
+                    p.clearCurrentToken()
+                    val parser = JsonParserSequence.createFlattened(false, tb.asParser(p), p)
+                    val filter = parser.readValueAs(FilterValue.MetricFilter.Filter::class.java)
+                    ReportFilter(FilterValue.MetricFilter(Connector.AND, listOf(filter)))
                 }
             } else
-                if(p.isExpectedStartArrayToken) {
+            if (p.isExpectedStartArrayToken) {
+                    val filters = mutableListOf<ReportFilter>()
+                    while (true) {
+                        var value: ReportFilter
+                        while (true) {
+                            var t: JsonToken
+                            if (p.nextToken().also { t = it } == JsonToken.END_ARRAY) {
+                                return ReportFilter(FilterValue.NestedFilter(Connector.AND, filters))
+                            }
+                            if (t == JsonToken.VALUE_NULL) {
+                                continue
+                            }
+                            value = this.deserialize(p, ctxt)
+                            break
+                        }
 
-                }
-            return null!!
+                        filters.add(value)
+                    }
+            } else {
+                throw ctxt.wrongTokenException(p, JsonToken.START_OBJECT, "")
+            }
         }
     }
 
@@ -138,10 +113,8 @@ data class ReportFilter(
             }
 
             data class Filter(
-                val type: MetricType,
-                @PolymorphicTypeStr<MetricType>(externalProperty = "type", valuesEnum = MetricType::class)
-                @JsonAlias("dimension")
-                val metric: ReportMetric,
+                @JsonAlias("dimension", "measure", "mapping")
+                val metric: Recipe.FieldReference,
                 val operator: String,
                 val value: Any?
             ) {
@@ -156,8 +129,6 @@ data class ReportFilter(
 
             @UppercaseEnum
             enum class MetricType(private val clazz: KClass<out ReportMetric>) : StrValueEnum {
-                UNARY(ReportMetric.Unary::class),
-                FUNCTION(ReportMetric.ReportDimension::class),
                 DIMENSION(ReportMetric.ReportDimension::class),
                 MAPPING_DIMENSION(ReportMetric.ReportMappingDimension::class),
                 MEASURE(ReportMetric.ReportMeasure::class);
@@ -174,12 +145,11 @@ data class ReportFilter(
 
     companion object {
         fun extractDateRangeForEventTimestamp(filter: ReportFilter?): DateRange? {
-            if(filter == null) return null
+            if (filter == null) return null
             // todo: process nested filter as well
             val dateRange: FilterValue.MetricFilter.Filter? = if (filter.value is FilterValue.MetricFilter) {
                 filter.value.filters.find {
-                        it.metric is ReportMetric.ReportMappingDimension &&
-                        it.metric.name == Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+                    it.metric.getMappingDimensionIfApplicable() == Dataset.MappingDimensions.CommonMappings.TIME_SERIES.name.lowercase()
                 }
             } else null
 
