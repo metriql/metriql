@@ -16,7 +16,6 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.dataset.Dataset
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
-import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
 import com.metriql.util.getOperation
@@ -33,7 +32,7 @@ data class ReportFilter(
 ) {
     class FilterValueJsonDeserializer : JsonDeserializer<ReportFilter>() {
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ReportFilter {
-            if (p.isExpectedStartObjectToken) {
+            return if (p.isExpectedStartObjectToken) {
                 val tb = ctxt.bufferForInputBuffering(p)
 
                 val nextFieldName = p.nextFieldName()
@@ -43,9 +42,10 @@ data class ReportFilter(
                     null
                 }
 
-                return if (connector != null) {
+                if (connector != null) {
                     p.nextToken()
                     val filters: List<ReportFilter> = p.readValueAs(object : com.fasterxml.jackson.core.type.TypeReference<List<ReportFilter>>() {})
+                    p.nextToken()
                     ReportFilter(FilterValue.NestedFilter(connector, filters))
                 } else {
                     tb.copyCurrentStructure(p)
@@ -54,27 +54,11 @@ data class ReportFilter(
                     val filter = parser.readValueAs(FilterValue.MetricFilter.Filter::class.java)
                     ReportFilter(FilterValue.MetricFilter(Connector.AND, listOf(filter)))
                 }
-            } else
-            if (p.isExpectedStartArrayToken) {
-                    val filters = mutableListOf<ReportFilter>()
-                    while (true) {
-                        var value: ReportFilter
-                        while (true) {
-                            var t: JsonToken
-                            if (p.nextToken().also { t = it } == JsonToken.END_ARRAY) {
-                                return ReportFilter(FilterValue.NestedFilter(Connector.AND, filters))
-                            }
-                            if (t == JsonToken.VALUE_NULL) {
-                                continue
-                            }
-                            value = this.deserialize(p, ctxt)
-                            break
-                        }
-
-                        filters.add(value)
-                    }
+            } else if (p.isExpectedStartArrayToken) {
+                val filters: List<ReportFilter> = p.readValueAs(object : com.fasterxml.jackson.core.type.TypeReference<List<ReportFilter>>() {})
+                ReportFilter(FilterValue.NestedFilter(Connector.AND, filters))
             } else {
-                throw ctxt.wrongTokenException(p, JsonToken.START_OBJECT, "")
+                throw ctxt.wrongTokenException(p, ReportFilter::class.java, JsonToken.START_OBJECT, "The filter must be an array or an object")
             }
         }
     }
