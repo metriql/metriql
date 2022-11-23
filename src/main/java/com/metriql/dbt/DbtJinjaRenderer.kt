@@ -6,7 +6,7 @@ import com.hubspot.jinjava.JinjavaConfig
 import com.hubspot.jinjava.el.ext.NamedParameter
 import com.hubspot.jinjava.interpret.JinjavaInterpreter
 import com.hubspot.jinjava.interpret.RenderResult
-import com.metriql.service.model.ModelName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.CryptUtil
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil
@@ -37,7 +37,7 @@ class DbtJinjaRenderer {
         val delimiter: String = CryptUtil.generateRandomKey(16)
     }
 
-    fun renderModelNameRegex(dataset: ModelName): ModelName {
+    fun renderModelNameRegex(dataset: DatasetName): DatasetName {
         return if (dataset.startsWith("ref(") || dataset.startsWith("source(") || dataset.startsWith("metric(")) {
             jinjava.render(
                 "{{$dataset}}",

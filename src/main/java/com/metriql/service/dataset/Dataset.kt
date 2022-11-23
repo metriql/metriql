@@ -1,4 +1,4 @@
-package com.metriql.service.model
+package com.metriql.service.dataset
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -7,40 +7,36 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.CaseFormat
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
-import com.metriql.report.ReportType
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.recipe.OrFilters
-import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
+import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.util.JsonHelper
-import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
 import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
-import io.netty.handler.codec.http.HttpResponseStatus
-import java.util.HashMap
 import kotlin.reflect.KClass
 
 typealias DimensionName = String
 
 fun DimensionName.getMappingDimensionIfValid() = if (this.startsWith(":"))
-    JsonHelper.convert(this.substring(1), Model.MappingDimensions.CommonMappings::class.java)
+    JsonHelper.convert(this.substring(1), Dataset.MappingDimensions.CommonMappings::class.java)
 else null
 
 typealias MeasureName = String
-typealias ModelName = String
+typealias DatasetName = String
 typealias RelationName = String
 
-data class ModelDimension(val modelName: String, val target: Model.Target, val dimension: Model.Dimension)
-data class ModelMeasure(val modelName: String, val target: Model.Target, val measure: Model.Measure, val extraFilters: List<ReportFilter>? = null)
+data class ModelDimension(val datasetName: DatasetName, val target: Dataset.Target, val dimension: Dataset.Dimension)
+data class ModelMeasure(val datasetName: DatasetName, val target: Dataset.Target, val measure: Dataset.Measure, val extraFilters: List<FilterValue>? = null)
 data class ModelRelation(
-    val sourceModelTarget: Model.Target,
-    val sourceModelName: ModelName,
-    val targetModelTarget: Model.Target,
-    val targetModelName: ModelName,
-    val relation: Model.Relation,
+    val sourceDatasetTarget: Dataset.Target,
+    val sourceDatasetName: DatasetName,
+    val targetDatasetTarget: Dataset.Target,
+    val targetDatasetName: DatasetName,
+    val relation: Dataset.Relation,
 )
 
-data class Model(
+data class Dataset(
     val name: String,
     val hidden: Boolean,
     val target: Target,
@@ -51,16 +47,11 @@ data class Model(
     val relations: List<Relation>,
     val dimensions: List<Dimension>,
     val measures: List<Measure>,
-    val materializes: List<Materialize>? = null,
+    val materializes: Map<String, Map<String, SegmentationMaterialize>>? = null,
     val alwaysFilters: List<OrFilters>? = null,
-    val id: Int? = null,
     val tags: List<String>? = null,
-    val recipeId: Int? = null,
-    val recipePath: String? = null,
+    val location: String? = null,
 ) {
-
-    data class Materialize(val name: String, val reportType: ReportType, val value: SegmentationMaterialize)
-
     @JSONBSerializable
     data class Target(
         val type: Type,
@@ -121,41 +112,13 @@ data class Model(
 
         @UppercaseEnum
         enum class CommonMappings(val fieldType: FieldType, val possibleNames: List<String>, val discoveredMeasure: (DimensionName) -> Measure?) {
-            EVENT_TIMESTAMP(FieldType.TIMESTAMP, listOf("_time", "timestamp"), { null }),
+            TIME_SERIES(FieldType.TIMESTAMP, listOf("_time", "timestamp"), { null }),
             INCREMENTAL(FieldType.TIMESTAMP, listOf("server_time", "_server_time"), { null }),
             USER_ID(
                 FieldType.STRING, listOf("_user", "user", "user_id"),
                 {
                     Measure(
                         "unique_users",
-                        null,
-                        null,
-                        null,
-                        Measure.Type.DIMENSION,
-                        Measure.MeasureValue.Column(Measure.AggregationType.COUNT_UNIQUE, it),
-                        null, null
-                    )
-                }
-            ),
-            DEVICE_ID(
-                FieldType.STRING, listOf("device_id"),
-                {
-                    Measure(
-                        "unique_devices",
-                        null,
-                        null,
-                        null,
-                        Measure.Type.DIMENSION,
-                        Measure.MeasureValue.Column(Measure.AggregationType.COUNT_UNIQUE, it),
-                        null, null
-                    )
-                }
-            ),
-            SESSION_ID(
-                FieldType.STRING, listOf("session_id"),
-                {
-                    Measure(
-                        "unique_sessions",
                         null,
                         null,
                         null,
@@ -189,7 +152,6 @@ data class Model(
         val label: String? = null,
         val category: String? = null,
         val primary: Boolean? = null,
-        val pivot: Boolean? = null,
         val suggestions: List<String>? = null,
         val postOperations: List<String>? = null,
         val fieldType: FieldType? = null,
@@ -220,22 +182,12 @@ data class Model(
         val type: Type,
         @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
         val value: MeasureValue,
-        val filters: List<ReportFilter>? = null,
+        val filters: List<FilterValue>? = null,
         val reportOptions: ObjectNode? = null,
         val fieldType: FieldType? = FieldType.DOUBLE,
         val hidden: Boolean? = null,
         val tags: List<String>? = null
     ) {
-
-        init {
-            // Validate measure filters
-            filters?.forEach {
-                if (it.value is ReportFilter.FilterValue.MetricFilter && it.value.metricType == ReportFilter.FilterValue.MetricFilter.MetricType.MEASURE) {
-                    throw MetriqlException("Only dimension filters are supported inside filters for measure: $name", HttpResponseStatus.BAD_REQUEST)
-                }
-            }
-        }
-
         @UppercaseEnum
         enum class Type(private val clazz: KClass<out MeasureValue>) : StrValueEnum {
             COLUMN(MeasureValue.Column::class), // This is not dimension, raw column
@@ -267,7 +219,7 @@ data class Model(
         val relationType: RelationType,
         @JsonAlias("join")
         val joinType: JoinType = JoinType.LEFT_JOIN,
-        val modelName: ModelName,
+        val datasetName: DatasetName,
         val type: Type,
         @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
         val value: RelationValue,

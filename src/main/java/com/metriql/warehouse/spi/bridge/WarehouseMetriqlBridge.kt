@@ -1,14 +1,14 @@
 package com.metriql.warehouse.spi.bridge
 
 import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.MeasureName
-import com.metriql.service.model.Model
-import com.metriql.service.model.ModelName
-import com.metriql.service.model.ModelRelation
-import com.metriql.service.model.RelationName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.MeasureName
+import com.metriql.service.dataset.ModelRelation
+import com.metriql.service.dataset.RelationName
 import com.metriql.util.ValidationUtil
 import com.metriql.util.serializableName
 import com.metriql.warehouse.WarehouseSupports
@@ -30,7 +30,7 @@ interface WarehouseMetriqlBridge {
     val queryGenerators: Map<String, ServiceQueryGenerator<*, *, *>>
     val functions: RFunctions
     val supportedDBTTypes: Set<DBTType>
-    val supportedJoins: Set<Model.Relation.JoinType>
+    val supportedJoins: Set<Dataset.Relation.JoinType>
     val quote: Char
 
     fun quoteIdentifier(identifier: String): String {
@@ -40,13 +40,13 @@ interface WarehouseMetriqlBridge {
     // used for dimension projection (mainly for timezone conversion)
     val metricRenderHook: MetricRenderHook
 
-    fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: AggregationContext): String
+    fun performAggregation(columnValue: String, aggregationType: Dataset.Measure.AggregationType, context: AggregationContext): String
 
     data class RenderedField(val value: String, val join: String?, val window: Boolean, val alias: String?)
 
     /**
      * In cases like rendering jinja context can't generate join expressions. Thus they're optional
-     * @param contextModelName: The model context where the measured is rendered (required iff join relations are acceptable)
+     * @param contextDatasetName: The model context where the measured is rendered (required iff join relations are acceptable)
      * @param measureName: Name of the  measure
      * @param modelName: Model name of the measure
      * @param relationName: Join this measure using this relation name. Context model name and target required if this is set.
@@ -56,18 +56,18 @@ interface WarehouseMetriqlBridge {
      * */
     fun renderMeasure(
         context: IQueryGeneratorContext,
-        contextModelName: ModelName,
+        contextDatasetName: DatasetName,
         measureName: MeasureName,
         relationName: RelationName?,
         metricPositionType: MetricPositionType,
         queryType: AggregationContext,
-        extraFilters: List<ReportFilter>? = null,
+        extraFilters: List<FilterValue>? = null,
         modelAlias: String? = null
     ): RenderedField
 
     /**
      * In cases like rendering jinja context can't generate join expressions. Thus they're optional
-     * @param contextModelName: The model context where the dimension is rendered (required iff join relations are acceptable)
+     * @param contextDatasetName: The model context where the dimension is rendered (required iff join relations are acceptable)
      * @param dimensionName: Name of the dimension
      * @param relationName: Join this dimension using this relation name. Context model name and target required if this is set.
      * @param metricPositionType: Projection or Filter. For projection, uses alias name of the dimension (ex: (column | expression) as dimensionName)
@@ -76,10 +76,10 @@ interface WarehouseMetriqlBridge {
      * */
     fun renderDimension(
         context: IQueryGeneratorContext,
-        contextModelName: ModelName,
+        contextDatasetName: DatasetName,
         dimensionName: DimensionName,
         relationName: RelationName?,
-        postOperation: ReportMetric.PostOperation?,
+        timeframe: ReportMetric.Timeframe?,
         metricPositionType: MetricPositionType,
         modelAlias: String? = null
     ): RenderedField
@@ -92,24 +92,24 @@ interface WarehouseMetriqlBridge {
      * If the dimension or measure has a relation to join, join expression will also be returned
      * Unlike dimension and measure rendering, context model is required in case of filtering
      * @param filter: A report filter of sql or metric
-     * @param contextModelName: The model context where the filter is rendered
+     * @param contextDatasetName: The model context where the filter is rendered
      * this model-name will also be passed to render dimension and measure functions.
      * @param context:  An adapter class to fetch metriql model elements.
      * @return A Where, Having and Join expression for a filter. If the filter is not applicable, IllegalArgumentException.
      * */
     @Throws(IllegalArgumentException::class)
     fun renderFilter(
-        filter: ReportFilter,
-        contextModelName: ModelName,
+        filter: FilterValue,
+        contextDatasetName: DatasetName,
         context: IQueryGeneratorContext,
     ): RenderedFilter
 
     // Generates a select query for the given dimensionNames
     fun generateDimensionMetaQuery(
         context: IQueryGeneratorContext,
-        modelName: ModelName,
-        modelTarget: Model.Target,
-        dimensions: List<Model.Dimension>
+        datasetName: DatasetName,
+        datasetTarget: Dataset.Target,
+        dimensions: List<Dataset.Dimension>
     ): String
 
     /* Join-Type Join-Model ON (Join-Expression || sourceModelTarget.sourceColumn = targetModelTarget.targetColumn)
@@ -173,8 +173,8 @@ interface WarehouseMetriqlBridge {
         fun dimensionBeforePostOperation(
             context: IQueryGeneratorContext,
             metricPositionType: MetricPositionType,
-            dimension: Model.Dimension,
-            postOperation: ReportMetric.PostOperation?,
+            dimension: Dataset.Dimension,
+            timeframe: ReportMetric.Timeframe?,
             dimensionValue: String
         ): String {
             return dimensionValue
@@ -183,8 +183,8 @@ interface WarehouseMetriqlBridge {
         fun dimensionAfterPostOperation(
             context: IQueryGeneratorContext,
             metricPositionType: MetricPositionType,
-            dimension: Model.Dimension,
-            postOperation: ReportMetric.PostOperation?,
+            dimension: Dataset.Dimension,
+            timeframe: ReportMetric.Timeframe?,
             dimensionValueWithPostOperation: String
         ): String {
             return dimensionValueWithPostOperation
@@ -196,11 +196,11 @@ interface WarehouseMetriqlBridge {
     }
 
     companion object {
-        val allAggregations = Model.Measure.AggregationType.values().toList()
+        val allAggregations = Dataset.Measure.AggregationType.values().toList()
         val trinoVersion: String = TrinoDriver::class.java.getPackage().implementationVersion ?: "<unknown>"
     }
 
-    fun generateQuery(viewModels: Map<ModelName, String>, rawQuery: String, comments: List<String> = listOf()): String
+    fun generateQuery(viewModels: Map<DatasetName, String>, rawQuery: String, comments: List<String> = listOf()): String
 
     fun compileFunction(function: RFunction, arguments: List<Any>): String {
         val template = functions[function] ?: getRequiredPostOperation(functions, function)

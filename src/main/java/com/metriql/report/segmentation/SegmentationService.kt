@@ -2,16 +2,19 @@ package com.metriql.report.segmentation
 
 import com.metriql.db.FieldType
 import com.metriql.report.IAdHocService
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.Companion.extractDateRangeForEventTimestamp
+import com.metriql.report.data.FilterValue
+import com.metriql.report.data.FilterValue.Companion.extractDateRangeForEventTimestamp
+import com.metriql.report.data.FilterValue.NestedFilter
+import com.metriql.report.data.FilterValue.NestedFilter.Connector.AND
 import com.metriql.report.data.ReportMetric.ReportDimension
 import com.metriql.report.data.ReportMetric.ReportMeasure
+import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQueryReWriter.MaterializeTableCache
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.Model.Target.TargetValue.Table
-import com.metriql.service.model.ModelName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.Dataset.Target.TargetValue.Table
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -39,64 +42,57 @@ import java.util.logging.Logger
 * Instead of generating the join relation on funnel service, we apply the filters (thus generating the join relation if needed)
 * using this service
 * */
-class SegmentationService : IAdHocService<SegmentationReportOptions> {
+class SegmentationService : IAdHocService<SegmentationQuery> {
     // check if materialize exists in the database, if not, ignore it
     private val materializeTableExists = newSetFromMap(ConcurrentHashMap<MaterializeTableCache, Boolean>())
 
     override fun generateMaterializeQuery(
         projectId: String,
         context: IQueryGeneratorContext,
-        modelName: ModelName,
+        datasetName: DatasetName,
         materalizeName: String,
-        materialize: SegmentationRecipeQuery.SegmentationMaterialize,
+        materialize: SegmentationMaterialize,
     ): Pair<Table, String> {
-        val model = context.getModel(modelName)
-        val reportOptions = materialize.toQuery(modelName).toReportOptions(context) as SegmentationReportOptions
-        val eventTimestamp = model.mappings.get(EVENT_TIMESTAMP)
+        val model = context.getModel(datasetName)
+        val reportOptions = materialize.toQuery(datasetName) as SegmentationQuery
+        val eventTimestamp = model.mappings.get(TIME_SERIES)
         if (eventTimestamp != null) {
             // check if HOUR, DAY, etc.
-            if (reportOptions.dimensions?.any { it.name == eventTimestamp && it.relationName == null } != true) {
+            if (reportOptions.dimensions?.any { it.name == eventTimestamp && it.relation == null } != true) {
                 throw MetriqlException(
-                    "For the aggregate '$materalizeName' in model '$modelName', " +
+                    "For the aggregate '$materalizeName' in model '$datasetName', " +
                         "the event timestamp ($eventTimestamp) with timeframe HOUR or DAY must be included.",
                     HttpResponseStatus.BAD_REQUEST
                 )
             }
         }
 
-        val (_, rawQuery, _) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = false, forAccumulator = true)
-        val (materializeTable, _, _) = renderQuery(context.auth, context, reportOptions, listOf(), useAggregate = true, forAccumulator = true)
+        val (_, rawQuery, _) = renderQuery(context.auth, context, reportOptions, reportFilters = null, useAggregate = false, forAccumulator = true)
+        val (materializeTable, _, _) = renderQuery(context.auth, context, reportOptions, reportFilters = null, useAggregate = true, forAccumulator = true)
         return Pair(materializeTable!!, rawQuery)
     }
 
-    override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: SegmentationReportOptions): Set<ModelName> {
-        val filterRelations = (reportOptions.filters ?: listOf()).mapNotNull {
-            when (it.value) {
-                // TODO
-                is ReportFilter.FilterValue.MetricFilter -> it.value.metricValue?.toMetricReference()?.relation
-                is ReportFilter.FilterValue.Sql -> null
-            }
-        }
-
-        val allRelations = (filterRelations + reportOptions.measures.mapNotNull { it.relationName } + (reportOptions.dimensions ?: listOf()).mapNotNull { it.relationName }).toSet()
-
-        val model = context.getModel(reportOptions.modelName)
-        val relationModels = allRelations.map { relation -> model.relations.first { it.name == relation }.modelName }.toSet()
-        return relationModels + setOf(reportOptions.modelName)
+    override fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: SegmentationQuery): Set<DatasetName> {
+        val allRelations = (reportOptions.measures?.mapNotNull { it.relation } ?: listOf()) +
+            (reportOptions.dimensions ?: listOf()).mapNotNull { it.relation }
+        val model = context.getModel(reportOptions.dataset)
+        val relationModels = allRelations.map { relation -> model.relations.first { it.name == relation }.datasetName }.toSet()
+        return relationModels + setOf(reportOptions.dataset)
     }
 
     override fun renderQuery(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
-        reportOptions: SegmentationReportOptions,
-        reportFilters: List<ReportFilter>,
+        reportOptions: SegmentationQuery,
+        reportFilters: FilterValue?,
     ): IAdHocService.RenderedQuery {
         val (_, query, dsl) = renderQuery(
             auth,
             context,
             reportOptions,
             reportFilters,
-            useAggregate = true
+            useAggregate = true,
+            forAccumulator = false
         )
 
         return IAdHocService.RenderedQuery(
@@ -111,10 +107,10 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
     fun renderQuery(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
-        reportOptions: SegmentationReportOptions,
-        reportFilters: List<ReportFilter>,
-        useAggregate: Boolean = false,
-        forAccumulator: Boolean = false,
+        reportOptions: SegmentationQuery,
+        reportFilters: FilterValue?,
+        useAggregate: Boolean,
+        forAccumulator: Boolean,
     ): Triple<Table?, String, Segmentation> {
         val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[SegmentationReportType.slug]
         val serviceQueryGenerator = queryGenerator as? SegmentationQueryGenerator ?: throw IllegalArgumentException("Warehouse query generator must be SegmentationQueryGenerator")
@@ -140,21 +136,21 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         auth: ProjectAuth,
         dataSource: DataSource,
         context: IQueryGeneratorContext,
-        reportOptions: SegmentationReportOptions,
-        reportFilters: List<ReportFilter>,
+        reportOptions: SegmentationQuery,
+        reportFilters: FilterValue?,
         useAggregate: Boolean,
         forAccumulator: Boolean,
     ): Pair<Table?, Segmentation> {
         val warehouseBridge = dataSource.warehouse.bridge
-        val mainModel = context.getModel(reportOptions.modelName)
+        val mainModel = context.getModel(reportOptions.dataset)
 
         val aggregatesForModel = context.getAggregatesForModel(mainModel.target, SegmentationReportType)
 
-        val usedModels = getUsedModels(auth, context, reportOptions)
+        val usedModels = getUsedDatasets(auth, context, reportOptions)
         val alwaysFilters = usedModels.flatMap { model -> context.getModel(model).alwaysFilters?.map { it.toReportFilter(context, model) } ?: listOf() }
+        val allFilters = NestedFilter(AND, listOfNotNull(reportOptions.filters, reportFilters) + alwaysFilters)
 
         val (materializeQuery, aggregateModel) = if (useAggregate) {
-            val allFilters = (reportOptions.filters ?: listOf()) + reportFilters + alwaysFilters
             try {
                 SegmentationQueryReWriter(context).findOptimumPlan(
                     reportOptions.copy(filters = allFilters), aggregatesForModel
@@ -189,59 +185,49 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
 
         val queryType = if (aggregateModel != null) INTERMEDIATE_MERGE else if (forAccumulator) INTERMEDIATE_ACCUMULATE else ADHOC
         val contextModelTarget = aggregateModel?.target ?: mainModel.target
-        val modelName = materializeQuery?.modelName ?: reportOptions.modelName
-        val dimensions = materializeQuery?.dimensions ?: reportOptions.dimensions ?: listOf()
-        val measures = materializeQuery?.measures ?: reportOptions.measures
-        val filters = materializeQuery?.filters ?: reportOptions.filters ?: listOf()
-        val orders = reportOptions.orders ?: listOf()
+        val modelName = materializeQuery?.dataset ?: reportOptions.dataset
+        val dimensionsRefs = materializeQuery?.dimensions ?: reportOptions.dimensions ?: listOf()
+        val measuresRefs = materializeQuery?.measures ?: reportOptions.measures ?: listOf()
+        val filters = materializeQuery?.filters ?: allFilters
+        val orders = reportOptions.orders?.let { getOrders(it, context.getModel(modelName), context) } ?: listOf()
         val alias = context.getOrGenerateAlias(modelName, null)
 
         // 1. Render measures, dimensions and filters.
         // Each of them will generate a projection value and a join relation if available.
-        val renderedDimensions = dimensions
-            .map { dimension ->
+        val dimensions = dimensionsRefs.map { it.toDimension(modelName, it.getType(context, modelName).second) }
+        val measures = measuresRefs.map { it.toMeasure(modelName) }
+
+        val renderedDimensions =
+            dimensions.map { dimension ->
                 // Note that renderDimension takes the context as an argument.
                 // We still keep track of each dimension rendered.
                 warehouseBridge.renderDimension(
                     context,
-                    dimension.modelName,
+                    dimension.dataset,
                     dimension.name,
-                    dimension.relationName,
-                    dimension.postOperation,
+                    dimension.relation,
+                    dimension.timeframe,
                     WarehouseMetriqlBridge.MetricPositionType.PROJECTION
                 )
             }
 
-        val modelAndQueryFilters = (filters + alwaysFilters)
-        val allFilters = modelAndQueryFilters + reportFilters
-
-        val renderedFilters = modelAndQueryFilters.map { warehouseBridge.renderFilter(it, modelName, context) } +
-            reportFilters.mapNotNull {
-                try {
-                    warehouseBridge.renderFilter(it, modelName, context)
-                } catch (e: MetriqlException) {
-                    context.comments.add("Unable to apply report filter ${it.value}: ${e.message}")
-                    // TODO: implement a fail safe mode?
-                    null
-                }
-            }
+        val renderedFilters = warehouseBridge.renderFilter(filters, modelName, context)
 
         // Need to render measures at last and call the relations in advance to trigger symmetric aggregates if required.
-        measures.filter { it.relationName != null }.forEach { context.getRelation(it.modelName, it.relationName!!) }
+        measures?.filter { it.relation != null }?.forEach { context.getRelation(modelName, it.relation!!) }
 
-        val renderedMeasures = measures
-            .map { measure ->
-                warehouseBridge.renderMeasure(
-                    context,
-                    measure.modelName,
-                    measure.name,
-                    measure.relationName,
-                    WarehouseMetriqlBridge.MetricPositionType.PROJECTION,
-                    queryType,
-                )
-            }
+        val renderedMeasures = measures?.map { measure ->
+            warehouseBridge.renderMeasure(
+                context,
+                measure.dataset,
+                measure.name,
+                measure.relation,
+                WarehouseMetriqlBridge.MetricPositionType.PROJECTION,
+                queryType,
+            )
+        } ?: listOf()
 
-        val joinRelations = (renderedFilters.mapNotNull { it.joins }.flatten() + (renderedDimensions.mapNotNull { it.join } + renderedMeasures.mapNotNull { it.join })).toSet()
+        val joinRelations = (renderedFilters.joins + (renderedDimensions.mapNotNull { it.join } + renderedMeasures.mapNotNull { it.join })).toSet()
 
         /*
         * 2. Prepare parts.
@@ -256,7 +242,7 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
 
         // Render table reference last. Have to wait for the queryGeneratorContext to fill with rendered dimensions
         val renderedDimensionAndColumnNames = context.referencedDimensions
-            .filter { it.value.modelName == modelName }
+            .filter { it.value.datasetName == modelName }
             .map { it.value.dimension.name }
 
         val inQueryDimensionNames = dimensions.map { it.name } + renderedDimensionAndColumnNames
@@ -266,9 +252,9 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             dimensions = renderedDimensions,
             limit = reportOptions.limit,
             measures = renderedMeasures,
-            whereFilters = renderedFilters.mapNotNull { it.whereFilter },
+            whereFilter = renderedFilters.whereFilter,
 
-            groupIdx = if (renderedMeasures.any { !it.window } || renderedFilters.any { it.havingFilter != null }) {
+            groupIdx = if (renderedMeasures.any { !it.window } || renderedFilters.havingFilter != null) {
                 (1..renderedDimensions.filter { !it.window }.size).toSet()
             } else null,
 
@@ -278,14 +264,14 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                         context,
                         modelName,
                         reportDimension.name,
-                        reportDimension.relationName,
-                        reportDimension.postOperation,
+                        reportDimension.relation,
+                        reportDimension.timeframe,
                         WarehouseMetriqlBridge.MetricPositionType.FILTER
                     ).value
                 }.toSet()
             } else null,
 
-            havingFilters = renderedFilters.mapNotNull { it.havingFilter }.toSet(),
+            havingFilter = renderedFilters.havingFilter,
 
             orderByIdx = when {
                 forAccumulator -> null
@@ -302,14 +288,17 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                                     index + 1
                                 }
                             }
+
                             is ReportMeasure -> {
                                 (dimensions.size + measures.indexOf(orderItem.value)) + 1
                             }
+
                             else -> throw IllegalStateException("Only dimension and measure are accepted as segmentation order")
                         }
                         "$metricIndex ${if (orderItem.ascending == true) "ASC" else "DESC"}"
                     }.toSet()
                 }
+
                 else -> null
             },
 
@@ -321,21 +310,23 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
                                 context,
                                 modelName,
                                 orderItem.value.name,
-                                orderItem.value.relationName,
-                                orderItem.value.postOperation,
+                                orderItem.value.relation,
+                                orderItem.value.timeframe,
                                 WarehouseMetriqlBridge.MetricPositionType.FILTER
                             ).value
                         }
+
                         is ReportMeasure -> {
                             warehouseBridge.renderMeasure(
                                 context,
-                                orderItem.value.modelName,
+                                orderItem.value.dataset,
                                 orderItem.value.name,
-                                orderItem.value.relationName,
+                                orderItem.value.relation,
                                 WarehouseMetriqlBridge.MetricPositionType.FILTER,
                                 queryType,
                             ).value
                         }
+
                         else -> throw IllegalStateException("Only ReportDimension and ReportMeasure are accepted as segmentation order")
                     }
                     "$metricIndex ${if (orderItem.ascending == true) "ASC" else "DESC"}"
@@ -343,11 +334,11 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
             } else {
                 if (measures.isNotEmpty()) {
                     val timestampDimensionsIndexes = dimensions?.mapIndexed { index, item ->
-                        val currentModelName = if (item.relationName != null) {
-                            context.getModel(item.modelName).relations.find { it.name == item.relationName }?.modelName
+                        val currentModelName = if (item.relation != null) {
+                            context.getModel(item.dataset).relations.find { it.name == item.relation }?.datasetName
                                 ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
                         } else {
-                            item.modelName ?: modelName
+                            item.dataset ?: modelName
                         }
                         val modelDimension = context.getModelDimension(item.name, currentModelName)
                         if (listOf(FieldType.TIMESTAMP, FieldType.DATE, FieldType.TIME).contains(modelDimension.dimension.fieldType)) {
@@ -385,17 +376,43 @@ class SegmentationService : IAdHocService<SegmentationReportOptions> {
         return aggregateModel?.target?.value as? Table to dsl
     }
 
-    private fun getColumnNames(context: IQueryGeneratorContext, mainModel: Model, dimensions: List<ReportDimension>, measures: List<ReportMeasure>): List<String> {
+    private fun getOrders(orders: Map<Recipe.FieldReference, Recipe.OrderType>, source: Dataset, context: IQueryGeneratorContext): List<SegmentationQuery.Order> {
+        return orders?.entries?.map { order ->
+            val fieldModel = if (order.key.relation != null) {
+                source.relations.find { it.name == order.key.relation }!!.datasetName
+            } else source.name
+            val targetModel = context.getModel(fieldModel)
+            when {
+                targetModel.dimensions.any { it.name == order.key.name } -> {
+                    SegmentationQuery.Order(
+                        SegmentationQuery.Order.Type.DIMENSION,
+                        order.key.toDimension(source.name, order.key.getType(context, source.name).second),
+                        order.value == Recipe.OrderType.ASC
+                    )
+                }
+
+                targetModel.measures.any { it.name == order.key.name } -> {
+                    SegmentationQuery.Order(SegmentationQuery.Order.Type.MEASURE, order.key.toMeasure(source.name), order.value == Recipe.OrderType.ASC)
+                }
+
+                else -> {
+                    throw MetriqlException("Ordering field ${order.key} not found in $fieldModel", HttpResponseStatus.BAD_REQUEST)
+                }
+            }
+        }
+    }
+
+    private fun getColumnNames(context: IQueryGeneratorContext, mainDataset: Dataset, dimensions: List<ReportDimension>, measures: List<ReportMeasure>): List<String> {
         val dimensionNames = dimensions.map {
-            val modelName = if (it.relationName == null) it.modelName else {
-                mainModel.relations.find { relation -> relation.name == it.relationName }!!.modelName
+            val modelName = if (it.relation == null) it.dataset else {
+                mainDataset.relations.find { relation -> relation.name == it.relation }!!.datasetName
             }
             context.getModelDimension(it.name, modelName).dimension
         }.map { it.label ?: it.name }
 
         val measureNames = measures.map {
-            val modelName = if (it.relationName == null) it.modelName else {
-                mainModel.relations.find { relation -> relation.name == it.relationName }!!.modelName
+            val modelName = if (it.relation == null) it.dataset else {
+                mainDataset.relations.find { relation -> relation.name == it.relation }!!.datasetName
             }
             context.getModelMeasure(it.name, modelName).measure
         }.map { it.label ?: it.name }

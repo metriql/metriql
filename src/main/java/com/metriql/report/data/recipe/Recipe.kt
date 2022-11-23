@@ -14,30 +14,24 @@ import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifest
 import com.metriql.dbt.DbtManifest.Companion.extractFields
 import com.metriql.report.ReportType
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
-import com.metriql.report.segmentation.SegmentationRecipeQuery
-import com.metriql.report.segmentation.SegmentationReportType
+import com.metriql.report.segmentation.SegmentationMaterialize
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.RelationName
 import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.ModelName
-import com.metriql.service.model.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.UppercaseEnum
-import com.metriql.util.getOperation
 import com.metriql.util.serializableName
 import com.metriql.util.toSnakeCase
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
-import com.metriql.warehouse.spi.function.TimestampPostOperation
-import com.metriql.warehouse.spi.function.TimestampPostOperation.HOUR
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceReportOptions
-import io.netty.handler.codec.http.HttpResponseStatus
+import com.metriql.warehouse.spi.services.ServiceQuery
 import io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST
-import io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND
+import kotlin.reflect.KClass
 
 data class Recipe(
     val repository: String,
@@ -47,7 +41,6 @@ data class Recipe(
     val packageName: String?,
     val dependencies: Dependencies? = null,
     val models: List<RecipeModel>? = null,
-    val dashboards: List<RecipeDashboard>? = null,
     val reports: List<SaveReport>? = null,
 ) {
     @JsonIgnoreProperties
@@ -55,10 +48,8 @@ data class Recipe(
         return dependencies ?: Dependencies()
     }
 
-    @JsonIgnoreProperties(value = ["dbtDependency"])
     @JSONBSerializable
     data class Dependencies(val dbt: DbtDependency? = null) {
-        @JsonIgnoreProperties(value = ["packages", "dbtProject", "selfHosted", "cronjob", "target"])
         data class DbtDependency(
             val profile: String? = null,
             val aggregatesSchema: String? = null,
@@ -111,20 +102,19 @@ data class Recipe(
     data class RecipeModel(
         val name: String? = null,
         val hidden: Boolean? = null,
-        val target: Model.Target.TargetValue.Table? = null,
+        val target: Dataset.Target.TargetValue.Table? = null,
         val sql: SQLRenderable? = null,
         val dataset: String? = null,
         val label: String? = null,
         val description: String? = null,
         val category: String? = null,
         val extends: String? = null,
-        val mappings: Model.MappingDimensions? = null,
+        val mappings: Dataset.MappingDimensions? = null,
         val relations: Map<String, RecipeRelation>? = null,
         val dimensions: Map<String, Metric.RecipeDimension>? = null,
         val columns: List<DbtManifest.DbtColumn>? = null,
         val measures: Map<String, Metric.RecipeMeasure>? = null,
-        val materializes: Map<String, Map<String, SegmentationRecipeQuery.SegmentationMaterialize>>? = null,
-        val aggregates: Map<String, SegmentationRecipeQuery.SegmentationMaterialize>? = null,
+        val materializes: Map<String, Map<String, SegmentationMaterialize>>? = null,
         val tags: List<String>? = null,
         @JsonAlias("always_filters")
         val alwaysFilters: List<OrFilters>? = null,
@@ -132,55 +122,6 @@ data class Recipe(
         val _path: String? = null,
         val package_name: String? = null,
     ) {
-
-        @JsonIgnore
-        fun getMaterializes(): List<Model.Materialize> {
-            val aggregates = this.aggregates?.let { mapOf(SegmentationReportType to it) } ?: mapOf()
-            val allMaterializes = ((materializes ?: mapOf()) + aggregates).flatMap { it.value.entries }?.map {
-                Model.Materialize(
-                    it.key,
-                    SegmentationReportType,
-                    it.value
-                )
-            }
-
-            allMaterializes.forEach { materialize ->
-                when (materialize.reportType) {
-                    SegmentationReportType -> {
-                        val eventTimestamp = mappings?.get(EVENT_TIMESTAMP)
-                        if (eventTimestamp != null) {
-                            val hasEventTimestampDimension = materialize.value.dimensions?.any {
-                                // TODO: if the dimension type is timestamp
-                                if (false) {
-                                    val timeframe = it.timeframe ?: throw MetriqlException(
-                                        "Timeframe is required for ${it.name} dimension",
-                                        BAD_REQUEST
-                                    )
-                                    val enum = JsonHelper.convert(timeframe, TimestampPostOperation::class.java)
-                                    if (enum != HOUR && !enum.isInclusive(TimestampPostOperation.YEAR)) {
-                                        throw MetriqlException(
-                                            "One of HOUR, DAY, WEEK, MONTH or YEAR timeframe of the eventTimestamp is required for incremental models",
-                                            BAD_REQUEST
-                                        )
-                                    }
-
-                                    true
-                                } else {
-                                    false
-                                }
-                            } ?: false
-                        }
-                    }
-                    else -> throw MetriqlException(
-                        "Only segmentation materializes are allowed at the moment.",
-                        HttpResponseStatus.NOT_IMPLEMENTED
-                    )
-                }
-            }
-
-            return allMaterializes
-        }
-
         @JsonIgnore
         fun validate(): List<String> {
             val errors = mutableListOf<String>()
@@ -207,9 +148,9 @@ data class Recipe(
         }
 
         companion object {
-            fun fromDimension(dimension: Model.Dimension): Metric.RecipeDimension {
+            fun fromDimension(dimension: Dataset.Dimension): Metric.RecipeDimension {
                 return when (dimension.value) {
-                    is Model.Dimension.DimensionValue.Sql -> Metric.RecipeDimension(
+                    is Dataset.Dimension.DimensionValue.Sql -> Metric.RecipeDimension(
                         dimension.label,
                         dimension.description,
                         dimension.category,
@@ -223,7 +164,8 @@ data class Recipe(
                         dimension.primary,
                         dimension.value.window
                     )
-                    is Model.Dimension.DimensionValue.Column -> Metric.RecipeDimension(
+
+                    is Dataset.Dimension.DimensionValue.Column -> Metric.RecipeDimension(
                         dimension.label,
                         dimension.description,
                         dimension.category,
@@ -240,253 +182,46 @@ data class Recipe(
                     )
                 }
             }
-
-            fun fromModel(model: Model): RecipeModel {
-                val recipeRelations = model.relations.map { relation ->
-                    relation.name to when (relation.value) {
-                        is Model.Relation.RelationValue.SqlValue -> RecipeRelation(
-                            relation.label,
-                            relation.description,
-                            relation.relationType,
-                            relation.joinType,
-                            relation.modelName,
-                            relation.value.sql,
-                            null,
-                            null,
-                            null,
-                            null,
-                            if (relation.hidden === true) true else null,
-                        )
-                        is Model.Relation.RelationValue.ColumnValue -> RecipeRelation(
-                            relation.label,
-                            relation.description,
-                            relation.relationType,
-                            relation.joinType,
-                            relation.modelName,
-                            null,
-                            null,
-                            null,
-                            relation.value.sourceColumn,
-                            relation.value.targetColumn,
-                            if (relation.hidden === true) true else null
-                        )
-                        is Model.Relation.RelationValue.DimensionValue -> RecipeRelation(
-                            relation.label,
-                            relation.description,
-                            relation.relationType,
-                            relation.joinType,
-                            relation.modelName,
-                            null,
-                            relation.value.sourceDimension,
-                            relation.value.targetDimension,
-                            null,
-                            null,
-                            if (relation.hidden === true) true else null
-                        )
-                    }
-                }.toMap()
-
-                val recipeDimensions = model.dimensions.map { dimension ->
-                    dimension.name to fromDimension(dimension)
-                }.toMap()
-
-                val recipeMeasures = model.measures.map { measure ->
-                    val filters = if (measure.filters != null) {
-                        measure.filters
-                            .map { filter ->
-                                when (filter.value) {
-                                    is ReportFilter.FilterValue.Sql -> {
-                                        listOf(
-                                            Metric.RecipeMeasure.Filter(
-                                                null,
-                                                null,
-                                                filter.value.sql,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null,
-                                                null
-                                            )
-                                        )
-                                    }
-                                    is ReportFilter.FilterValue.MetricFilter -> {
-                                        filter.value.filters.map {
-                                            val metricValue = filter.value.metricValue ?: it.metricValue ?: throw java.lang.IllegalArgumentException()
-                                            when (metricValue) {
-                                                is ReportMetric.ReportMeasure -> throw IllegalStateException("Measure filters can't filter measures")
-                                                is ReportMetric.ReportDimension -> {
-                                                    val dimensionType = model.dimensions.find { dim -> dim.name == metricValue.name }?.fieldType
-                                                        ?: throw MetriqlException(
-                                                            "Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.",
-                                                            NOT_FOUND
-                                                        )
-                                                    val (type, operation) = getOperation(dimensionType, it.operator)
-                                                    filter.value.filters
-                                                        .map {
-                                                            Metric.RecipeMeasure.Filter(
-                                                                metricValue.name,
-                                                                null,
-                                                                null,
-                                                                metricValue.modelName,
-                                                                metricValue.relationName,
-                                                                metricValue.postOperation,
-                                                                type,
-                                                                operation,
-                                                                it.value
-                                                            )
-                                                        }
-                                                }
-                                                is ReportMetric.ReportMappingDimension -> {
-                                                    val name = model.mappings.get(metricValue.name)
-                                                    val dimensionType = model.dimensions.find { dim -> dim.name == name }?.fieldType
-                                                        ?: throw MetriqlException(
-                                                            "Dimension ${model.name}.${metricValue.name} must have type since these is filter set on it.",
-                                                            NOT_FOUND
-                                                        )
-                                                    val (type, operator) = getOperation(dimensionType, it.operator)
-
-                                                    filter.value.filters
-                                                        .map {
-                                                            Metric.RecipeMeasure.Filter(
-                                                                null,
-                                                                metricValue.name,
-                                                                null,
-                                                                null,
-                                                                null,
-                                                                metricValue.postOperation,
-                                                                type,
-                                                                operator,
-                                                                it.value
-                                                            )
-                                                        }
-                                                }
-                                                is ReportMetric.Function -> TODO()
-                                                is ReportMetric.Unary -> TODO()
-                                                else -> TODO()
-                                            }
-                                        }.flatten()
-                                    }
-                                }
-                            }.flatten()
-                    } else {
-                        null
-                    }
-                    measure.name to when (measure.value) {
-                        is Model.Measure.MeasureValue.Sql -> {
-                            Metric.RecipeMeasure(
-                                measure.label,
-                                measure.description,
-                                measure.category,
-                                filters,
-                                measure.reportOptions,
-                                measure.value.sql,
-                                null,
-                                null,
-                                measure.value.aggregation,
-                                measure.fieldType,
-                                if (measure.hidden === true) true else null,
-                                measure.value.window
-                            )
-                        }
-                        is Model.Measure.MeasureValue.Column -> {
-                            Metric.RecipeMeasure(
-                                measure.label,
-                                measure.description,
-                                measure.category,
-                                filters,
-                                measure.reportOptions,
-                                null,
-                                measure.value.column,
-                                null,
-                                measure.value.aggregation,
-                                measure.fieldType,
-                                if (measure.hidden === true) true else null,
-                                null
-                            )
-                        }
-                        is Model.Measure.MeasureValue.Dimension -> {
-                            Metric.RecipeMeasure(
-                                measure.label,
-                                measure.description,
-                                measure.category,
-                                filters,
-                                measure.reportOptions,
-                                null,
-                                null,
-                                measure.value.dimension,
-                                measure.value.aggregation,
-                                measure.fieldType,
-                                if (measure.hidden === true) true else null,
-                                null
-                            )
-                        }
-                    }
-                }.toMap()
-
-                val aggregates = model.materializes?.filter { it.reportType == SegmentationReportType }?.associate { it.name to it.value }
-                return RecipeModel(
-                    model.name,
-                    if (model.hidden === true) true else null,
-                    model.target.value as? Model.Target.TargetValue.Table,
-                    (model.target.value as? Model.Target.TargetValue.Sql)?.sql,
-                    null,
-                    model.label,
-                    model.description,
-                    model.category,
-                    null,
-                    model.mappings,
-                    recipeRelations,
-                    recipeDimensions,
-                    null,
-                    recipeMeasures,
-                    null,
-                    aggregates,
-                    model.tags,
-                    model.alwaysFilters,
-                    model.recipePath
-                )
-            }
         }
 
-        fun toModel(packageNameFromModel: String, bridge: WarehouseMetriqlBridge, recipeId: Int): Model {
+        fun toModel(packageNameFromModel: String, bridge: WarehouseMetriqlBridge): Dataset {
             val packageName = this.package_name ?: packageNameFromModel
             val modelName = name ?: throw MetriqlException("Model name is required", BAD_REQUEST)
 
             val modelRelations = relations?.map { (relationName, relation) -> relation.toRelation(packageName, relationName) } ?: listOf()
 
-            val modelTarget = when {
+            val datasetTarget = when {
                 sql != null -> {
-                    Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql(sql))
+                    Dataset.Target(Dataset.Target.Type.SQL, Dataset.Target.TargetValue.Sql(sql))
                 }
+
                 dataset != null -> {
                     val modelName = DbtJinjaRenderer.renderer.renderReference(dataset, packageName)
-                    Model.Target(Model.Target.Type.SQL, Model.Target.TargetValue.Sql("select * from {{model.$modelName}}"))
+                    Dataset.Target(Dataset.Target.Type.SQL, Dataset.Target.TargetValue.Sql("select * from {{model.$modelName}}"))
                 }
+
                 else -> {
-                    Model.Target(Model.Target.Type.TABLE, target!!)
+                    Dataset.Target(Dataset.Target.Type.TABLE, target!!)
                 }
             }
 
             val (dbtMeasures, dbtDimensions) = extractFields(modelName, columns?.map { it.name to it }?.toMap() ?: mapOf())
 
-            return Model(
+            return Dataset(
                 modelName,
-                hidden ?: false,
-                modelTarget,
-                label,
-                description,
-                category,
-                mappings ?: Model.MappingDimensions(),
-                modelRelations,
-                ((dimensions ?: mapOf()) + dbtDimensions)?.map { (dimensionName, dimension) -> dimension.toDimension(dimensionName, bridge) },
-                ((measures ?: mapOf()) + dbtMeasures)?.map { (measureName, measure) -> measure.toMeasure(measureName, modelName) },
-                getMaterializes(),
-                alwaysFilters,
-                null,
-                tags,
-                recipeId,
-                _path
+                hidden = hidden ?: false,
+                target = datasetTarget,
+                label = label,
+                description = description,
+                category = category,
+                mappings = mappings ?: Dataset.MappingDimensions(),
+                relations = modelRelations,
+                dimensions = ((dimensions ?: mapOf()) + dbtDimensions)?.map { (dimensionName, dimension) -> dimension.toDimension(dimensionName, bridge) },
+                measures = ((measures ?: mapOf()) + dbtMeasures)?.map { (measureName, measure) -> measure.toMeasure(measureName, modelName) },
+                materializes = materializes,
+                alwaysFilters = alwaysFilters,
+                tags = tags,
+                location = _path
             )
         }
 
@@ -522,11 +257,11 @@ data class Recipe(
                     return null
                 }
 
-                fun toDimension(dimensionName: String, bridge: WarehouseMetriqlBridge): Model.Dimension {
+                fun toDimension(dimensionName: String, bridge: WarehouseMetriqlBridge): Dataset.Dimension {
                     val (valType, value) = if (sql != null) {
-                        Pair(Model.Dimension.Type.SQL, Model.Dimension.DimensionValue.Sql(sql, window))
+                        Pair(Dataset.Dimension.Type.SQL, Dataset.Dimension.DimensionValue.Sql(sql, window))
                     } else {
-                        Pair(Model.Dimension.Type.COLUMN, Model.Dimension.DimensionValue.Column(column!!))
+                        Pair(Dataset.Dimension.Type.COLUMN, Dataset.Dimension.DimensionValue.Column(column!!))
                     }
 
                     val timeframes = if (timeframes.isNullOrEmpty() && type != null) {
@@ -540,7 +275,7 @@ data class Recipe(
                         timeframes
                     }
 
-                    return Model.Dimension(
+                    return Dataset.Dimension(
                         dimensionName,
                         valType,
                         value,
@@ -548,7 +283,6 @@ data class Recipe(
                         label,
                         category,
                         primary,
-                        if (pivot === false) false else null,
                         null,
                         timeframes,
                         type,
@@ -568,7 +302,7 @@ data class Recipe(
                 val sql: SQLRenderable? = null,
                 val column: String? = null,
                 val dimension: String? = null,
-                val aggregation: Model.Measure.AggregationType? = null,
+                val aggregation: Dataset.Measure.AggregationType? = null,
                 val type: FieldType? = FieldType.DOUBLE,
                 val hidden: Boolean? = null,
                 val window: Boolean? = null,
@@ -590,23 +324,25 @@ data class Recipe(
                     return null
                 }
 
-                fun toMeasure(measureName: String, modelName: String): Model.Measure {
+                fun toMeasure(measureName: String, modelName: String): Dataset.Measure {
                     val (valType, value) = when {
                         sql != null -> {
-                            Pair(Model.Measure.Type.SQL, Model.Measure.MeasureValue.Sql(sql, aggregation, window))
+                            Pair(Dataset.Measure.Type.SQL, Dataset.Measure.MeasureValue.Sql(sql, aggregation, window))
                         }
+
                         dimension != null -> {
                             val agg = aggregation ?: throw MetriqlException("Aggregation is required for $modelName.$measureName", BAD_REQUEST)
                             Pair(
-                                Model.Measure.Type.DIMENSION,
-                                Model.Measure.MeasureValue.Dimension(agg, dimension)
+                                Dataset.Measure.Type.DIMENSION,
+                                Dataset.Measure.MeasureValue.Dimension(agg, dimension)
                             )
                         }
+
                         else -> {
                             val agg = aggregation ?: throw MetriqlException("Aggregation is required for $modelName.$measureName", BAD_REQUEST)
                             Pair(
-                                Model.Measure.Type.COLUMN,
-                                Model.Measure.MeasureValue.Column(agg, column)
+                                Dataset.Measure.Type.COLUMN,
+                                Dataset.Measure.MeasureValue.Column(agg, column)
                             )
                         }
                     }
@@ -614,45 +350,36 @@ data class Recipe(
                     val filters = filters?.map { filter ->
                         when {
                             filter.dimension != null -> {
-                                ReportFilter(
-                                    ReportFilter.Type.METRIC_FILTER,
-                                    ReportFilter.FilterValue.MetricFilter(
-                                        // TODO: it's deprecated
-                                        ReportFilter.FilterValue.MetricFilter.MetricType.DIMENSION,
-                                        // TODO: it's deprecated
-                                        ReportMetric.ReportDimension(
-                                            filter.dimension,
-                                            filter.modelName ?: modelName,
-                                            filter.relationName,
-                                            filter.postOperation
-                                        ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.operator!!.name, filter.value))
-                                    )
+                                FilterValue.MetricFilter(
+                                    ReportMetric.ReportDimension(
+                                        filter.dimension,
+                                        filter.datasetName ?: modelName,
+                                        filter.relationName,
+                                        filter.timeframe
+                                    ).toMetricReference(),
+                                    filter.operator!!.name, filter.value
                                 )
                             }
+
                             filter.mappingDimension != null -> {
-                                ReportFilter(
-                                    ReportFilter.Type.METRIC_FILTER,
-                                    ReportFilter.FilterValue.MetricFilter(
-                                        ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION,
-                                        ReportMetric.ReportMappingDimension(
-                                            filter.mappingDimension,
-                                            filter.postOperation
-                                        ),
-                                        listOf(ReportFilter.FilterValue.MetricFilter.Filter(null, null, filter.operator!!.name, filter.value))
-                                    )
+                                FilterValue.MetricFilter(
+                                    ReportMetric.ReportMappingDimension(
+                                        filter.mappingDimension,
+                                        filter.timeframe
+                                    ).toMetricReference(),
+                                    filter.operator!!.name, filter.value
+
                                 )
                             }
+
                             filter.sql != null -> {
-                                ReportFilter(
-                                    ReportFilter.Type.SQL_FILTER,
-                                    ReportFilter.FilterValue.Sql(filter.sql)
-                                )
+                                FilterValue.SqlFilter(filter.sql)
                             }
+
                             else -> throw IllegalStateException("dimension, mappingDimension or sql must be present in a measure filter")
                         }
                     }
-                    return Model.Measure(
+                    return Dataset.Measure(
                         measureName,
                         label,
                         description,
@@ -670,14 +397,14 @@ data class Recipe(
                 data class Filter(
                     val dimension: DimensionName? = null,
                     @JsonAlias("mapping")
-                    val mappingDimension: Model.MappingDimensions.CommonMappings? = null,
+                    val mappingDimension: Dataset.MappingDimensions.CommonMappings? = null,
                     val sql: SQLRenderable? = null,
-                    val modelName: ModelName? = null,
+                    val datasetName: DatasetName? = null,
                     val relationName: RelationName? = null,
-                    val postOperation: ReportMetric.PostOperation? = null,
+                    val timeframe: ReportMetric.Timeframe? = null,
                     val valueType: FieldType? = null,
                     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "valueType", include = JsonTypeInfo.As.EXTERNAL_PROPERTY)
-                    @JsonTypeIdResolver(ReportFilter.FilterValue.MetricFilter.Filter.OperatorTypeResolver::class)
+                    @JsonTypeIdResolver(FilterValue.MetricFilter.OperatorTypeResolver::class)
                     val operator: Enum<*>? = null,
                     val value: Any? = null,
                 ) {
@@ -709,11 +436,11 @@ data class Recipe(
             val label: String? = null,
             val description: String? = null,
             @JsonAlias("relationType", "relation")
-            val relationship: Model.Relation.RelationType? = null,
+            val relationship: Dataset.Relation.RelationType? = null,
             @JsonAlias("join", "joinType")
-            val type: Model.Relation.JoinType? = null,
+            val type: Dataset.Relation.JoinType? = null,
             @JsonAlias("modelName")
-            val model: ModelName? = null,
+            val model: DatasetName? = null,
             val sql: SQLRenderable? = null,
             @JsonAlias("sourceDimension")
             val source: String? = null,
@@ -726,36 +453,38 @@ data class Recipe(
             val fields: Set<String>? = null,
             val name: String? = null
         ) {
-            fun getModel(packageName: String, relationName: String): ModelName {
+            fun getModel(packageName: String, relationName: String): DatasetName {
                 val toModel = to?.let { DbtJinjaRenderer.renderer.renderReference("{{$it}}", packageName) }
                 return model ?: toModel ?: relationName
             }
 
-            fun toRelation(packageName: String, relationName: String): Model.Relation {
+            fun toRelation(packageName: String, relationName: String): Dataset.Relation {
                 val (relType, value) = when {
                     sql != null -> {
-                        Pair(Model.Relation.Type.SQL, Model.Relation.RelationValue.SqlValue(sql))
+                        Pair(Dataset.Relation.Type.SQL, Dataset.Relation.RelationValue.SqlValue(sql))
                     }
+
                     source != null -> {
                         Pair(
-                            Model.Relation.Type.DIMENSION,
-                            Model.Relation.RelationValue.DimensionValue(source, target!!)
+                            Dataset.Relation.Type.DIMENSION,
+                            Dataset.Relation.RelationValue.DimensionValue(source, target!!)
                         )
                     }
+
                     else -> {
                         Pair(
-                            Model.Relation.Type.COLUMN,
-                            Model.Relation.RelationValue.ColumnValue(sourceColumn!!, targetColumn!!)
+                            Dataset.Relation.Type.COLUMN,
+                            Dataset.Relation.RelationValue.ColumnValue(sourceColumn!!, targetColumn!!)
                         )
                     }
                 }
 
-                return Model.Relation(
+                return Dataset.Relation(
                     relationName,
                     label,
                     description,
-                    relationship ?: Model.Relation.RelationType.ONE_TO_ONE,
-                    type ?: Model.Relation.JoinType.LEFT_JOIN,
+                    relationship ?: Dataset.Relation.RelationType.ONE_TO_ONE,
+                    type ?: Dataset.Relation.JoinType.LEFT_JOIN,
                     getModel(packageName, relationName),
                     relType,
                     value,
@@ -772,7 +501,31 @@ data class Recipe(
         val mapping: String? = null,
         val operator: String,
         val value: Any?,
-    )
+    ) {
+        @JsonIgnore
+        fun toFilter(
+            context: IQueryGeneratorContext,
+            datasetName: DatasetName,
+        ): FilterValue.MetricFilter {
+            var metricValue = when {
+                dimension != null ->
+                    dimension.toDimension(datasetName, dimension.getType(context, datasetName).second)
+
+                measure != null ->
+                    measure.toMeasure(datasetName)
+
+                mapping != null -> {
+                    val type = JsonHelper.convert(mapping, Dataset.MappingDimensions.CommonMappings::class.java)
+                    ReportMetric.ReportMappingDimension(type, null)
+                }
+
+                else -> {
+                    throw IllegalStateException("One of dimension, measure or mapping is required")
+                }
+            }
+            return FilterValue.MetricFilter(metricValue.toMetricReference(), operator, value)
+        }
+    }
 
     data class FieldReference(val name: String, val relation: String? = null, val timeframe: String? = null) {
         @JsonValue
@@ -781,62 +534,69 @@ data class Recipe(
             return if (timeframe != null) "$ref::$timeframe" else ref
         }
 
-        fun getType(context: IQueryGeneratorContext, modelName: ModelName): FieldType {
-            val currentModel = context.getModel(modelName)
+        fun getType(context: IQueryGeneratorContext, datasetName: DatasetName): Pair<KClass<out ReportMetric>, FieldType> {
+            val currentModel = context.getModel(datasetName)
 
             val targetModel = if (relation != null) {
-                val targetModelName = currentModel.relations.find { r -> r.name == relation }?.modelName
+                val targetModelName = currentModel.relations.find { r -> r.name == relation }?.datasetName
                     ?: throw MetriqlException("Relation `$relation` could not found", BAD_REQUEST)
                 context.getModel(targetModelName)
             } else currentModel
 
-            val dimensionName = if (isMappingDimension()) {
+            val dimensionName = getMappingDimensionIfApplicable()?.let {
                 targetModel.mappings[name.substring(1)]
-            } else {
-                name
-            }
+            } ?: name
 
             val measureModel = if (relation != null) {
-                context.getModel(currentModel.relations.find { it.name == relation }?.modelName!!)
+                context.getModel(currentModel.relations.find { it.name == relation }?.datasetName!!)
             } else currentModel
 
-            val measureType = measureModel.measures.find { it.name == name }?.fieldType
+            val measure = measureModel.measures.find { it.name == name }
+            val dimension = targetModel.dimensions.find { dimension -> dimension.name == dimensionName }
 
-            val dimensionType =
-                targetModel.dimensions.find { dimension -> dimension.name == dimensionName }?.fieldType
+            val type = if (measure != null) {
+                ReportMetric.ReportMeasure::class
+            } else if (dimension != null) {
+                ReportMetric.ReportDimension::class
+            } else {
+                throw MetriqlException("Metric `$this` could not found", BAD_REQUEST)
+            }
 
-            return measureType ?: dimensionType ?: FieldType.UNKNOWN
+            return type to (measure?.fieldType ?: dimension?.fieldType ?: FieldType.UNKNOWN)
         }
 
         @JsonIgnore
-        fun isMappingDimension() = name.startsWith(":")
+        fun getMappingDimensionIfApplicable(): String? {
+            return if (name.startsWith(":")) {
+                return name.substring(1)
+            } else null
+        }
 
-        fun toMeasure(modelName: ModelName): ReportMetric.ReportMeasure {
+        fun toMeasure(datasetName: DatasetName): ReportMetric.ReportMeasure {
             if (timeframe != null) {
                 throw MetriqlException("`$this`: timeframe can't be used for measure references", BAD_REQUEST)
             }
-            return ReportMetric.ReportMeasure(modelName, name, relation)
+            return ReportMetric.ReportMeasure(datasetName, name, relation)
         }
 
         @JsonIgnore
-        fun toDimension(modelName: ModelName, type: FieldType): ReportMetric.ReportDimension {
+        fun toDimension(datasetName: DatasetName, type: FieldType): ReportMetric.ReportDimension {
             return ReportMetric.ReportDimension(
-                name, modelName, relation,
+                name, datasetName, relation,
                 if (timeframe != null)
                     try {
-                        ReportMetric.PostOperation.fromFieldType(type, timeframe)
+                        ReportMetric.Timeframe.fromFieldType(type, timeframe)
                     } catch (e: IllegalArgumentException) {
                         throw MetriqlException("Error constructing dimension $this: ${e.message}", BAD_REQUEST)
                     }
                 else null,
-                null
             )
         }
 
         companion object {
             private val regex = "(([A-Z0-9a-z_]+)?\\.)?(\\$?[:A-Z0-9a-z_]+)".toRegex()
 
-            fun mappingDimension(name: Model.MappingDimensions.CommonMappings, relation: String?): FieldReference {
+            fun mappingDimension(name: Dataset.MappingDimensions.CommonMappings, relation: String?): FieldReference {
                 return FieldReference(":" + name.toSnakeCase, relation)
             }
 
@@ -865,6 +625,6 @@ data class Recipe(
         val sharedEveryone: Boolean?,
         val type: ReportType,
         @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
-        val options: ServiceReportOptions
+        val options: ServiceQuery
     )
 }

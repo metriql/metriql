@@ -19,7 +19,7 @@ abstract class JdbcTestSimpleFilter : TestSimpleFilter<Connection>() {
         stmt.execute("SET time_zone = 'UTC'")
     }
 
-    fun populate() {
+    open fun populate() {
         val mqlTypeMap = testingServer.bridge.mqlTypeMap
 
         testingServer.getQueryRunner().use { connection ->
@@ -40,17 +40,17 @@ abstract class JdbcTestSimpleFilter : TestSimpleFilter<Connection>() {
             )
 
             // Populate data
-            val values = SimpleFilterTests.testInt.mapIndexed { index, i ->
+            val values = SampleDataset.testInt.mapIndexed { index, i ->
                 val requiredFunction = testingServer.bridge.compileFunction(
                     RFunction.FROM_UNIXTIME,
-                    listOf(SimpleFilterTests.testTimestamp[index].toEpochSecond(ZoneOffset.UTC))
+                    listOf(SampleDataset.testTimestamp[index].toEpochSecond(ZoneOffset.UTC))
                 )
                 """(
                     $i,
-                    '${SimpleFilterTests.testString[index]}',
-                    ${SimpleFilterTests.testDouble[index]},
-                    CAST('${SimpleFilterTests.testDate[index]}' AS ${mqlTypeMap[StandardTypes.DATE]}),
-                    ${SimpleFilterTests.testBool[index]},
+                    '${SampleDataset.testString[index]}',
+                    ${SampleDataset.testDouble[index]},
+                    CAST('${SampleDataset.testDate[index]}' AS ${mqlTypeMap[StandardTypes.DATE]}),
+                    ${SampleDataset.testBool[index]},
                     $requiredFunction
                     )
                 """.trimIndent()

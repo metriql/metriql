@@ -2,12 +2,11 @@ package com.metriql.warehouse.bigquery
 
 import com.metriql.db.FieldType
 import com.metriql.report.data.ReportMetric
-import com.metriql.report.flow.FlowReportType
 import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.retention.RetentionReportType
 import com.metriql.report.segmentation.SegmentationReportType
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge
@@ -17,7 +16,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.AggregationContex
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionType.PROJECTION
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.flow.ANSISQLFlowQueryGenerator
 import com.metriql.warehouse.spi.services.funnel.ANSISQLFunnelQueryGenerator
 import com.metriql.warehouse.spi.services.segmentation.ANSISQLSegmentationQueryGenerator
 import io.trino.spi.type.StandardTypes
@@ -30,8 +28,7 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
     override val queryGenerators = mapOf(
         SegmentationReportType.slug to ANSISQLSegmentationQueryGenerator(),
         FunnelReportType.slug to ANSISQLFunnelQueryGenerator(template = BigQueryMetriqlBridge::class.java.getResource("/sql/funnel/warehouse/bigquery/generic.jinja2").readText()),
-        RetentionReportType.slug to BigQueryRetentionQueryGenerator(),
-        FlowReportType.slug to ANSISQLFlowQueryGenerator(),
+        RetentionReportType.slug to BigQueryRetentionQueryGenerator()
     )
 
     override val mqlTypeMap = super.mqlTypeMap + mapOf(
@@ -52,8 +49,8 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
             override fun dimensionBeforePostOperation(
                 context: IQueryGeneratorContext,
                 metricPositionType: WarehouseMetriqlBridge.MetricPositionType,
-                dimension: Model.Dimension,
-                postOperation: ReportMetric.PostOperation?,
+                dimension: Dataset.Dimension,
+                timeframe: ReportMetric.Timeframe?,
                 dimensionValue: String,
             ): String {
                 val zoneId = context.auth.timezone
@@ -80,7 +77,7 @@ object BigQueryMetriqlBridge : ANSISQLMetriqlBridge() {
         )
     }
 
-    override fun performAggregation(columnValue: String, aggregationType: Model.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
+    override fun performAggregation(columnValue: String, aggregationType: Dataset.Measure.AggregationType, context: WarehouseMetriqlBridge.AggregationContext): String {
         return if (aggregationType == APPROXIMATE_UNIQUE) {
             when (context) {
                 ADHOC -> "APPROX_COUNT_DISTINCT($columnValue)"

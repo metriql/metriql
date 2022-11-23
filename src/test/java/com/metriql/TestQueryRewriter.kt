@@ -1,12 +1,12 @@
 package com.metriql
 
-import com.metriql.tests.Helper.assertJsonEquals
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.segmentation.SegmentationMaterialize
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationQueryReWriter
-import com.metriql.report.segmentation.SegmentationRecipeQuery
-import com.metriql.report.segmentation.SegmentationRecipeQuery.SegmentationMaterialize
 import com.metriql.service.auth.ProjectAuth.Companion.systemUser
 import com.metriql.service.jinja.JinjaRendererService
+import com.metriql.tests.Helper.assertJsonEquals
 import com.metriql.tests.TestDatasetService
 import com.metriql.util.JsonHelper
 import com.metriql.warehouse.postgresql.PostgresqlDataSource
@@ -23,11 +23,11 @@ class TestQueryRewriter {
         @Language("JSON5")
         val query = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON5")
         val aggregate = JsonHelper.read(
@@ -37,17 +37,17 @@ class TestQueryRewriter {
             SegmentationMaterialize::class.java
         )
 
-        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))!!
+        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))!!
 
         assertEquals(model.name, "daily_views")
 
         @Language("JSON5")
         val result = """{
-              "model" : "daily_views",
+              "dataset" : "daily_views",
               "measures" : [ "measure1" ]
             }"""
 
-        assertJsonEquals(materializeQuery.toRecipeQuery(), result)
+        assertJsonEquals(materializeQuery, result)
     }
 
     @Test
@@ -55,12 +55,12 @@ class TestQueryRewriter {
         @Language("JSON5")
         val query = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1"]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON")
         val aggregate = JsonHelper.read(
@@ -71,13 +71,13 @@ class TestQueryRewriter {
             SegmentationMaterialize::class.java
         )
 
-        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))!!
+        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))!!
 
         assertEquals(model.name, "daily_views")
         assertJsonEquals(
-            materializeQuery.toRecipeQuery(),
+            materializeQuery,
             """{
-              "model" : "daily_views",
+              "dataset" : "daily_views",
               "measures" : [ "measure1" ],
               "dimensions": [ "dimension1" ]
             }"""
@@ -89,18 +89,18 @@ class TestQueryRewriter {
         @Language("JSON5")
         val query = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1"],
             "filters": [{"dimension": "dimension1", "operator": "equals", "value": "test"}]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON5")
         val aggregate = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1"],
             "filters": [{"dimension": "dimension1", "operator": "equals", "value": "test"}]
@@ -108,13 +108,13 @@ class TestQueryRewriter {
             SegmentationMaterialize::class.java
         )
 
-        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))!!
+        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))!!
 
         assertEquals(model.name, "daily_views")
         assertJsonEquals(
-            materializeQuery.toRecipeQuery(),
+            materializeQuery,
             """{
-              "model" : "daily_views",
+              "dataset" : "daily_views",
               "measures" : [ "measure1" ],
               "dimensions": [ "dimension1" ]
             }"""
@@ -126,7 +126,7 @@ class TestQueryRewriter {
         @Language("JSON5")
         val query = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1"],
             "filters": [
@@ -134,13 +134,13 @@ class TestQueryRewriter {
                 {"dimension": "dimension1", "operator": "contains", "value": "mehmet"}
             ]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON5")
         val aggregate = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1"],
             "filters": [{"dimension": "dimension1", "operator": "contains", "value": "ahmet"}]
@@ -148,13 +148,13 @@ class TestQueryRewriter {
             SegmentationMaterialize::class.java
         )
 
-        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))!!
+        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))!!
 
         assertEquals(model.name, "daily_views")
         assertJsonEquals(
-            materializeQuery.toRecipeQuery(),
+            materializeQuery,
             """[{
-              "model" : "daily_views",
+              "dataset" : "daily_views",
               "measures" : [ "measure1" ],
               "dimensions" : [ "dimension1" ],
               "filters" : [ {
@@ -174,8 +174,8 @@ class TestQueryRewriter {
             "measures": ["measure1", "measure2"],
             "dimensions": ["dimension1"]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON5")
         val aggregate = JsonHelper.read(
@@ -186,7 +186,7 @@ class TestQueryRewriter {
             SegmentationMaterialize::class.java
         )
 
-        val result = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))
+        val result = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))
         assertNull(result)
     }
 
@@ -195,24 +195,24 @@ class TestQueryRewriter {
         @Language("JSON5")
         val query = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1", "dimension2"]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON5")
         val aggregate = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1"]
           }""",
             SegmentationMaterialize::class.java
         )
 
-        val result = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))
+        val result = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))
         assertNull(result)
     }
 
@@ -221,12 +221,12 @@ class TestQueryRewriter {
         @Language("JSON5")
         val query = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1", "test2.measure1"],
             "dimensions": ["dimension1"]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON5")
         val aggregate = JsonHelper.read(
@@ -237,13 +237,13 @@ class TestQueryRewriter {
             SegmentationMaterialize::class.java
         )
 
-        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))!!
+        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))!!
 
         assertEquals(model.name, "daily_views")
         assertJsonEquals(
-            materializeQuery.toRecipeQuery(),
+            materializeQuery,
             """{
-              "model" : "daily_views",
+              "dataset" : "daily_views",
               "measures" : ["measure1", "test2.measure1"],
               "dimensions": [ "dimension1" ]
             }"""
@@ -255,12 +255,12 @@ class TestQueryRewriter {
         @Language("JSON5")
         val query = JsonHelper.read(
             """{
-            "model":  "test1", 
+            "dataset":  "test1", 
             "measures": ["measure1"],
             "dimensions": ["dimension1", "test2.dimension1"]
           }""",
-            SegmentationRecipeQuery::class.java
-        ).toReportOptions(rewriter.context)
+            SegmentationQuery::class.java
+        )
 
         @Language("JSON5")
         val aggregate = JsonHelper.read(
@@ -271,13 +271,13 @@ class TestQueryRewriter {
             SegmentationMaterialize::class.java
         )
 
-        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.modelName, "daily_views", aggregate)))!!
+        val (materializeQuery, model) = rewriter.findOptimumPlan(query, listOf(Triple(query.dataset, "daily_views", aggregate)))!!
 
         assertEquals(model.name, "daily_views")
         assertJsonEquals(
-            materializeQuery.toRecipeQuery(),
+            materializeQuery,
             """{
-              "model" : "daily_views",
+              "dataset" : "daily_views",
               "measures" : ["measure1"],
               "dimensions": ["dimension1", "test2.dimension1"]
             }"""
@@ -323,7 +323,7 @@ class TestQueryRewriter {
                           }
                         }""",
                         Recipe.RecipeModel::class.java
-                    ).toModel("", datasource.warehouse.bridge, -1),
+                    ).toModel("", datasource.warehouse.bridge),
                     JsonHelper.read(
                         """{
                               "name": "test2",
@@ -350,7 +350,7 @@ class TestQueryRewriter {
                               }
                             }""",
                         Recipe.RecipeModel::class.java
-                    ).toModel("", datasource.warehouse.bridge, -1)
+                    ).toModel("", datasource.warehouse.bridge)
                 )
             )
             return SegmentationQueryReWriter(

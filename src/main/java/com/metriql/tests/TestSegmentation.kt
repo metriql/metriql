@@ -4,32 +4,26 @@ import com.google.common.cache.CacheBuilderSpec
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.SqlQueryTaskGenerator
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
-import com.metriql.report.data.ReportMetric
-import com.metriql.report.data.ReportMetric.PostOperation
-import com.metriql.report.data.ReportMetric.ReportDimension
-import com.metriql.report.data.ReportMetric.ReportMeasure
-import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.report.data.FilterValue
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.cache.InMemoryCacheService
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.Dimension.DimensionValue.Column
+import com.metriql.service.dataset.Dataset.Dimension.Type.COLUMN
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.Dimension.DimensionValue.Column
-import com.metriql.service.model.Model.Dimension.Type.COLUMN
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
+import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.WarehouseQueryTask
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.filter.DateRange
-import com.metriql.warehouse.spi.filter.NumberOperatorType
-import com.metriql.warehouse.spi.filter.TimestampOperatorType
-import com.metriql.warehouse.spi.function.TimestampPostOperation
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
+import org.intellij.lang.annotations.Language
 import org.testng.Assert.assertEquals
 import org.testng.Assert.assertNotNull
 import org.testng.Assert.assertNull
@@ -54,39 +48,22 @@ abstract class TestSegmentation {
     private val datasetService = TestDatasetService(getModels())
     private val service: SegmentationService get() = SegmentationService()
 
-    private fun generateReportFilter(dateRange: DateRange): ReportFilter {
-        return ReportFilter(
-            ReportFilter.Type.METRIC_FILTER,
-            MetricFilter(
-                MetricFilter.MetricType.MAPPING_DIMENSION,
-                ReportMetric.ReportMappingDimension(EVENT_TIMESTAMP, null),
-                listOf(
-                    MetricFilter.Filter(
-                        null, null, TimestampOperatorType.BETWEEN.name,
-                        mapOf("start" to dateRange.start.toString(), "end" to dateRange.end.toString())
-                    )
-                )
-            )
-        )
+    private fun generateReportFilter(dateRange: DateRange): FilterValue {
+        return JsonHelper.read("""{"mapping":":time_series", "operator: "between", "value": ${JsonHelper.encode(dateRange)}}""", FilterValue::class.java)
     }
 
     @Test
     fun testTimestampPostProcessorHour() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time",
-                "_table",
-                null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.HOUR
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::hour"]
+          }""",
+            SegmentationQuery::class.java
         )
-
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
 
         val context = getContext()
         val test = execute(
@@ -121,7 +98,7 @@ abstract class TestSegmentation {
             context,
             context.datasource,
             query,
-            SqlReportOptions.QueryOptions(WarehouseQueryTask.DEFAULT_LIMIT, null, null, true),
+            SqlQuery.QueryOptions(WarehouseQueryTask.DEFAULT_LIMIT, null, null, true),
             false
         )
         return task.runAndWaitForResult()
@@ -129,19 +106,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorDay() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.DAY
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::day"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -159,19 +134,18 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorWeek() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.WEEK
-                )
-            )
+
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::week"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -189,19 +163,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorMonth() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.MONTH
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::month"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -219,19 +191,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorYear() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.YEAR
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::year"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -249,19 +219,18 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorHourOfDay() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.HOUR_OF_DAY
-                )
-            )
+
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::hour_of_day"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -279,19 +248,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorDayOfMonth() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.DAY_OF_MONTH
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::day_of_month"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -309,19 +276,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorWeekOfYear() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.WEEK_OF_YEAR
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::week_of_year"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -339,19 +304,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorMonthOfYear() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.MONTH_OF_YEAR
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::month_of_year"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -369,19 +332,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorQuarterOfYear() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.QUARTER_OF_YEAR
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::quarter_of_year"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -399,19 +360,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampPostProcessorDayOfWeek() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension(
-                "_time", "_table", null,
-                PostOperation(
-                    PostOperation.Type.TIMESTAMP,
-                    TimestampPostOperation.DAY_OF_WEEK
-                )
-            )
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time::day_of_week"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -429,14 +388,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testMultipleMeasures() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension("testnumber", "_table", null, null),
-            ReportDimension("testbool", "_table", null, null)
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["testnumber", "testbool"]
+          }""",
+            SegmentationQuery::class.java
         )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -454,14 +416,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testNonExistsDimension() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension("testnumber", "_table", null, null),
-            ReportDimension("testnumber_doesntexist", "_table", null, null)
-        )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99))))
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["testnumber", "testnumber_doesntexist"]
+          }""",
+            SegmentationQuery::class.java
+        )
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(98), LocalDate.ofEpochDay(99)))
         val context = getContext()
         execute(
             context,
@@ -483,11 +448,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testNumericDimension() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(ReportDimension("testnumber", "_table", null, null))
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["testnumber"]
+          }""",
+            SegmentationQuery::class.java
+        )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -507,11 +478,16 @@ abstract class TestSegmentation {
 
     @Test
     fun testStringDimension() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(ReportDimension("teststr", "_table", null, null))
-
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["teststr"]
+          }""",
+            SegmentationQuery::class.java
+        )
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -530,11 +506,16 @@ abstract class TestSegmentation {
 
     @Test
     fun testTimestampDimension() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(ReportDimension("_time", "_table", null, null))
-
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["_time"]
+          }""",
+            SegmentationQuery::class.java
+        )
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -554,11 +535,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testDateDimension() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(ReportDimension("testdate", "_table", null, null))
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["testdate"]
+          }""",
+            SegmentationQuery::class.java
+        )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -577,11 +564,16 @@ abstract class TestSegmentation {
 
     @Test
     fun testTotalStatistics() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf<ReportDimension>()
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"]
+          }""",
+            SegmentationQuery::class.java
+        )
 
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -599,14 +591,16 @@ abstract class TestSegmentation {
 
     @Test
     fun testAllDimensionsNumberBoolean() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf(
-            ReportDimension("testnumber", "_table", null, null),
-            ReportDimension("testbool", "_table", null, null)
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "dimensions": ["testnumber", "testbool"]
+          }""",
+            SegmentationQuery::class.java
         )
-
-        val report = SegmentationReportOptions("_table", dimensions, listOf(measure))
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -624,25 +618,17 @@ abstract class TestSegmentation {
 
     @Test
     fun testSegmentationWithFilter() {
-        val measure = ReportMeasure("_table", "measure", null)
-        val dimensions = listOf<ReportDimension>()
+        @Language("JSON5")
+        val report = JsonHelper.read(
+            """{
+            "dataset":  "_table", 
+            "measures": ["measure"],
+            "filters": {"type": "metric", "value": {"connector": "and", "filters": [{"metric": "testnumber", "operator":  "greater_than", "value":  10}]}}
+          }""",
+            SegmentationQuery::class.java
+        )
 
-        val filter = ReportFilter(
-            ReportFilter.Type.METRIC_FILTER,
-            MetricFilter(
-                MetricFilter.MetricType.DIMENSION,
-                ReportDimension("testnumber", "_table", null, null),
-                listOf(MetricFilter.Filter(null, null, NumberOperatorType.GREATER_THAN.name, 10))
-            )
-        )
-        val report = SegmentationReportOptions(
-            "_table",
-            dimensions,
-            listOf(measure),
-            filters = listOf(filter),
-            reportOptions = null
-        )
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()
         val test = execute(
             context,
@@ -674,7 +660,7 @@ abstract class TestSegmentation {
         val dimensions = listOf(Dimension(COLUMN, ColumnValue(DataMappingHttpService.RakamCollection("_table2", TableType.EVENT), "teststr", null), false))
         val dimensions = listOf(ReportDimension("testdate", "_table", null))
         val report = SegmentationReportOptions(dataSet, dimensions, listOf(measure), null)
-        val reportFilters = listOf(generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
+        val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99))))
         val test = service.queryTask(
             auth,
             null,
@@ -691,31 +677,31 @@ abstract class TestSegmentation {
     companion object {
         const val SCALE_FACTOR = 100
 
-        fun getModels(): List<Model> {
+        fun getModels(): List<Dataset> {
             val dimensions = listOf(
-                Model.Dimension("teststr", COLUMN, Column("teststr"), fieldType = FieldType.STRING),
-                Model.Dimension("testnumber", COLUMN, Column("testnumber"), fieldType = FieldType.DOUBLE),
-                Model.Dimension("testbool", COLUMN, Column("testbool"), fieldType = FieldType.BOOLEAN),
-                Model.Dimension("testarray", COLUMN, Column("testarray"), fieldType = FieldType.ARRAY_STRING),
-                Model.Dimension("testdate", COLUMN, Column("testdate"), fieldType = FieldType.DATE),
-                Model.Dimension("_time", COLUMN, Column("_time"), fieldType = FieldType.TIMESTAMP),
+                Dataset.Dimension("teststr", COLUMN, Column("teststr"), fieldType = FieldType.STRING),
+                Dataset.Dimension("testnumber", COLUMN, Column("testnumber"), fieldType = FieldType.DOUBLE),
+                Dataset.Dimension("testbool", COLUMN, Column("testbool"), fieldType = FieldType.BOOLEAN),
+                Dataset.Dimension("testarray", COLUMN, Column("testarray"), fieldType = FieldType.ARRAY_STRING),
+                Dataset.Dimension("testdate", COLUMN, Column("testdate"), fieldType = FieldType.DATE),
+                Dataset.Dimension("_time", COLUMN, Column("_time"), fieldType = FieldType.TIMESTAMP),
             )
 
-            val model1 = Model(
+            val dataset1 = Dataset(
                 "_table", false,
-                Model.Target.initWithTable(null, "rakam_test", "_table"),
-                null, null, null, Model.MappingDimensions.build(EVENT_TIMESTAMP to "_time"), listOf(),
+                Dataset.Target.initWithTable(null, "rakam_test", "_table"),
+                null, null, null, Dataset.MappingDimensions.build(TIME_SERIES to "_time"), listOf(),
                 dimensions,
-                listOf(Model.Measure("measure", null, null, null, Model.Measure.Type.COLUMN, Model.Measure.MeasureValue.Column(Model.Measure.AggregationType.COUNT, null))),
+                listOf(Dataset.Measure("measure", null, null, null, Dataset.Measure.Type.COLUMN, Dataset.Measure.MeasureValue.Column(Dataset.Measure.AggregationType.COUNT, null))),
             )
 
-            val model2 = model1.copy(
+            val dataset2 = dataset1.copy(
                 name = "_table2",
-                target = Model.Target.initWithTable(null, "rakam_test", "_table2"),
-                dimensions = model1.dimensions + listOf(Model.Dimension("testdummy", COLUMN, Column("testdummy"), fieldType = FieldType.STRING))
+                target = Dataset.Target.initWithTable(null, "rakam_test", "_table2"),
+                dimensions = dataset1.dimensions + listOf(Dataset.Dimension("testdummy", COLUMN, Column("testdummy"), fieldType = FieldType.STRING))
             )
 
-            return listOf(model1, model2)
+            return listOf(dataset1, dataset2)
         }
     }
 }

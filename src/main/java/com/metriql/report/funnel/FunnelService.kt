@@ -1,21 +1,21 @@
 package com.metriql.report.funnel
 
+import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.PropertyKey.SUMMARIZED
 import com.metriql.report.IAdHocService
 import com.metriql.report.data.Dataset
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
-import com.metriql.report.data.getUsedModels
-import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.USER_ID
-import com.metriql.service.model.ModelName
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.USER_ID
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.util.MetriqlException
-import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.funnel.Funnel
 import com.metriql.warehouse.spi.services.funnel.Funnel.ExcludedStep
@@ -27,24 +27,24 @@ import javax.inject.Inject
 class FunnelService @Inject constructor(
     private val datasetService: IDatasetService,
     private val segmentationService: SegmentationService,
-) : IAdHocService<FunnelReportOptions> {
+) : IAdHocService<FunnelQuery> {
 
     override fun renderQuery(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
-        options: FunnelReportOptions,
-        reportFilters: List<ReportFilter>,
+        options: FunnelQuery,
+        reportFilters: FilterValue?,
     ): IAdHocService.RenderedQuery {
         val funnel = Funnel(
             steps = options.steps
                 .mapIndexed { idx, step ->
-                    renderStep(context, step, idx, auth, context.datasource, options, reportFilters, false)
+                    renderStep(context, step, idx, auth, options, reportFilters, false)
                 },
             excludedSteps = options.excludedSteps
                 ?.mapIndexed { idx, exStep ->
                     ExcludedStep(
                         step = renderStep(
-                            context, exStep.step, idx, auth, context.datasource,
+                            context, exStep.step, idx, auth,
                             options, reportFilters, true
                         ),
                         start = exStep.start
@@ -52,7 +52,7 @@ class FunnelService @Inject constructor(
                 },
             hasDimension = options.dimension != null,
             windowInSeconds = options.window?.toSeconds(),
-            sorting = if (options.dimension?.postOperation != null) "dimension" else "step1",
+            sorting = if (options.dimension?.reference?.getType(context, options.steps[0].dataset)?.second != FieldType.TIMESTAMP) "dimension" else "step1",
         )
 
         val queryGenerator = context.datasource.warehouse.bridge.queryGenerators[FunnelReportType.slug]
@@ -67,32 +67,32 @@ class FunnelService @Inject constructor(
         step: Dataset,
         idx: Int,
         auth: ProjectAuth,
-        datasource: DataSource,
-        options: FunnelReportOptions,
-        reportFilters: List<ReportFilter> = listOf(),
+        options: FunnelQuery,
+        reportFilters: FilterValue?,
         isExcludeStep: Boolean,
     ): Step {
-        val mappings by lazy { datasetService.getDataset(auth, step.modelName)?.mappings }
+        val mappings by lazy { datasetService.getDataset(auth, step.dataset)?.mappings }
         val connectorDimensionName = options.connector ?: (
             mappings?.get(USER_ID)
-                ?: throw MetriqlException("`userId` mapping dimension is required for `${step.modelName}` model", HttpResponseStatus.BAD_REQUEST)
+                ?: throw MetriqlException("`userId` mapping dimension is required for `${step.dataset}` model", HttpResponseStatus.BAD_REQUEST)
             )
-        val eventTimeStampDimensionName = mappings?.get(EVENT_TIMESTAMP)
-            ?: throw MetriqlException("`eventTimestamp` mapping is required for `${step.modelName}` model", HttpResponseStatus.BAD_REQUEST)
-        val contextModelName = step.modelName
+        val eventTimeStampDimensionName = mappings?.get(TIME_SERIES)
+            ?: throw MetriqlException("`eventTimestamp` mapping is required for `${step.dataset}` model", HttpResponseStatus.BAD_REQUEST)
+        val contextModelName = step.dataset
 
         val dimensionsToRender = listOf(
-            ReportMetric.ReportDimension(connectorDimensionName, contextModelName, null, null),
-            ReportMetric.ReportDimension(eventTimeStampDimensionName, contextModelName, null, null)
+            Recipe.FieldReference(connectorDimensionName),
+            Recipe.FieldReference(eventTimeStampDimensionName)
         ) + (
             if (!isExcludeStep && options.dimension != null && options.dimension.step == idx) {
+                val dimension = options.dimension.reference.toDimension(contextModelName, options.dimension.reference.getType(context, contextModelName).second)
                 listOf(
                     ReportMetric.ReportDimension(
-                        options.dimension.name,
+                        dimension.name,
                         contextModelName,
-                        options.dimension.relationName,
-                        options.dimension.postOperation
-                    )
+                        dimension.relation,
+                        dimension.timeframe
+                    ).toReference()
                 )
             } else listOf()
             )
@@ -105,30 +105,31 @@ class FunnelService @Inject constructor(
             segmentationService.renderQuery(
                 auth,
                 context,
-                SegmentationReportOptions(
+                SegmentationQuery(
                     contextModelName,
                     dimensionsToRender,
                     listOf(),
-                    filters = step.filters,
-                    reportOptions = null
+                    filters = step.filters
                 ),
                 reportFilters,
                 useAggregate = false,
                 forAccumulator = false
             ).second
-            }) AS ${datasource.warehouse.bridge.quoteIdentifier(contextModelName)}",
+            }) AS ${context.datasource.warehouse.bridge.quoteIdentifier(contextModelName)}",
 
-            connector = datasource.warehouse.bridge.quoteIdentifier(connectorDimensionName),
-            eventTimestamp = datasource.warehouse.bridge.quoteIdentifier(eventTimeStampDimensionName),
+            connector = context.datasource.warehouse.bridge.quoteIdentifier(connectorDimensionName),
+            eventTimestamp = context.datasource.warehouse.bridge.quoteIdentifier(eventTimeStampDimensionName),
 
             dimension = if (!isExcludeStep && options.dimension != null && options.dimension.step == idx) {
+                val dimension = options.dimension.reference.toDimension(contextModelName, options.dimension.reference.getType(context, contextModelName).second)
+
                 // Pass context models as nulls while funnel does not support joins
                 val alias = context.getDimensionAlias(
-                    options.dimension.name,
-                    options.dimension.relationName,
-                    options.dimension.postOperation
+                    dimension.name,
+                    dimension.relation,
+                    dimension.timeframe
                 )
-                datasource.warehouse.bridge.quoteIdentifier(alias)
+                context.datasource.warehouse.bridge.quoteIdentifier(alias)
             } else {
                 null
             },
@@ -145,7 +146,7 @@ class FunnelService @Inject constructor(
         return result
     }
 
-    override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: FunnelReportOptions): Set<ModelName> {
-        return reportOptions.steps.flatMap { step -> getUsedModels(step, context) }.toSet()
+    override fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: FunnelQuery): Set<DatasetName> {
+        return reportOptions.steps.flatMap { it.getUsedModels(context) }.toSet()
     }
 }

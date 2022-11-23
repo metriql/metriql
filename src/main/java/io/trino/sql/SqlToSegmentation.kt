@@ -4,22 +4,20 @@ import com.google.common.base.Enums
 import com.google.inject.Inject
 import com.metriql.db.FieldType
 import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType
-import com.metriql.report.data.ReportFilter.Type.METRIC_FILTER
-import com.metriql.report.data.ReportFilter.Type.SQL_FILTER
+import com.metriql.report.data.FilterValue
+import com.metriql.report.data.FilterValue.MetricFilter
+import com.metriql.report.data.FilterValue.MetricType
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.mql.MqlService
-import com.metriql.report.segmentation.SegmentationRecipeQuery
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.APPROXIMATE_UNIQUE
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.COUNT_UNIQUE
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.SUM
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
-import com.metriql.service.model.IDatasetService
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
-import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
-import com.metriql.service.model.Model.Measure.AggregationType.SUM
-import com.metriql.service.model.ModelName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
@@ -91,18 +89,18 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     fun convert(
         context: IQueryGeneratorContext,
         parameterMap: Map<NodeRef<Parameter>, Expression>,
-        modelAlias: Pair<Model, List<String>>,
+        datasetAlias: Pair<Dataset, List<String>>,
         select: Select,
         where: Optional<Expression>,
         having: Optional<Expression>,
         limit: Optional<Node>,
         orderBy: Optional<OrderBy>
     ): String {
-        val (model, alias) = modelAlias
+        val (model, alias) = datasetAlias
 
         val references = mutableMapOf<Node, Reference>()
         model.relations.forEach { relation ->
-            val relationModel = context.getModel(relation.modelName)
+            val relationModel = context.getModel(relation.datasetName)
             buildReferences(references, relationModel, alias, relation = relation)
         }
 
@@ -140,18 +138,18 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val whereFilters = where.orElse(null)?.let { processWhereExpression(context, rewriter, parameterMap, references, model, it) } ?: listOf()
         val havingFilters = having.orElse(null)?.let { processWhereExpression(context, rewriter, parameterMap, references, model, it) } ?: listOf()
 
-        val (havingFilterProjections, havingFiltersPushdown) = havingFilters.groupBy { it.type == SQL_FILTER }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
-        val (whereFilterProjections, whereFiltersPushdown) = whereFilters.groupBy { it.type == SQL_FILTER }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
+        val (havingFilterProjections, havingFiltersPushdown) = havingFilters.groupBy { it is FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
+        val (whereFilterProjections, whereFiltersPushdown) = whereFilters.groupBy { it is FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
 
         val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, projectionColumns, orderBy)
-        val query = SegmentationRecipeQuery(
+        val query = SegmentationQuery(
             model.name,
             measures.toSet().map { Recipe.FieldReference.fromName(it) },
             dimensions.toSet().map { Recipe.FieldReference.fromName(it) },
-            (whereFiltersPushdown + havingFiltersPushdown).mapNotNull { it.toReference() },
+            FilterValue.NestedFilter(FilterValue.NestedFilter.Connector.AND, whereFiltersPushdown + havingFiltersPushdown),
             limit = parseLimit(limit.orElse(null)),
             orders = orders
-        ).toReportOptions(context)
+        )
 
         val (renderedQuery, _, _) = segmentationService.renderQuery(context.auth, context, query)
 
@@ -168,7 +166,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             val orderBy = if (projectionOrders.any { it != null }) "\nORDER BY ${projectionOrders.joinToString(" ")}" else ""
 
             // We don't need to use HAVING as we have sub-query
-            val whereFilters = (whereFilterProjections + havingFilterProjections).map { it.value as ReportFilter.FilterValue.Sql }.joinToString(" AND ") { it.sql }
+            val whereFilters = (whereFilterProjections + havingFilterProjections).map { it as FilterValue.SqlFilter }.joinToString(" AND ") { it.sql }
 
             """SELECT ${if (select.isDistinct) "DISTINCT " else ""}$projections FROM (
                 |$renderedQuery
@@ -180,11 +178,11 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun deferenceExpression(expression: Expression, modelName: ModelName?): Node? {
+    private fun deferenceExpression(expression: Expression, datasetName: DatasetName?): Node? {
         return when (expression) {
             is DereferenceExpression -> {
                 val source = getIdentifierValue(expression.base)
-                if (source != modelName) {
+                if (source != datasetName) {
                     throw IllegalArgumentException("Invalid reference $source")
                 }
                 expression.field
@@ -206,7 +204,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
     inner class MetriqlSegmentationQueryRewriter(
         context: IQueryGeneratorContext,
-        private val model: Model,
+        private val dataset: Dataset,
         private val references: Map<Node, Reference>,
         val dimensions: MutableList<String>,
         val measures: MutableList<String>,
@@ -291,8 +289,8 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 MetricType.DIMENSION -> {
                     dimensions.add(reference.second)
                     val ref = Recipe.FieldReference.fromName(value)
-                    val dimension = ref.toDimension(model.name, ref.getType(queryContext, model.name))
-                    queryContext.getDimensionAlias(dimension.name, dimension.relationName, dimension.postOperation)
+                    val dimension = ref.toDimension(dataset.name, ref.getType(queryContext, dataset.name).second)
+                    queryContext.getDimensionAlias(dimension.name, dimension.relation, dimension.timeframe)
                 }
                 MetricType.MEASURE -> {
                     measures.add(reference.second)
@@ -371,29 +369,23 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
     private fun getReportFilter(
         context: IQueryGeneratorContext,
-        model: Model,
+        dataset: Dataset,
         metricReference: Reference,
         operatorFunction: (FieldType) -> Enum<*>,
         value: Any?
-    ): List<ReportFilter> {
+    ): List<FilterValue> {
         val (type, metricValue) = when (metricReference.first) {
             MetricType.DIMENSION -> {
                 val fromName = Recipe.FieldReference.fromName(metricReference.second)
-                val type = fromName.getType(context, model.name)
-                type to fromName.toDimension(model.name, type)
+                val (_, type) = fromName.getType(context, dataset.name)
+                type to fromName
             }
-            MetricType.MEASURE -> FieldType.DOUBLE to Recipe.FieldReference.fromName(metricReference.second).toMeasure(model.name)
+            MetricType.MEASURE -> FieldType.DOUBLE to Recipe.FieldReference.fromName(metricReference.second)
             else -> throw IllegalStateException()
         }
 
         return listOf(
-            ReportFilter(
-                METRIC_FILTER,
-                MetricFilter(
-                    metricReference.first, metricValue,
-                    listOf(MetricFilter.Filter(metricReference.first, metricValue, operatorFunction.invoke(type).name, value))
-                )
-            )
+            MetricFilter(metricValue, operatorFunction.invoke(type).name, value)
         )
     }
 
@@ -402,24 +394,24 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         rewriter: MetriqlSegmentationQueryRewriter,
         parameterMap: Map<NodeRef<Parameter>, Expression>,
         references: Map<Node, Reference>,
-        model: Model,
+        dataset: Dataset,
         exp: Expression
-    ): List<ReportFilter>? {
+    ): List<FilterValue>? {
 
         return when (exp) {
             is IsNullPredicate -> {
                 val metricReference = references[exp.value] ?: throw MetriqlException("Unable to resolve ${exp.value}", BAD_REQUEST)
-                getReportFilter(context, model, metricReference, { AnyOperatorType.IS_NOT_SET }, null)
+                getReportFilter(context, dataset, metricReference, { AnyOperatorType.IS_NOT_SET }, null)
             }
             is IsNotNullPredicate -> {
                 val metricReference = references[exp.value] ?: throw MetriqlException("Unable to resolve ${exp.value}", BAD_REQUEST)
-                getReportFilter(context, model, metricReference, { AnyOperatorType.IS_SET }, null)
+                getReportFilter(context, dataset, metricReference, { AnyOperatorType.IS_SET }, null)
             }
             is InPredicate -> {
                 val metricReference = references[exp.value] ?: throw MetriqlException("Unable to resolve ${exp.value}", BAD_REQUEST)
                 val value = exp.valueList as? InListExpression ?: throw MetriqlException("Unable to resolve $exp, value must be a list", BAD_REQUEST)
                 getReportFilter(
-                    context, model, metricReference,
+                    context, dataset, metricReference,
                     {
                         Enums.getIfPresent(it.operatorClass.java, "IN").orNull() ?: throw MetriqlException("IN operator is not available for $it type", BAD_REQUEST)
                     },
@@ -429,7 +421,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             is BetweenPredicate -> {
                 val metricReference = references[exp.value] ?: TODO()
                 getReportFilter(
-                    context, model, metricReference,
+                    context, dataset, metricReference,
                     {
                         exp.min
                         TODO()
@@ -440,7 +432,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             is LikePredicate -> {
                 val metricReference = references[exp.value] ?: TODO()
                 getReportFilter(
-                    context, model, metricReference,
+                    context, dataset, metricReference,
                     {
                         exp.value
                         TODO()
@@ -449,20 +441,21 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                 )
             }
             is LogicalBinaryExpression -> {
-                val left = processWhereExpression(context, rewriter, parameterMap, references, model, exp.left)
-                val right = processWhereExpression(context, rewriter, parameterMap, references, model, exp.right)
+                val left = processWhereExpression(context, rewriter, parameterMap, references, dataset, exp.left)
+                val right = processWhereExpression(context, rewriter, parameterMap, references, dataset, exp.right)
                 val allFilters = (left ?: listOf()) + (right ?: listOf())
 
                 when (exp.operator) {
                     LogicalBinaryExpression.Operator.AND -> allFilters
                     LogicalBinaryExpression.Operator.OR -> {
                         val filters = allFilters.flatMap { filter ->
-                            when (filter.value) {
-                                is ReportFilter.FilterValue.Sql -> throw UnsupportedOperationException()
-                                is MetricFilter -> filter.value.filters
+                            when (filter) {
+                                is FilterValue.SqlFilter -> throw UnsupportedOperationException()
+                                is MetricFilter -> listOf(filter)
+                                is FilterValue.NestedFilter -> TODO()
                             }
                         }
-                        listOf(ReportFilter(METRIC_FILTER, MetricFilter(null, null, filters = filters)))
+                        listOf(FilterValue.NestedFilter(FilterValue.NestedFilter.Connector.OR, filters = filters))
                     }
                 }
             }
@@ -484,9 +477,9 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     false -> null
                     else -> {
                         val metricReference =
-                            references[exp.left] ?: references[exp.right] ?: return listOf(ReportFilter(SQL_FILTER, ReportFilter.FilterValue.Sql(rewriter.process(exp))))
+                            references[exp.left] ?: references[exp.right] ?: return listOf(FilterValue.SqlFilter(rewriter.process(exp)))
                         val value = getFilterValue(parameterMap, if (references.containsKey(exp.left)) exp.right else exp.left)
-                        getReportFilter(context, model, metricReference, { convertMetriqlOperator(exp.operator, it.operatorClass.java) }, value)
+                        getReportFilter(context, dataset, metricReference, { convertMetriqlOperator(exp.operator, it.operatorClass.java) }, value)
                     }
                 }
             }
@@ -548,7 +541,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getMeasureStr(measure: Model.Measure, tableAlias: List<String>, prefix: String?): List<String> {
+    private fun getMeasureStr(measure: Dataset.Measure, tableAlias: List<String>, prefix: String?): List<String> {
         val aggregations = when {
             measure.value.agg == APPROXIMATE_UNIQUE -> {
                 listOf(APPROXIMATE_UNIQUE, COUNT_UNIQUE, SUM, null)
@@ -574,7 +567,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
     }
 
-    private fun getDimensionStr(dimension: Model.Dimension, tableAlias: List<String>, prefix: String?): List<Pair<String, Reference>> {
+    private fun getDimensionStr(dimension: Dataset.Dimension, tableAlias: List<String>, prefix: String?): List<Pair<String, Reference>> {
 
         // the mapping is based on presto dialect
         val identifier = "${prefix?.let { "$it." } ?: ""}${dimension.name}"
@@ -607,16 +600,16 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
 
     private fun buildReferences(
         references: MutableMap<Node, Reference>,
-        sourceModel: Model,
+        sourceDataset: Dataset,
         tableAlias: List<String>,
-        relation: Model.Relation? = null
+        relation: Dataset.Relation? = null
     ) {
 
-        sourceModel.dimensions.forEach { dimension ->
+        sourceDataset.dimensions.forEach { dimension ->
             getDimensionStr(dimension, tableAlias, relation?.name).forEach { references[parseExpression(it.first)] = it.second }
         }
 
-        sourceModel.measures.forEach { measure ->
+        sourceDataset.measures.forEach { measure ->
             val prefix = relation?.name?.let { "$it." } ?: ""
             val reference = Pair(MetricType.MEASURE, prefix + measure.name)
             getMeasureStr(measure, tableAlias, relation?.name).forEach { references[parseExpression(it)] = reference }
@@ -628,7 +621,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
     }
 
     companion object {
-        fun getModel(context: IQueryGeneratorContext, from: Relation): Pair<Model, List<String>> {
+        fun getModel(context: IQueryGeneratorContext, from: Relation): Pair<Dataset, List<String>> {
             return when (from) {
                 is Table -> {
                     val table = DbtJinjaRenderer.renderer.renderModelNameRegex(from.name.suffix)

@@ -1,16 +1,16 @@
 package com.metriql.warehouse.spi
 
-import com.metriql.service.model.Model
+import com.metriql.service.dataset.Dataset
 import com.metriql.util.UppercaseEnum
 
 data class DbtSettings(
     val dbType: String,
     val credentials: Map<String, Any>,
     // based on quoting, the reference may be changed
-    val tableConfigMapper: (Triple<String, Model.Target.TargetValue.Table?, Map<String, String>?>) -> Map<String, String> = {
+    val tableConfigMapper: (Triple<String, Dataset.Target.TargetValue.Table?, Map<String, String>?>) -> Map<String, String> = {
         val (name, target, persist) = it
 
-        val table = target ?: Model.Target.TargetValue.Table(null, null, name)
+        val table = target ?: Dataset.Target.TargetValue.Table(null, null, name)
 
         listOfNotNull(
             if (table.schema != null) "schema" to table.schema else null,

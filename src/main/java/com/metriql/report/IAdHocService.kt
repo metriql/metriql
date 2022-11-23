@@ -1,17 +1,19 @@
 package com.metriql.report
 
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.segmentation.SegmentationRecipeQuery
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.data.FilterValue
+import com.metriql.report.segmentation.SegmentationMaterialize
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.Model
-import com.metriql.service.model.ModelName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import io.netty.handler.codec.http.HttpResponseStatus
+import kotlin.reflect.KClass
 
-interface IAdHocService<T : ServiceReportOptions> {
+interface IAdHocService<T : ServiceQuery> {
+
     /**
      * A factory pattern queryTask generator. Given reportOptions, passes options to corresponding service.
      * Service then builds up the query and passes to SQLQueryExecutor to pass the final limits and checks the short-lived
@@ -27,22 +29,27 @@ interface IAdHocService<T : ServiceReportOptions> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: T,
-        reportFilters: List<ReportFilter> = listOf()
+        reportFilters: FilterValue? = null
     ): RenderedQuery
 
-    fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<ModelName> {
+    fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<DatasetName> {
         return setOf()
     }
 
     fun generateMaterializeQuery(
         projectId: String,
         context: IQueryGeneratorContext,
-        modelName: ModelName,
+        datasetName: DatasetName,
         materializeName: String,
-        materialize: SegmentationRecipeQuery.SegmentationMaterialize
-    ): Pair<Model.Target.TargetValue.Table, String> {
+        materialize: SegmentationMaterialize
+    ): Pair<Dataset.Target.TargetValue.Table, String> {
         throw MetriqlException("This report type doesn't support materialization", HttpResponseStatus.NOT_IMPLEMENTED)
     }
 
-    data class RenderedQuery(val query: String, val postProcessors: List<PostProcessor> = listOf(), val queryOptions: SqlReportOptions.QueryOptions? = null)
+    data class RenderedQuery(
+        val query: String,
+        val postProcessors: List<PostProcessor> = listOf(),
+        val queryOptions: SqlQuery.QueryOptions? = null,
+        val target: KClass<out QueryTaskGenerator> = SqlQueryTaskGenerator::class
+    )
 }

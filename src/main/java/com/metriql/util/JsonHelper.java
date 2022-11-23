@@ -231,6 +231,7 @@ public class JsonHelper {
         mapper.registerModule(new SimpleModule("typeInference", Version.unknownVersion()) {
             @Override
             public void setupModule(SetupContext context) {
+//                context.insertAnnotationIntrospector(new SealedClassInferenceIntrospector());
                 context.insertAnnotationIntrospector(new PolymorphicTypeStrAnnotationIntrospector());
                 context.insertAnnotationIntrospector(new PolymorphicTypeIntAnnotationIntrospector());
                 context.insertAnnotationIntrospector(new CamelCaseEnumAnnotationIntrospector(encodeEnumAsSnakeCase));
@@ -238,8 +239,7 @@ public class JsonHelper {
         });
         SimpleModule reportTypeModule = new SimpleModule();
         for (ReportType reportType : ReportLocator.INSTANCE.getList()) {
-            reportTypeModule.registerSubtypes(new NamedType(JvmClassMappingKt.getJavaClass(reportType.getConfigClass()), reportType.getSlug()));
-            reportTypeModule.registerSubtypes(new NamedType(JvmClassMappingKt.getJavaClass(reportType.getRecipeClass()), reportType.getSlug()));
+            reportTypeModule.registerSubtypes(new NamedType(JvmClassMappingKt.getJavaClass(reportType.getDataClass()), reportType.getSlug()));
         }
         mapper.registerModule(reportTypeModule);
 
@@ -275,9 +275,9 @@ public class JsonHelper {
         protected TypeResolverBuilder<?> typeResolver(String property, JsonTypeInfo.As inclusion) {
             if (property != null) {
                 StdTypeResolverBuilder b = new StdTypeResolverBuilder();
-                b = b.init(JsonTypeInfo.Id.NAME, null);
-                b = b.inclusion(inclusion);
-                b = b.typeProperty(property);
+                b.init(JsonTypeInfo.Id.NAME, null);
+                b.inclusion(inclusion);
+                b.typeProperty(property);
                 return b;
             }
             return null;

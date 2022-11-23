@@ -2,31 +2,33 @@ package com.metriql.report
 
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats.State.FINISHED
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.data.FilterValue
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.audit.MetriqlEvents
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.IDatasetService
 import com.metriql.service.task.Task
+import com.metriql.util.MetriqlException
 import com.metriql.warehouse.WarehouseQueryTask.Companion.DEFAULT_LIMIT
 import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.querycontext.DependencyFetcher
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
+import io.netty.handler.codec.http.HttpResponseStatus
 import java.util.UUID
 
 class ReportService(
     private val datasetService: IDatasetService,
     private val rendererService: JinjaRendererService,
-    private val queryTaskGenerator: SqlQueryTaskGenerator,
-    val services: Map<ReportType, IAdHocService<out ServiceReportOptions>>,
+    private val queryTaskGenerators: List<QueryTaskGenerator>,
+    val services: Map<ReportType, IAdHocService<out ServiceQuery>>,
     private val userAttributeFetcher: UserAttributeFetcher,
     private val dependencyFetcher: DependencyFetcher,
 ) {
-    fun getServiceForReportType(reportType: ReportType) = services.getValue(reportType) as IAdHocService<in ServiceReportOptions>
+    fun getServiceForReportType(reportType: ReportType) = services.getValue(reportType) as IAdHocService<in ServiceQuery>
 
     fun createContext(auth: ProjectAuth, dataSource: DataSource): QueryGeneratorContext {
         return QueryGeneratorContext(
@@ -40,7 +42,6 @@ class ReportService(
                     auth,
                     context,
                     options.toReportOptions(context),
-                    listOf(),
                 ).query
             },
             dependencyFetcher = dependencyFetcher,
@@ -48,25 +49,30 @@ class ReportService(
         )
     }
 
-    fun <T : ServiceReportOptions> queryTask(
+    fun <T : ServiceQuery> queryTask(
         auth: ProjectAuth,
         reportType: ReportType,
         dataSource: DataSource,
         options: T,
-        reportFilters: List<ReportFilter> = listOf(),
+        reportFilters: FilterValue? = null,
         isBackgroundTask: Boolean = false,
         useCache: Boolean = true,
         context: IQueryGeneratorContext = createContext(auth, dataSource)
     ): QueryTask {
         try {
-            val (query, postProcessors, sqlQueryOptions) = getServiceForReportType(reportType).renderQuery(
+            val (query, postProcessors, sqlQueryOptions, target) = getServiceForReportType(reportType).renderQuery(
                 auth,
                 context,
                 options,
                 reportFilters,
             )
 
-            val queryOptions = sqlQueryOptions ?: SqlReportOptions.QueryOptions(options.getQueryLimit() ?: DEFAULT_LIMIT, null, null, useCache)
+            val queryTaskGenerator = (
+                queryTaskGenerators.find { it.javaClass == target.java }
+                    ?: throw MetriqlException("Unable to find task generator $target", HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                )
+
+            val queryOptions = sqlQueryOptions ?: SqlQuery.QueryOptions(DEFAULT_LIMIT, null, null, useCache)
             return queryTaskGenerator.createTask(
                 auth,
                 context,

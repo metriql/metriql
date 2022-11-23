@@ -5,8 +5,8 @@ import com.metriql.db.QueryResult
 import com.metriql.report.QueryTask
 import com.metriql.service.audit.MetriqlEvents
 import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.dataset.Dataset
 import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.model.Model
 import com.metriql.util.JdbcUtil
 import com.metriql.util.JdbcUtil.fromGenericJDBCTypeFieldType
 import com.metriql.util.MetriqlEventBus
@@ -41,7 +41,7 @@ abstract class JDBCDataSource(
     private val tableTypes: Array<String>,
     private val usePool: Boolean,
     private val supportsCrossDatabaseQueries: Boolean,
-    private val defaultDatabase: String,
+    private val defaultDatabase: String?,
     private val defaultSchema: String?, // Not every database supports schema (i.e mysql)
 ) : DataSource {
 
@@ -84,7 +84,7 @@ abstract class JDBCDataSource(
 
     override fun listDatabaseNames(): List<DatabaseName> {
         if (!supportsCrossDatabaseQueries) {
-            return listOf(defaultDatabase)
+            return listOfNotNull(defaultDatabase)
         }
         return openConnection().use { connection ->
             val meta = connection.metaData
@@ -228,13 +228,13 @@ abstract class JDBCDataSource(
     }
 
     override fun sqlReferenceForTarget(
-        target: Model.Target,
+        target: Dataset.Target,
         aliasName: String,
         renderSQL: (SQLRenderable) -> String,
     ): String {
         return when (target.value) {
-            is Model.Target.TargetValue.Sql -> renderSQL(target.value.sql)
-            is Model.Target.TargetValue.Table -> {
+            is Dataset.Target.TargetValue.Sql -> renderSQL(target.value.sql)
+            is Dataset.Target.TargetValue.Table -> {
                 val (databaseName, schemaName, table) = target.value
 
                 val targetBuilder = mutableListOf<String>()
@@ -245,17 +245,15 @@ abstract class JDBCDataSource(
                     targetBuilder.add(warehouse.bridge.quoteIdentifier(schemaName))
                 }
                 targetBuilder.add(warehouse.bridge.quoteIdentifier(table))
-
-                val targetSQL = targetBuilder.joinToString(".")
-                "$targetSQL AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
+                targetBuilder.joinToString(".")
             }
-        }
+        } + "AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
     }
 
-    override fun fillDefaultsToTarget(target: Model.Target): Model.Target {
+    override fun fillDefaultsToTarget(target: Dataset.Target): Dataset.Target {
         return when (target.value) {
-            is Model.Target.TargetValue.Sql -> target
-            is Model.Target.TargetValue.Table -> {
+            is Dataset.Target.TargetValue.Sql -> target
+            is Dataset.Target.TargetValue.Table -> {
                 target.copy(
                     value = target.value.copy(
                         database = target.value.database ?: defaultDatabase,
@@ -300,7 +298,7 @@ abstract class JDBCDataSource(
             return when (e) {
                 is SQLException -> {
                     if (!ignoredExceptionCodes.isNullOrEmpty() &&
-                        !ignoredExceptionCodes.map { ignoredCode -> e.sqlState.startsWith(ignoredCode) }.reduce { c1, c2 -> c1 || c2 }
+                        !ignoredExceptionCodes.map { ignoredCode -> e.sqlState?.startsWith(ignoredCode) == true }.reduce { c1, c2 -> c1 || c2 }
                     ) {
                         MetriqlEventBus.publish(MetriqlEvents.InternalException(e as Throwable, auth.userId, auth.projectId))
                     }
@@ -368,6 +366,7 @@ abstract class JDBCDataSource(
         if (conn.catalog != defaultDatabase) {
             conn.catalog = defaultDatabase
         }
+
         if (conn.schema != defaultSchema) {
             conn.schema = defaultSchema
         }

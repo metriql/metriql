@@ -4,18 +4,17 @@ import com.metriql.deployment.Deployment
 import com.metriql.report.QueryTask
 import com.metriql.report.ReportService
 import com.metriql.report.SqlQueryTaskGenerator
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType.MAPPING_DIMENSION
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
-import com.metriql.report.segmentation.SegmentationReportOptions
+import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.Model.MappingDimensions.CommonMappings.EVENT_TIMESTAMP
-import com.metriql.service.model.ModelName
+import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
 import com.metriql.service.task.Task
 import com.metriql.service.task.TaskQueueService
 import com.metriql.util.MetriqlException
@@ -47,10 +46,11 @@ class SuggestionService @Inject constructor(
                     .firstNotNullOfOrNull { it.mappings.get(value.name)?.let { dim -> it.name to dim } }
                     ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
             }
+
             is ReportMetric.ReportDimension -> {
-                val sourceModelName = value.modelName!!
-                val realModelName = if (value.relationName != null) {
-                    deployment.getDatasetService().getDataset(auth, sourceModelName)?.relations?.find { value.relationName == it.name }?.modelName
+                val sourceModelName = value.dataset!!
+                val realModelName = if (value.relation != null) {
+                    deployment.getDatasetService().getDataset(auth, sourceModelName)?.relations?.find { value.relation == it.name }?.datasetName
                         ?: throw MetriqlException(HttpResponseStatus.NOT_FOUND)
                 } else {
                     sourceModelName
@@ -88,8 +88,7 @@ class SuggestionService @Inject constructor(
             val taskTicket = result.taskTicket()
             if (taskTicket.result?.error != null) {
                 throw MetriqlException("Unable to fetch suggestions for dataset $modelName.$dimensionName: ${taskTicket.result?.error}", HttpResponseStatus.INTERNAL_SERVER_ERROR)
-            } else
-            if (result.status == Task.Status.FINISHED) {
+            } else if (result.status == Task.Status.FINISHED) {
                 val result = taskTicket.result?.result?.map { it[0].toString() } ?: listOf()
                 if (filter == null) {
                     result.take(50)
@@ -104,51 +103,39 @@ class SuggestionService @Inject constructor(
 
     private fun fetchUniqueAttributeValues(
         auth: ProjectAuth,
-        modelName: ModelName,
+        datasetName: DatasetName,
         dimensionName: DimensionName,
         filterText: String?,
         useIncrementalDateFilter: Boolean = true,
     ): QueryTask {
-        val mapping = deployment.getDatasetService().getDataset(auth, modelName)?.mappings
+        val mapping = deployment.getDatasetService().getDataset(auth, datasetName)?.mappings
         val datasource = deployment.getDataSource(auth)
         val rakamBridge = datasource.warehouse.bridge
         val context = reportService.createContext(auth, datasource)
 
         // If mapping has incremental column it for filtering
-        val canUseIncrementalFilter = mapping?.get(EVENT_TIMESTAMP)?.isBlank() == false &&
+        val canUseIncrementalFilter = mapping?.get(TIME_SERIES)?.isBlank() == false &&
             rakamBridge.filters.timestampOperators[TimestampOperatorType.GREATER_THAN] != null &&
             useIncrementalDateFilter
 
         val filters = if (canUseIncrementalFilter) {
-            listOf(
-                ReportFilter(
-                    ReportFilter.Type.METRIC_FILTER,
-                    MetricFilter(
-                        MAPPING_DIMENSION,
-                        ReportMetric.ReportMappingDimension(
-                            EVENT_TIMESTAMP, null
-                        ),
-                        listOf(
-                            MetricFilter.Filter(
-                                null, null,
-                                TimestampOperatorType.BETWEEN.name,
-                                "P2W"
-                            )
-                        )
-                    )
-                )
+            FilterValue.MetricFilter(
+                Recipe.FieldReference.mappingDimension(TIME_SERIES, null),
+                TimestampOperatorType.BETWEEN.name,
+                "P2W"
             )
-        } else {
-            listOf()
-        }
+        } else null
 
-        val dimensions = ReportMetric.ReportDimension(dimensionName, modelName, null, null, null)
         val segmentationQuery = segmentationService.renderQuery(
             auth,
             context,
-            SegmentationReportOptions(modelName, listOf(dimensions), listOf(ReportMetric.ReportMeasure(modelName, TOTAL_ROWS_MEASURE.name)), filters = filters),
-            listOf(),
-            useAggregate = false, forAccumulator = false
+            SegmentationQuery(
+                datasetName, listOf(Recipe.FieldReference(dimensionName)),
+                listOf(Recipe.FieldReference(TOTAL_ROWS_MEASURE.name)), filters = filters
+            ),
+            reportFilters = null,
+            useAggregate = false,
+            forAccumulator = false
         )
 
         val executeTask = sqlQueryTaskGenerator.createTask(
@@ -156,15 +143,15 @@ class SuggestionService @Inject constructor(
             context,
             datasource,
             segmentationQuery.second,
-            SqlReportOptions.QueryOptions(100, null, null, true),
+            SqlQuery.QueryOptions(100, null, null, true),
             true,
-            info = SQLContext.Suggestion(modelName, dimensionName, filterText)
+            info = SQLContext.Suggestion(datasetName, dimensionName, filterText)
         )
 
         executeTask.onFinish { result ->
-            if(result?.error == null) {
+            if (result?.error == null) {
                 val values = result?.result?.map { it[0].toString() } ?: listOf()
-                deployment.getCacheService().set(auth, modelName, dimensionName, values)
+                deployment.getCacheService().set(auth, datasetName, dimensionName, values)
             }
         }
 
@@ -172,8 +159,8 @@ class SuggestionService @Inject constructor(
     }
 
     data class SuggestionQuery(
-        val type: MetricFilter.MetricType,
-        @PolymorphicTypeStr<MetricFilter.MetricType>(externalProperty = "type", valuesEnum = MetricFilter.MetricType::class)
+        val type: FilterValue.MetricType,
+        @PolymorphicTypeStr<FilterValue.MetricType>(externalProperty = "type", valuesEnum = FilterValue.MetricType::class)
         val value: ReportMetric,
         val filter: String?,
     )

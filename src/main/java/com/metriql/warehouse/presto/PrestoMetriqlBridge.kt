@@ -2,8 +2,8 @@ package com.metriql.warehouse.presto
 
 import com.metriql.report.funnel.FunnelReportType
 import com.metriql.report.segmentation.SegmentationReportType
-import com.metriql.service.model.Model.Measure.AggregationType
-import com.metriql.service.model.Model.Measure.AggregationType.APPROXIMATE_UNIQUE
+import com.metriql.service.dataset.Dataset.Measure.AggregationType
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.warehouse.spi.DBTType
 import com.metriql.warehouse.spi.bridge.ANSISQLMetriqlBridge
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge

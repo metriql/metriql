@@ -1,6 +1,6 @@
 package io.trino
 
-import com.metriql.service.model.IDatasetService
+import com.metriql.service.dataset.IDatasetService
 import io.trino.connector.system.SystemHandleResolver
 import io.trino.connector.system.SystemPageSourceProvider
 import io.trino.connector.system.SystemSplitManager
@@ -41,10 +41,6 @@ class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManag
             return SystemSplitManager(nodeManager, metadata)
         }
 
-        override fun beginTransaction(isolationLevel: IsolationLevel?, readOnly: Boolean): ConnectorTransactionHandle {
-            return super.beginTransaction(isolationLevel, readOnly)
-        }
-
         override fun getPageSourceProvider(): ConnectorPageSourceProvider {
             return SystemPageSourceProvider(metadata)
         }
@@ -56,5 +52,6 @@ class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManag
 
     companion object {
         val QUERY_TYPE_PROPERTY: PropertyMetadata<String> = PropertyMetadata.stringProperty("query_mode", "Switch query mode", "mql", false)
+        val METRIQL_AUTH_PROPERTY: PropertyMetadata<String> = PropertyMetadata.stringProperty("metriql", "Metriql info", null, true)
     }
 }

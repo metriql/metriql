@@ -8,8 +8,8 @@ import com.google.cloud.bigquery.Schema
 import com.google.cloud.bigquery.StandardTableDefinition
 import com.google.cloud.bigquery.TableId
 import com.google.cloud.bigquery.TableInfo
-import com.metriql.service.model.Model
-import com.metriql.tests.SimpleFilterTests
+import com.metriql.service.dataset.Dataset
+import com.metriql.tests.SampleDataset
 import com.metriql.tests.TestDataSource
 import com.metriql.util.`try?`
 import org.testng.annotations.BeforeSuite
@@ -33,10 +33,10 @@ class TestDataSourceBigQuery : TestDataSource<BigQuery>() {
 
     @Test
     override fun `test fill defaults`() {
-        val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table(null, null, "dumb_table"))
-        val filledModelTarget = testingServer.dataSource.fillDefaultsToTarget(modelTarget).value as Model.Target.TargetValue.Table
-        assertEquals(filledModelTarget.database, "rakamui-215316")
-        assertEquals(schemaName, filledModelTarget.schema)
+        val datasetTarget = Dataset.Target(Dataset.Target.Type.TABLE, Dataset.Target.TargetValue.Table(null, null, "dumb_table"))
+        val filledDatasetTarget = testingServer.dataSource.fillDefaultsToTarget(datasetTarget).value as Dataset.Target.TargetValue.Table
+        assertEquals(filledDatasetTarget.database, "rakamui-215316")
+        assertEquals(schemaName, filledDatasetTarget.schema)
     }
 
     @Test
@@ -70,7 +70,7 @@ class TestDataSourceBigQuery : TestDataSource<BigQuery>() {
         `try?` { bigQuery.getTable(tableId).delete() }
         bigQuery.create(tableInfo)
 
-        val rows = SimpleFilterTests.testInt.mapIndexed { index, i ->
+        val rows = SampleDataset.testInt.mapIndexed { index, i ->
             InsertAllRequest.RowToInsert.of(
                 UUID.randomUUID().toString(),
                 mapOf(

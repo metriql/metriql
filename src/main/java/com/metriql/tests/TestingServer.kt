@@ -6,7 +6,6 @@ import com.metriql.warehouse.spi.DataSource
 import com.metriql.warehouse.spi.Warehouse
 import java.time.ZoneId
 import java.util.logging.Logger
-import kotlin.test.fail
 
 interface TestingServer<C> {
     val config: Warehouse.Config
@@ -30,7 +29,7 @@ interface TestingServer<C> {
             false
         ).runAndWaitForResult()
         if (task.error != null) {
-            fail("Error running query: $query \n ${task.error}")
+            throw RuntimeException("Error running query: $query \n ${task.error}")
         }
 
         return if (task.result?.isEmpty() == true) {

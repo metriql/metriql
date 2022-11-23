@@ -1,27 +1,28 @@
 package com.metriql.report.sql
 
 import com.metriql.report.IAdHocService
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
+import com.metriql.report.data.FilterValue.Companion.extractDateRangeForEventTimestamp
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.ModelName
+import com.metriql.service.dataset.DatasetName
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
-class SqlService : IAdHocService<SqlReportOptions> {
+class SqlService : IAdHocService<SqlQuery> {
 
     override fun renderQuery(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
-        reportOptions: SqlReportOptions,
-        reportFilters: List<ReportFilter>,
+        reportOptions: SqlQuery,
+        reportFilters: FilterValue?,
     ): IAdHocService.RenderedQuery {
 
         val compiledSql = context.renderSQL(
             reportOptions.query, null, null,
-            dateRange = ReportFilter.extractDateRangeForEventTimestamp(reportFilters)
+            dateRange = extractDateRangeForEventTimestamp(reportFilters)
         )
 
         return IAdHocService.RenderedQuery(compiledSql, queryOptions = reportOptions.queryOptions)
     }
 
-    override fun getUsedModels(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: SqlReportOptions): Set<ModelName> = setOf()
+    override fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: SqlQuery): Set<DatasetName> = setOf()
 }

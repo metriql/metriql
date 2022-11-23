@@ -8,14 +8,14 @@ import com.metriql.UserContext
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifestParser
 import com.metriql.dbt.DbtProfiles
-import com.metriql.dbt.DbtYamlParser
 import com.metriql.dbt.ProjectYaml
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.jinja.JinjaApps
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.ProjectAuth.Companion.PASSWORD_CREDENTIAL
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.UpdatableDatasetService
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Model
-import com.metriql.service.model.UpdatableDatasetService
 import com.metriql.service.suggestion.InMemorySuggestionCacheService
 import com.metriql.service.suggestion.SuggestionCacheService
 import com.metriql.util.JsonHelper
@@ -33,20 +33,21 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.ZoneId
 
-class SingleTenantDeployment(
+class SingleTenantDbtDeployment(
     private val manifestJson: String,
     private val modelsFilter: String?,
     private val passCredentialsToDatasource: Boolean,
     private val timezone: ZoneId?,
     usernamePass: String?,
-    projectDir: String,
+    private val projectDir: String,
     profilesContent: String?,
     profilesDir: String,
     vars: String?,
     profile: String?,
     private val cacheSpec: CacheBuilderSpec,
 ) : Deployment {
-    private val profileConfig = getProfileConfigForSingleTenant(projectDir, profilesContent, profilesDir, vars, profile)
+    private val vars = getVarMap(vars)
+    private val profileConfig = getProfileConfigForSingleTenant(projectDir, profilesContent, profilesDir, this.vars, profile)
     private val singleAuth = ProjectAuth.singleProject()
     private val datasetService = UpdatableDatasetService(null) {
         val dataSource = getDataSource(singleAuth)
@@ -84,8 +85,27 @@ class SingleTenantDeployment(
         return WarehouseLocator.getDataSource(config)
     }
 
+    override fun getApps(auth: ProjectAuth): JinjaApps {
+        val projectDirectory = File(projectDir)
+        val apps = File(projectDirectory, "applications/").walk().filter {
+            it.extension == "sql"
+        }.map {
+
+            val rawCode = it.readText(StandardCharsets.UTF_8)
+            DbtJinjaRenderer.renderer.render(getDataSource(auth), rawCode, projectDirectory, "", it.relativeTo(projectDirectory).path, vars, mapOf())
+            JinjaApps.JinjaApp(rawCode, null)
+        }.toList()
+
+        return JinjaApps(apps)
+    }
+
     companion object {
-        fun getProfileConfigForSingleTenant(projectDir: String, profilesContent: String?, profilesDir: String?, vars: String?, profile: String?): WarehouseConfig {
+        fun getVarMap(vars: String?): Map<String, Any?> {
+            return if (vars != null) {
+                YamlHelper.mapper.readValue(vars, object : TypeReference<Map<String, Any?>>() {})
+            } else mapOf()
+        }
+        fun getProfileConfigForSingleTenant(projectDir: String, profilesContent: String?, profilesDir: String?, varMap: Map<String, Any?>, profile: String?): WarehouseConfig {
             val dbtProjectFile = File(projectDir, "dbt_project.yml")?.let {
                 if (it.exists()) {
                     YamlHelper.mapper.readValue(it.readBytes(), ProjectYaml::class.java)
@@ -101,10 +121,6 @@ class SingleTenantDeployment(
                 }
                 profilesFile.readText(StandardCharsets.UTF_8)
             }
-
-            val varMap = if (vars != null) {
-                YamlHelper.mapper.readValue(vars, object : TypeReference<Map<String, Any?>>() {})
-            } else mapOf()
 
             val compiledProfiles = DbtJinjaRenderer.renderer.renderProfiles(content, varMap)
 
@@ -131,9 +147,9 @@ class SingleTenantDeployment(
             } else it
         }
 
-        fun getPreparedModels(dataSource: DataSource, auth: ProjectAuth, recipe: Recipe): List<Model> {
+        fun getPreparedModels(dataSource: DataSource, auth: ProjectAuth, recipe: Recipe): List<Dataset> {
             val metriqlModels = recipe.models?.map {
-                resolveExtends(recipe.models, it, recipe.packageName ?: "").toModel(recipe.packageName ?: "", dataSource.warehouse.bridge, -1)
+                resolveExtends(recipe.models, it, recipe.packageName ?: "").toModel(recipe.packageName ?: "", dataSource.warehouse.bridge)
             } ?: listOf()
             val context = QueryGeneratorContext(auth, dataSource, UpdatableDatasetService(null) { metriqlModels }, JinjaRendererService(), null, null, null)
             return RecipeUtil.prepareModelsForInstallation(dataSource, context, metriqlModels)
@@ -175,16 +191,7 @@ class SingleTenantDeployment(
                 }
             }
 
-            val models = try {
-                DbtManifestParser.parse(dataSource, content, modelsFilter)
-            } catch (manifestEx: DbtYamlParser.ParseException) {
-                // support both dbt and metriql manifest file in the same config but throw dbt exception as it's the default method
-                try {
-                    JsonHelper.read(content, object : TypeReference<List<Model>>() {}).map { Recipe.RecipeModel.fromModel(it) }
-                } catch (metriqlModelEx: Exception) {
-                    throw manifestEx
-                }
-            }
+            val models = DbtManifestParser.parse(dataSource, content, modelsFilter)
 
             return Recipe("local://metriql", "master", null, Recipe.Config(packageName), packageName, models = models)
         }

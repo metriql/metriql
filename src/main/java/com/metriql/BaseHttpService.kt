@@ -15,7 +15,7 @@ import java.io.File
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 
-const val CURRENT_VERSION = "v0"
+const val CURRENT_VERSION = "v1"
 const val CURRENT_PATH = "/api/$CURRENT_VERSION"
 
 @Path("/")

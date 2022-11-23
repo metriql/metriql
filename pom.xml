@@ -15,7 +15,7 @@
 
     <properties>
         <project.scm.id>github</project.scm.id>
-        <dep.jackson.version>2.10.3</dep.jackson.version>
+        <dep.jackson.version>2.13.4</dep.jackson.version>
         <dep.log4j2.version>2.16.0</dep.log4j2.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <air.version>200</air.version>
@@ -24,7 +24,7 @@
         <dep.kotlin.version>1.6.21</dep.kotlin.version>
         <check.skip-dependency>false</check.skip-dependency>
         <check.fail-dependency>true</check.fail-dependency>
-        <dep.jinja.version>2.5.7</dep.jinja.version>
+        <dep.jinja.version>2.6.0</dep.jinja.version>
 
         <air.main.basedir>${project.basedir}</air.main.basedir>
         <air.check.skip-extended>true</air.check.skip-extended>
@@ -42,7 +42,6 @@
         <postgresql.version>42.2.8</postgresql.version>
         <java.version>11</java.version>
         <aws.library>1.10.66</aws.library>
-        <swagger.version>1.5.16</swagger.version>
 
         <!--Plugin versions-->
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
@@ -194,6 +193,11 @@
             <version>3.13.8</version>
         </dependency>
         <dependency>
+            <groupId>org.duckdb</groupId>
+            <artifactId>duckdb_jdbc</artifactId>
+            <version>0.4.0</version>
+        </dependency>
+        <dependency>
             <groupId>net.snowflake</groupId>
             <artifactId>snowflake-jdbc</artifactId>
             <version>3.13.3</version>
@@ -259,12 +263,6 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>13.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.swagger</groupId>
-            <artifactId>swagger-core</artifactId>
-            <version>1.5.16</version>
         </dependency>
 
         <dependency>
@@ -357,7 +355,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-kotlin</artifactId>
-            <version>2.12.2</version>
+            <version>${dep.jackson.version}</version>
         </dependency>
 
         <dependency>
@@ -570,6 +568,7 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test</artifactId>
             <version>${dep.kotlin.version}</version>
+            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>org.jetbrains.kotlin</groupId>

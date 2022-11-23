@@ -8,7 +8,7 @@ import com.google.cloud.bigquery.Schema
 import com.google.cloud.bigquery.StandardTableDefinition
 import com.google.cloud.bigquery.TableId
 import com.google.cloud.bigquery.TableInfo
-import com.metriql.tests.SimpleFilterTests
+import com.metriql.tests.SampleDataset
 import com.metriql.tests.TestSimpleFilter
 import com.metriql.util.`try?`
 import org.testng.annotations.BeforeSuite
@@ -40,16 +40,16 @@ class TestSimpleFilterBigQuery : TestSimpleFilter<BigQuery>() {
         `try?` { bigQuery.getTable(tableId).delete() }
         bigQuery.create(tableInfo)
 
-        val rows = SimpleFilterTests.testInt.mapIndexed { index, i ->
+        val rows = SampleDataset.testInt.mapIndexed { index, i ->
             InsertAllRequest.RowToInsert.of(
                 UUID.randomUUID().toString(),
                 mapOf(
                     "test_int" to i,
-                    "test_string" to SimpleFilterTests.testString[index],
-                    "test_double" to SimpleFilterTests.testDouble[index],
-                    "test_date" to "${SimpleFilterTests.testDate[index]}",
-                    "test_bool" to SimpleFilterTests.testBool[index],
-                    "test_timestamp" to "${SimpleFilterTests.testTimestamp[index]}"
+                    "test_string" to SampleDataset.testString[index],
+                    "test_double" to SampleDataset.testDouble[index],
+                    "test_date" to "${SampleDataset.testDate[index]}",
+                    "test_bool" to SampleDataset.testBool[index],
+                    "test_timestamp" to "${SampleDataset.testTimestamp[index]}"
                 )
             )
         }

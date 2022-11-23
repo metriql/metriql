@@ -5,16 +5,14 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.metriql.warehouse.spi.services.RecipeQuery
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import kotlin.reflect.KClass
 
 @JsonDeserialize(using = ReportType.ReportTypeJsonDeserializer::class)
 interface ReportType {
     val slug: String
-    val configClass: KClass<out ServiceReportOptions>
-    val recipeClass: KClass<out RecipeQuery>
-    val serviceClass: KClass<out IAdHocService<out ServiceReportOptions>>
+    val dataClass: KClass<out ServiceQuery>
+    val serviceClass: KClass<out IAdHocService<out ServiceQuery>>
 
     @JsonValue
     fun getJsonValue() = slug

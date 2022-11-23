@@ -4,22 +4,17 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.RecipeQuery
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import io.trino.sql.tree.Expression
 
 @JsonIgnoreProperties(value = ["version"])
-data class MqlReportOptions(
+data class MqlQuery(
     val query: String,
     val queryOptions: QueryOptions?,
     val variables: List<Expression>?,
     val reportOptions: ReportOptions?
-) : ServiceReportOptions, RecipeQuery {
-    override fun toRecipeQuery() = this
+) : ServiceQuery(), RecipeQuery {
     override fun toReportOptions(context: IQueryGeneratorContext) = this
-
-    override fun getQueryLimit(): Int? {
-        return queryOptions?.limit
-    }
 
     @JsonIgnoreProperties(value = ["segmentedColumnOptions"])
     data class ReportOptions(

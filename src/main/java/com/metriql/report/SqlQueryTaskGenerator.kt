@@ -3,7 +3,7 @@ package com.metriql.report
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.PropertyKey.CACHE_TIME
 import com.metriql.db.QueryResult.QueryStats
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent
 import com.metriql.service.audit.MetriqlEvents.AuditLog.SQLExecuteEvent.SQLContext
 import com.metriql.service.auth.ProjectAuth
@@ -33,29 +33,29 @@ typealias PostProcessor = (QueryResult) -> QueryResult
 *   In sql type models, we append their query using WITH alias as (SELECT ..)
 *   so that the query is more organized.
 * */
-class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICacheService) {
+class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICacheService) : QueryTaskGenerator {
     private val runningTasks = ConcurrentHashMap<QueryIdentifierForRunningTasks, QueryTask>()
 
     data class QueryIdentifierForCache(
         val query: String,
-        val options: SqlReportOptions.QueryOptions,
+        val options: SqlQuery.QueryOptions,
     )
 
     data class QueryIdentifierForRunningTasks(
         val projectId: String,
         val query: String,
-        val options: SqlReportOptions.QueryOptions,
+        val options: SqlQuery.QueryOptions,
     )
 
-    fun createTask(
+    override fun createTask(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         dataSource: DataSource,
         rawSqlQuery: String,
-        queryOptions: SqlReportOptions.QueryOptions,
+        queryOptions: SqlQuery.QueryOptions,
         isBackgroundTask: Boolean,
-        postProcessors: List<PostProcessor> = listOf(),
-        info: SQLContext? = null,
+        postProcessors: List<PostProcessor>,
+        info: SQLContext?,
     ): QueryTask {
         val limit = if (queryOptions.limit != null && queryOptions.limit > WarehouseQueryTask.MAX_LIMIT) {
             WarehouseQueryTask.MAX_LIMIT
@@ -136,7 +136,7 @@ class SqlQueryTaskGenerator @Inject constructor(private val cacheService: ICache
         return task
     }
 
-    fun setQueryProperties(result: QueryResult, query: String, limit: Int) {
+    private fun setQueryProperties(result: QueryResult, query: String, limit: Int) {
         result.setProperty(QueryResult.PropertyKey.QUERY, query)
         result.setProperty(QueryResult.PropertyKey.LIMIT, limit)
     }

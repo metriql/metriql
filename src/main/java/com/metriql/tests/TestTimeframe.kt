@@ -4,12 +4,12 @@ import com.metriql.warehouse.spi.function.DatePostOperation
 import com.metriql.warehouse.spi.function.TimePostOperation
 import com.metriql.warehouse.spi.function.TimestampPostOperation
 import io.trino.spi.type.StandardTypes
+import org.testng.AssertJUnit.assertEquals
 import org.testng.annotations.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import kotlin.test.assertEquals
 
 abstract class TestTimeframe {
     abstract val testingServer: TestingServer<*>

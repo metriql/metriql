@@ -26,6 +26,10 @@ annotation class PolymorphicTypeStr<E>(
     val name: String = ""
 ) where E : Enum<E>, E : StrValueEnum
 
+@Inherited
+@JacksonAnnotation
+annotation class SealedClassInference()
+
 interface StrValueEnum {
     fun getValueClass(): Class<*>
     fun getValueClass(parameter: String): Class<*> {

@@ -8,7 +8,7 @@ object Helper {
         Assert.assertEquals(JsonHelper.encode(actual), JsonHelper.encode(expected))
     }
 
-    fun assetEqualsCaseInsensitive(expected : String, actual : String) {
+    fun assetEqualsCaseInsensitive(expected: String, actual: String) {
         Assert.assertTrue(expected.equals(actual, ignoreCase = true), "Expected $expected, actual $actual.")
     }
 }

@@ -1,7 +1,9 @@
 package com.metriql.util
 
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import com.fasterxml.jackson.databind.exc.MismatchedInputException
@@ -10,6 +12,18 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException
 typealias JsonPath = String
 
 object JsonUtil {
+    fun serializeAsArrayOrSingle(value: List<*>, gen: JsonGenerator, serializers: SerializerProvider, serializer: Class<*>) {
+        val serializer = serializers.findValueSerializer(serializer)
+        when {
+            value.size > 1 -> {
+                gen.writeStartArray(value)
+                value.forEach { serializer.serialize(it, gen, serializers) }
+                gen.writeEndArray()
+            }
+            value.size == 1 -> serializer.serialize(value[0], gen, serializers)
+            else -> gen.writeNull()
+        }
+    }
     fun convertToUserFriendlyError(e: Exception): Pair<JsonPath?, String> {
         return when (e) {
             is InvalidDefinitionException -> {

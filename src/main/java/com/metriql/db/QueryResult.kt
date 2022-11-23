@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.metriql.report.ReportType
 import com.metriql.report.segmentation.SegmentationReportType
-import com.metriql.report.sql.SqlReportOptions
+import com.metriql.report.sql.SqlQuery
 import com.metriql.service.cache.ICacheService
 import com.metriql.util.MetriqlException
 import com.metriql.util.UppercaseEnum
 import com.metriql.util.toCamelCase
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
@@ -22,7 +22,7 @@ data class QueryResult @JsonCreator constructor(
     val error: QueryError?,
     var properties: Map<String, Any>?,
     var responseHeaders: Map<String, String>? = null
-) : ICacheService.CacheValue  {
+) : ICacheService.CacheValue {
 
     constructor(metadata: List<QueryColumn>, result: List<List<Any?>>) : this(metadata, result, null, null)
     constructor(metadata: List<QueryColumn>, result: List<List<Any?>>, properties: Map<String, Any>?) : this(
@@ -100,10 +100,10 @@ data class QueryResult @JsonCreator constructor(
         val processedBytes: Long? = null,
     ) {
 
-        data class QueryInfo(val reportType: ReportType, val query: ServiceReportOptions, val compiledQuery: String) {
+        data class QueryInfo(val reportType: ReportType, val query: ServiceQuery, val compiledQuery: String) {
             companion object {
                 fun rawSql(query: String): QueryInfo {
-                    return QueryInfo(SegmentationReportType, SqlReportOptions(query, null, null, null), query)
+                    return QueryInfo(SegmentationReportType, SqlQuery(query, null, null, null), query)
                 }
             }
         }

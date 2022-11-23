@@ -7,22 +7,17 @@ import com.metriql.util.StrValueEnum
 import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.RecipeQuery
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import kotlin.reflect.KClass
 
 @JsonIgnoreProperties(value = ["version"])
-data class SqlReportOptions(
+data class SqlQuery(
     val query: String,
     val queryOptions: QueryOptions?,
     val variables: List<Variable<*>>?,
     val reportOptions: ReportOptions?
-) : ServiceReportOptions, RecipeQuery {
-    override fun toRecipeQuery() = this
+) : ServiceQuery(), RecipeQuery {
     override fun toReportOptions(context: IQueryGeneratorContext) = this
-
-    override fun getQueryLimit(): Int? {
-        return queryOptions?.limit
-    }
 
     @JsonIgnoreProperties(value = ["segmentedColumnOptions"])
     data class ReportOptions(

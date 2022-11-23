@@ -1,13 +1,12 @@
 package com.metriql.report.data
 
-import com.fasterxml.jackson.annotation.JsonAlias
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.metriql.db.FieldType
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.MeasureName
-import com.metriql.service.model.Model
-import com.metriql.service.model.ModelName
-import com.metriql.service.model.RelationName
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.MeasureName
+import com.metriql.service.dataset.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.PolymorphicTypeStr
@@ -20,91 +19,65 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 
-// legacy properties
-@JsonIgnoreProperties("metricName", "metricModelName", "metricRelationName")
 sealed class ReportMetric {
     data class ReportMappingDimension(
-        val name: Model.MappingDimensions.CommonMappings,
-        val postOperation: PostOperation?
+        val name: Dataset.MappingDimensions.CommonMappings,
+        val timeframe: Timeframe?
     ) : ReportMetric() {
         override fun toMetricReference() = Recipe.FieldReference.mappingDimension(name, null)
     }
 
-    data class Function(val name: SqlFunction, val parameters: List<ReportMetric>) : ReportMetric() {
-        enum class SqlFunction(aggregation: Boolean) {
-            COUNT(true)
-        }
-
-        override fun toMetricReference(): Recipe.FieldReference {
-            TODO("not implemented")
-        }
-    }
-
-    data class Unary(val operator: Operator, val left: ReportMetric, val right: ReportMetric) : ReportMetric() {
-        enum class Operator(name: String) {
-            PLUS("+"), MINUS("-")
-        }
-
-        override fun toMetricReference(): Recipe.FieldReference {
-            TODO("not implemented")
-        }
-    }
-
     data class ReportDimension(
-        @JsonAlias("dimension")
         val name: DimensionName,
-        // for dashboard filters compatibility
-        @JsonAlias("model")
-        val modelName: ModelName,
-        val relationName: RelationName?,
-        val postOperation: PostOperation?,
-        val pivot: Boolean? = null
+        val dataset: DatasetName,
+        val relation: RelationName?,
+        val timeframe: Timeframe?,
     ) : ReportMetric() {
         init {
-            if (modelName == null && relationName == null) {
+            if (dataset == null && relation == null) {
                 throw MetriqlException("Cant infer measures model if both modelName and relationName not set", HttpResponseStatus.BAD_REQUEST)
             }
         }
 
-        override fun toMetricReference(): Recipe.FieldReference = Recipe.FieldReference(name, relationName)
+        override fun toMetricReference(): Recipe.FieldReference = Recipe.FieldReference(name, relation)
 
         fun toReference(): Recipe.FieldReference {
-            return Recipe.FieldReference(name, relationName, postOperation?.value?.name?.lowercase())
+            return Recipe.FieldReference(name, relation, timeframe?.value?.name?.lowercase())
         }
     }
 
     data class ReportMeasure(
-        val modelName: ModelName,
+        val dataset: DatasetName,
         val name: MeasureName,
-        val relationName: RelationName? = null,
+        val relation: RelationName? = null,
     ) : ReportMetric() {
         init {
-            if (modelName == null && relationName == null) {
+            if (dataset == null && relation == null) {
                 throw MetriqlException("Cant infer measures model if both modelName and relationName not set", HttpResponseStatus.BAD_REQUEST)
             }
         }
 
         override fun toMetricReference(): Recipe.FieldReference {
-            return Recipe.FieldReference(name, relationName)
+            return Recipe.FieldReference(name, relation)
         }
     }
 
-    data class PostOperation(
+    data class Timeframe(
         val type: Type, // Type is the same with `FieldType`. For simplicity; duplicated
         @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
         val value: Enum<*>
     ) {
         @UppercaseEnum
-        enum class Type(val clazz: KClass<out Enum<*>>) : StrValueEnum {
-            TIMESTAMP(TimestampPostOperation::class),
-            DATE(DatePostOperation::class),
-            TIME(TimePostOperation::class);
+        enum class Type(val clazz: KClass<out Enum<*>>, val fieldType: FieldType) : StrValueEnum {
+            TIMESTAMP(TimestampPostOperation::class, FieldType.TIMESTAMP),
+            DATE(DatePostOperation::class, FieldType.DATE),
+            TIME(TimePostOperation::class, FieldType.TIME);
 
             override fun getValueClass() = clazz.java
         }
 
         companion object {
-            fun fromFieldType(type: com.metriql.db.FieldType, name: String): PostOperation {
+            fun fromFieldType(type: com.metriql.db.FieldType, name: String): Timeframe {
                 val value = when (type) {
                     com.metriql.db.FieldType.TIME -> Type.TIME
                     com.metriql.db.FieldType.TIMESTAMP -> Type.TIMESTAMP
@@ -117,7 +90,7 @@ sealed class ReportMetric {
                     }
                 }
 
-                return PostOperation(value, JsonHelper.convert(name, value.clazz.java))
+                return Timeframe(value, JsonHelper.convert(name, value.clazz.java))
             }
         }
     }

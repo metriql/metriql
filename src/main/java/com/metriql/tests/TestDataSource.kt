@@ -2,16 +2,16 @@ package com.metriql.tests
 
 import com.metriql.db.FieldType
 import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.dataset.Dataset
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.model.Model
 import com.metriql.tests.Helper.assetEqualsCaseInsensitive
 import com.metriql.warehouse.spi.querycontext.QueryGeneratorContext
+import org.testng.Assert.assertEquals
 import org.testng.annotations.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import kotlin.test.assertEquals
 
 abstract class TestDataSource<T> {
     abstract val testingServer: TestingServer<T>
@@ -28,10 +28,10 @@ abstract class TestDataSource<T> {
             items.map { if (it) 1 else 0 }
         } else items
     }
-    val testDouble = SimpleFilterTests.testInt.map { it * 1.0 }
-    val testDate = SimpleFilterTests.testInt.map { LocalDate.of(2000, 1, it + 1) }
-    val testTimestamp = SimpleFilterTests.testInt.map { Instant.ofEpochMilli((it * 1000 * 60 * 60).toLong()) }
-    val testTime = SimpleFilterTests.testInt.map { LocalTime.of(it, it) }
+    val testDouble = SampleDataset.testInt.map { it * 1.0 }
+    val testDate = SampleDataset.testInt.map { LocalDate.of(2000, 1, it + 1) }
+    val testTimestamp = SampleDataset.testInt.map { Instant.ofEpochMilli((it * 1000 * 60 * 60).toLong()) }
+    val testTime = SampleDataset.testInt.map { LocalTime.of(it, it) }
 
     val columnTypes = mapOf(
         "test_int" to listOf(FieldType.INTEGER, FieldType.LONG),
@@ -65,18 +65,18 @@ abstract class TestDataSource<T> {
 
     @Test
     open fun `test generate sql reference`() {
-        val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table("a", "b", "c"))
-        val sqlTarget = testingServer.dataSource.sqlReferenceForTarget(modelTarget, "model") { "" }
+        val datasetTarget = Dataset.Target(Dataset.Target.Type.TABLE, Dataset.Target.TargetValue.Table("a", "b", "c"))
+        val sqlTarget = testingServer.dataSource.sqlReferenceForTarget(datasetTarget, "model") { "" }
         assertEquals("\"a\".\"b\".\"c\" AS \"model\"", sqlTarget)
     }
 
     @Test
     open fun `test fill defaults`() {
-        val modelTarget = Model.Target(Model.Target.Type.TABLE, Model.Target.TargetValue.Table(null, null, "dumb_table"))
-        val filledModelTarget = testingServer.dataSource.fillDefaultsToTarget(modelTarget).value as Model.Target.TargetValue.Table
+        val datasetTarget = Dataset.Target(Dataset.Target.Type.TABLE, Dataset.Target.TargetValue.Table(null, null, "dumb_table"))
+        val filledDatasetTarget = testingServer.dataSource.fillDefaultsToTarget(datasetTarget).value as Dataset.Target.TargetValue.Table
         val config = testingServer.dataSource.config
-        assertEquals(filledModelTarget.database, config.warehouseDatabase())
-        assertEquals(filledModelTarget.schema, config.warehouseSchema())
+        assertEquals(filledDatasetTarget.database, config.warehouseDatabase())
+        assertEquals(filledDatasetTarget.schema, config.warehouseSchema())
     }
 
     @Test

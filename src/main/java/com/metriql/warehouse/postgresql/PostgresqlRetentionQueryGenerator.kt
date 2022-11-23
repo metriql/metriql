@@ -1,7 +1,7 @@
 package com.metriql.warehouse.postgresql
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.metriql.report.retention.RetentionReportOptions
+import com.metriql.report.retention.RetentionQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -12,7 +12,7 @@ import com.metriql.warehouse.spi.services.retention.RetentionSupport
 import io.netty.handler.codec.http.HttpResponseStatus
 
 class PostgresqlRetentionQueryGenerator : RetentionQueryGenerator {
-    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Retention, options: RetentionReportOptions): String {
+    override fun generateSQL(auth: ProjectAuth, context: IQueryGeneratorContext, queryDSL: Retention, options: RetentionQuery): String {
         val queryNode = JsonHelper.convert(queryDSL, object : TypeReference<Map<String, *>>() {})
         checkSupport(options.approximate, options)
         val template = if (options.approximate) throw MetriqlException("Approximate mode is not supported by postgresql", HttpResponseStatus.BAD_REQUEST) else expensive

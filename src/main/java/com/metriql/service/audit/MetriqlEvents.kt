@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.metriql.db.QueryResult
 import com.metriql.report.ReportType
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.ModelName
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
 import com.metriql.service.task.Task
-import com.metriql.warehouse.spi.services.ServiceReportOptions
+import com.metriql.warehouse.spi.services.ServiceQuery
 import org.rakam.server.http.RakamHttpRequest
 
 class MetriqlEvents {
@@ -27,8 +27,8 @@ class MetriqlEvents {
             val error: QueryResult.QueryError?
         ) : AuditLog(auth, 1) {
             sealed class SQLContext(val type: String) {
-                data class AdhocReport(val reportType: ReportType, val options: ServiceReportOptions) : SQLContext("ADHOC_REPORT")
-                data class Suggestion(val modelName: ModelName, val dimensionName: DimensionName, val filter: String?) : SQLContext("SUGGESTION")
+                data class AdhocReport(val reportType: ReportType, val options: ServiceQuery) : SQLContext("ADHOC_REPORT")
+                data class Suggestion(val datasetName: DatasetName, val dimensionName: DimensionName, val filter: String?) : SQLContext("SUGGESTION")
             }
 
             override fun toString(): String {

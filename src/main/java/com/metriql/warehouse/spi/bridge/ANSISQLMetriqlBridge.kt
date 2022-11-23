@@ -1,31 +1,31 @@
 package com.metriql.warehouse.spi.bridge
 
 import com.metriql.db.FieldType
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.ReportMetric.ReportMeasure
+import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.Dataset.Measure.AggregationType
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.AVERAGE
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.AVERAGE_DISTINCT
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.COUNT
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.COUNT_UNIQUE
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.MAXIMUM
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.MINIMUM
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.SQL
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.SUM
+import com.metriql.service.dataset.Dataset.Measure.AggregationType.SUM_DISTINCT
+import com.metriql.service.dataset.Dataset.Relation.RelationType.MANY_TO_MANY
+import com.metriql.service.dataset.Dataset.Relation.RelationType.MANY_TO_ONE
+import com.metriql.service.dataset.Dataset.Relation.RelationType.ONE_TO_MANY
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.MeasureName
+import com.metriql.service.dataset.ModelDimension
+import com.metriql.service.dataset.ModelRelation
+import com.metriql.service.dataset.RelationName
 import com.metriql.service.jinja.MetriqlJinjaContext
 import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.model.DimensionName
-import com.metriql.service.model.MeasureName
-import com.metriql.service.model.Model
-import com.metriql.service.model.Model.Measure.AggregationType
-import com.metriql.service.model.Model.Measure.AggregationType.AVERAGE
-import com.metriql.service.model.Model.Measure.AggregationType.AVERAGE_DISTINCT
-import com.metriql.service.model.Model.Measure.AggregationType.COUNT
-import com.metriql.service.model.Model.Measure.AggregationType.COUNT_UNIQUE
-import com.metriql.service.model.Model.Measure.AggregationType.MAXIMUM
-import com.metriql.service.model.Model.Measure.AggregationType.MINIMUM
-import com.metriql.service.model.Model.Measure.AggregationType.SQL
-import com.metriql.service.model.Model.Measure.AggregationType.SUM
-import com.metriql.service.model.Model.Measure.AggregationType.SUM_DISTINCT
-import com.metriql.service.model.Model.Relation.RelationType.MANY_TO_MANY
-import com.metriql.service.model.Model.Relation.RelationType.MANY_TO_ONE
-import com.metriql.service.model.Model.Relation.RelationType.ONE_TO_MANY
-import com.metriql.service.model.ModelDimension
-import com.metriql.service.model.ModelName
-import com.metriql.service.model.ModelRelation
-import com.metriql.service.model.RelationName
 import com.metriql.util.DefaultJinja
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
@@ -41,7 +41,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionTyp
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.RenderedFilter
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.FilterOperator
-import com.metriql.warehouse.spi.function.IPostOperation
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -82,141 +81,103 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     )
 
     override val supportedDBTTypes: Set<DBTType> = setOf()
-    override val supportedJoins: Set<Model.Relation.JoinType> = setOf(
-        Model.Relation.JoinType.FULL_JOIN,
-        Model.Relation.JoinType.INNER_JOIN,
-        Model.Relation.JoinType.LEFT_JOIN,
-        Model.Relation.JoinType.RIGHT_JOIN
+    override val supportedJoins: Set<Dataset.Relation.JoinType> = setOf(
+        Dataset.Relation.JoinType.FULL_JOIN,
+        Dataset.Relation.JoinType.INNER_JOIN,
+        Dataset.Relation.JoinType.LEFT_JOIN,
+        Dataset.Relation.JoinType.RIGHT_JOIN
     )
 
     override fun renderFilter(
-        filter: ReportFilter,
-        contextModelName: ModelName,
+        filter: FilterValue,
+        contextDatasetName: DatasetName,
         context: IQueryGeneratorContext
     ): RenderedFilter {
-        return when (filter.value) {
-            is ReportFilter.FilterValue.Sql -> {
-                val renderedQuery = context.renderSQL(filter.value.sql, context.getOrGenerateAlias(contextModelName, null), contextModelName)
+        return when (filter) {
+            is FilterValue.NestedFilter -> {
+                val renderedSubFilters = filter.filters.map { renderFilter(it, contextDatasetName, context) }
+                RenderedFilter(
+                    renderedSubFilters.flatMap { it.joins },
+                    renderedSubFilters.mapNotNull { it.whereFilter }.joinToString(" ${filter.connector} "),
+                    renderedSubFilters.mapNotNull { it.havingFilter }.joinToString(" ${filter.connector} ")
+                )
+            }
+
+            is FilterValue.SqlFilter -> {
+                val renderedQuery = context.renderSQL(filter.sql, context.getOrGenerateAlias(contextDatasetName, null), contextDatasetName)
                 RenderedFilter(listOf(), renderedQuery, null)
             }
-            is ReportFilter.FilterValue.MetricFilter -> {
+
+            is FilterValue.MetricFilter -> {
                 val joins = mutableListOf<String>()
-                val wheres = mutableListOf<String>()
-                val havings = mutableListOf<String>()
+                var wheres: String? = null
+                var havings: String? = null
 
-                filter.value.filters.forEach {
-                    val metricValue = it.metricValue ?: filter.value.metricValue ?: throw java.lang.IllegalStateException()
-                    when (metricValue) {
-                        is ReportMetric.ReportDimension -> {
-                            // hacky way to find out relation if the dimension doesn't belong to context model
-                            val relationName = if (contextModelName != metricValue.modelName) {
-                                context.referencedRelations
-                                    .filter { it.value.sourceModelName == contextModelName && it.value.targetModelName == metricValue.modelName }
-                                    .map { it.value }
-                                    .firstOrNull()?.relation?.name
+                val (clazz, type) = filter.metric.getType(context, contextDatasetName)
+                when (clazz) {
+                    ReportMetric.ReportDimension::class -> {
 
-                                // TODO: find out if the dimension is from the parent model before throwing exception
-                                // the filter is not applicable to this model
-//                                throw MetriqlException("Dimension is not applicable for context model: $metricValue", HttpResponseStatus.BAD_REQUEST)
-                                null
-                            } else metricValue.relationName
+                        val dimension = filter.metric.toDimension(contextDatasetName, type)
 
-                            val (dim, _) = generateModelDimension(contextModelName, metricValue.name, metricValue.relationName, context)
+                        val (dim, _) = generateModelDimension(contextDatasetName, filter.metric.name, filter.metric.relation, context)
 
-                            val renderedMetric = renderDimension(
-                                context,
-                                contextModelName,
-                                metricValue.name,
-                                relationName,
-                                metricValue.postOperation,
-                                MetricPositionType.FILTER
-                            )
+                        val renderedMetric = renderDimension(
+                            context,
+                            contextDatasetName,
+                            dimension.name,
+                            dimension.relation,
+                            dimension.timeframe,
+                            MetricPositionType.FILTER
+                        )
 
-                            val value = if (it.value is SQLRenderable) {
-                                context.renderSQL(it.value, context.getOrGenerateAlias(contextModelName, relationName), contextModelName)
-                            } else {
-                                it.value
-                            }
-
-                            if (renderedMetric.join != null) {
-                                joins.add(renderedMetric.join)
-                            }
-
-                            val timeframeType = ((it.metricValue as? ReportMetric.ReportDimension)?.postOperation?.value as? IPostOperation)?.valueType
-                            val (_, operator) = getOperation(timeframeType ?: dim.dimension.fieldType, it.operator)
-
-                            wheres.add(
-                                filters.generateFilter(
-                                    context,
-                                    operator as FilterOperator,
-                                    renderedMetric.value,
-                                    value
-                                )
-                            )
+                        val value = if (filter.value is SQLRenderable) {
+                            context.renderSQL(filter.value, context.getOrGenerateAlias(contextDatasetName, filter.metric.relation), contextDatasetName)
+                        } else {
+                            filter.value
                         }
-                        is ReportMetric.ReportMappingDimension -> {
-                            val mappingType = metricValue.name
-                            val postOperation = metricValue.postOperation
-                            val dimensionName = context.getMappingDimensions(contextModelName).get(mappingType)
-                                ?: throw MetriqlException("'${mappingType.serializableName}' mapping type not found for model $contextModelName", HttpResponseStatus.BAD_REQUEST)
-                            val renderedMetric = renderDimension(
-                                context,
-                                contextModelName,
-                                dimensionName,
-                                null,
-                                postOperation,
-                                MetricPositionType.FILTER
-                            )
-                            val (_, operator) = getOperation(metricValue.name.fieldType, it.operator)
 
-                            wheres.add(
-                                filters.generateFilter(
-                                    context,
-                                    operator as FilterOperator,
-                                    renderedMetric.value,
-                                    it.value
-                                )
-                            )
+                        if (renderedMetric.join != null) {
+                            joins.add(renderedMetric.join)
                         }
-                        is ReportMeasure -> {
-                            val renderedMetric = renderMeasure(
-                                context,
-                                contextModelName,
-                                metricValue.name,
-                                metricValue.relationName,
-                                MetricPositionType.FILTER,
-                                ADHOC
-                            )
 
-                            val (_, operator) = getOperation(FieldType.DOUBLE, it.operator)
+                        val (_, operator) = getOperation(dimension.timeframe?.type?.fieldType ?: dim.dimension.fieldType, filter.operator)
 
-                            val havingFilters = filter.value.filters.joinToString(" OR ") { measureFilter ->
-                                filters.generateFilter(
-                                    context,
-                                    operator as FilterOperator,
-                                    renderedMetric.value,
-                                    measureFilter.value
-                                )
-                            }
+                        wheres = filters.generateFilter(
+                            context,
+                            operator as FilterOperator,
+                            renderedMetric.value,
+                            value
+                        )
+                    }
+                    ReportMeasure::class -> {
+                        val renderedMetric = renderMeasure(
+                            context,
+                            contextDatasetName,
+                            filter.metric.name,
+                            filter.metric.relation,
+                            MetricPositionType.FILTER,
+                            ADHOC
+                        )
 
-                            if (renderedMetric.join != null) {
-                                joins.add(renderedMetric.join)
-                            }
+                        val (_, operator) = getOperation(FieldType.DOUBLE, filter.operator)
 
-                            havings.add(havingFilters)
+                        havings = filters.generateFilter(
+                            context,
+                            operator as FilterOperator,
+                            renderedMetric.value,
+                            filter.value
+                        )
+
+                        if (renderedMetric.join != null) {
+                            joins.add(renderedMetric.join)
                         }
-                        is ReportMetric.Function -> TODO()
-                        is ReportMetric.Unary -> TODO()
                     }
                 }
 
-                val whereFilters = wheres.joinToString(" OR ")
-                val havingFilters = havings.joinToString(" OR ")
-
                 RenderedFilter(
                     joins,
-                    if (wheres.size > 1) "($whereFilters)" else if (wheres.size == 1) whereFilters else null,
-                    if (havings.size > 1) "($havingFilters)" else if (havings.size == 1) havingFilters else null
+                    if (wheres != null) "($wheres)" else null,
+                    if (havings != null) "($havings)" else null
                 )
             }
         }
@@ -233,22 +194,27 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 INTERMEDIATE_ACCUMULATE -> "count($columnValue)"
                 INTERMEDIATE_MERGE -> "coalesce(sum($columnValue), 0)"
             }
+
             COUNT_UNIQUE -> when (context) {
                 ADHOC -> "count(distinct $columnValue)"
                 else -> throw MetriqlException("`countUnique` aggregation can't be used in `aggregate`, please use `approximateUnique`", HttpResponseStatus.BAD_REQUEST)
             }
+
             AVERAGE -> when (context) {
                 ADHOC -> "avg($columnValue)"
                 else -> null
             }
+
             SUM_DISTINCT -> when (context) {
                 ADHOC -> "sum(distinct $columnValue)"
                 else -> null
             }
+
             AVERAGE_DISTINCT -> when (context) {
                 ADHOC -> "avg(distinct $columnValue)"
                 else -> null
             }
+
             SQL -> columnValue
             else -> null
         } ?: throw MetriqlException("`$aggregationType` measure is not supported for $context(`$columnValue`)", HttpResponseStatus.BAD_REQUEST)
@@ -256,48 +222,50 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
     override fun renderMeasure(
         context: IQueryGeneratorContext,
-        contextModelName: ModelName,
+        contextDatasetName: DatasetName,
         measureName: MeasureName,
         relationName: RelationName?,
         metricPositionType: MetricPositionType,
         queryType: WarehouseMetriqlBridge.AggregationContext,
-        extraFilters: List<ReportFilter>?,
+        extraFilters: List<FilterValue>?,
         modelAlias: String?
     ): WarehouseMetriqlBridge.RenderedField {
         val (modelMeasure, modelRelation) = if (relationName != null) {
-            if (contextModelName == null) {
+            if (contextDatasetName == null) {
                 throw IllegalStateException("Context model name is required when measure has a relation to join")
             }
-            val modelRelation = context.getRelation(contextModelName, relationName)
+            val modelRelation = context.getRelation(contextDatasetName, relationName)
             // Get the dimensions model-name from joins target model
-            val modelMeasure = context.getModelMeasure(measureName, modelRelation.targetModelName)
+            val modelMeasure = context.getModelMeasure(measureName, modelRelation.targetDatasetName)
             Pair(modelMeasure, modelRelation)
         } else {
-            val modelMeasure = context.getModelMeasure(measureName, contextModelName)
+            val modelMeasure = context.getModelMeasure(measureName, contextDatasetName)
             Pair(modelMeasure, null)
         }
 
         val measure = modelMeasure.measure
-        val isWindow = measure.value is Model.Measure.MeasureValue.Sql && measure.value.window == true
+        val isWindow = measure.value is Dataset.Measure.MeasureValue.Sql && measure.value.window == true
 
         val filters = (modelMeasure.measure.filters ?: listOf()) + (extraFilters ?: listOf())
-        val isFilterInPushdown = measure.type == Model.Measure.Type.SQL && measure.value.agg == null
-        val alias = context.getOrGenerateAlias(contextModelName, relationName)
+        val isFilterInPushdown = measure.type == Dataset.Measure.Type.SQL && measure.value.agg == null
+        val alias = context.getOrGenerateAlias(contextDatasetName, relationName)
 
         val rawValue = when (measure.value) {
             // Exclude aggregation if filter is present. Aggregation function will be added later
-            is Model.Measure.MeasureValue.Column -> {
+            is Dataset.Measure.MeasureValue.Column -> {
                 when (queryType) {
                     ADHOC, INTERMEDIATE_ACCUMULATE ->
                         if (measure.value.column == null)
                         // when filter is enabled, * fails
                             "1" else {
-                            context.getSQLReference(modelMeasure.target, alias, modelMeasure.modelName, measure.value.column)
+                            context.getSQLReference(modelMeasure.target, alias, modelMeasure.datasetName, measure.value.column)
                         }
+
                     INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
-            is Model.Measure.MeasureValue.Sql -> {
+
+            is Dataset.Measure.MeasureValue.Sql -> {
                 when (queryType) {
                     ADHOC, INTERMEDIATE_ACCUMULATE -> {
                         // If there is no aggregation, we need to pushdown the filters to underlying measures
@@ -311,23 +279,26 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                         context.renderSQL(
                             measure.value.sql,
                             alias,
-                            modelMeasure.modelName,
+                            modelMeasure.datasetName,
                             hook = hook,
                             renderAlias = measure.value.window != null
                         )
                     }
+
                     INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
-            is Model.Measure.MeasureValue.Dimension -> {
-                val sqlMeasure = Model.Measure.MeasureValue.Sql("{{dimension.${measure.value.dimension}}}", measure.value.aggregation)
+
+            is Dataset.Measure.MeasureValue.Dimension -> {
+                val sqlMeasure = Dataset.Measure.MeasureValue.Sql("{{dimension.${measure.value.dimension}}}", measure.value.aggregation)
 
                 when (queryType) {
                     ADHOC, INTERMEDIATE_ACCUMULATE -> context.renderSQL(
                         sqlMeasure.sql,
                         alias,
-                        modelMeasure.modelName
+                        modelMeasure.datasetName
                     )
+
                     INTERMEDIATE_MERGE -> quoteIdentifier(measureName)
                 }
             }
@@ -340,23 +311,16 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         // A filter might use a dimension from a relation. New joins may be added.
         // If the aggregation is not set, the only use case is it's a SQL
         val (value, joinRelations) = if (filters.isNotEmpty() && !isFilterInPushdown) {
-            if (contextModelName == null) {
+            if (contextDatasetName == null) {
                 throw MetriqlException(
                     "Measure '${measure.name}' can't be rendered in this context while it uses relational dimensions in filters and context model name is not set.",
                     HttpResponseStatus.BAD_REQUEST
                 )
             }
             val renderedFilters = filters.map {
-                // Measure filters only have metric filter
-                val metricValue = (it.value as ReportFilter.FilterValue.MetricFilter).metricValue
-                val filterDimensionsModelName = if (metricValue is ReportMetric.ReportDimension) {
-                    metricValue.modelName!!
-                } else {
-                    contextModelName
-                }
                 renderFilter(
                     it,
-                    filterDimensionsModelName,
+                    contextDatasetName,
                     context
                 )
             }
@@ -387,10 +351,10 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                     (relationName != null && it.value.relation.relationType == MANY_TO_ONE)
             }
             val (aggregation, nonSymmetricAggregatedValue) = if (nonSymmetricAggregates.isNotEmpty()) {
-                val primaryKeyDimension = context.getModel(contextModelName)?.dimensions.find { it.primary == true }?.name
-                    ?: throw MetriqlException("Primary key dimension is required for non-symmetric aggregates in `$contextModelName`", HttpResponseStatus.BAD_REQUEST)
+                val primaryKeyDimension = context.getModel(contextDatasetName)?.dimensions.find { it.primary == true }?.name
+                    ?: throw MetriqlException("Primary key dimension is required for non-symmetric aggregates in `$contextDatasetName`", HttpResponseStatus.BAD_REQUEST)
 
-                val primaryKey = renderDimension(context, contextModelName, primaryKeyDimension, null, null, MetricPositionType.FILTER)
+                val primaryKey = renderDimension(context, contextDatasetName, primaryKeyDimension, null, null, MetricPositionType.FILTER)
 
                 val (aggregation, nullableNonSymmetricAggregatedValue) = when (measure.value.agg) {
                     AVERAGE -> null to nonSymmetricAggregateAvg(value, primaryKey.value)
@@ -405,7 +369,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                         """
                     Non-symmetric aggregation detected, this can show unexpected results so it's disabled by default.
                     Aggregation '${measure.value.agg.serializableName}'
-                    ${nonSymmetricAggregates.map { "`${it.value.relation.name}` relation from model `${it.value.sourceModelName}`" }}
+                    ${nonSymmetricAggregates.map { "`${it.value.relation.name}` relation from model `${it.value.sourceDatasetName}`" }}
                         """.trimIndent(),
                         HttpResponseStatus.BAD_REQUEST
                     )
@@ -454,14 +418,14 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
     override fun generateDimensionMetaQuery(
         context: IQueryGeneratorContext,
-        modelName: ModelName,
-        modelTarget: Model.Target,
-        dimensions: List<Model.Dimension>,
+        datasetName: DatasetName,
+        datasetTarget: Dataset.Target,
+        dimensions: List<Dataset.Dimension>,
     ): String {
         val modelTargetSQL = context.getSQLReference(
-            modelTarget,
-            context.getOrGenerateAlias(modelName, null),
-            modelName,
+            datasetTarget,
+            context.getOrGenerateAlias(datasetName, null),
+            datasetName,
             null,
             dimensions.map { it.name },
             DateRange(LocalDate.now().minusDays(14), LocalDate.now()) // Dimension discovery filter on last 14 days. Especially helpful for bigquery
@@ -471,13 +435,14 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             dimensions
                 .joinToString(", ") { dimension ->
                     val value = when (dimension.value) {
-                        is Model.Dimension.DimensionValue.Column -> context.getSQLReference(
-                            modelTarget,
-                            context.getOrGenerateAlias(modelName, null),
-                            modelName,
+                        is Dataset.Dimension.DimensionValue.Column -> context.getSQLReference(
+                            datasetTarget,
+                            context.getOrGenerateAlias(datasetName, null),
+                            datasetName,
                             dimension.value.column
                         )
-                        is Model.Dimension.DimensionValue.Sql -> context.renderSQL(dimension.value.sql, context.getOrGenerateAlias(modelName, null), modelName)
+
+                        is Dataset.Dimension.DimensionValue.Sql -> context.renderSQL(dimension.value.sql, context.getOrGenerateAlias(datasetName, null), datasetName)
                     }
                     "$value AS ${quoteIdentifier(context.getDimensionAlias(dimension.name, null, null))}"
                 }
@@ -489,63 +454,63 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     }
 
     private fun generateModelDimension(
-        contextModelName: ModelName,
+        contextDatasetName: DatasetName,
         dimensionName: DimensionName,
         relationName: RelationName?,
         context: IQueryGeneratorContext,
     ): Pair<ModelDimension, ModelRelation?> {
         return if (relationName != null) {
-            val modelRelation = context.getRelation(contextModelName, relationName)
+            val modelRelation = context.getRelation(contextDatasetName, relationName)
             // Get the dimensions model-name from joins target model
-            val modelDimension = context.getModelDimension(dimensionName, modelRelation.targetModelName)
+            val modelDimension = context.getModelDimension(dimensionName, modelRelation.targetDatasetName)
             Pair(modelDimension, modelRelation)
         } else {
-            val modelDimension = context.getModelDimension(dimensionName, contextModelName)
+            val modelDimension = context.getModelDimension(dimensionName, contextDatasetName)
             Pair(modelDimension, null)
         }
     }
 
     override fun renderDimension(
         context: IQueryGeneratorContext,
-        contextModelName: ModelName,
+        contextDatasetName: DatasetName,
         dimensionName: DimensionName,
         relationName: RelationName?,
-        postOperation: ReportMetric.PostOperation?,
+        timeframe: ReportMetric.Timeframe?,
         metricPositionType: MetricPositionType,
         modelAlias: String?
     ): WarehouseMetriqlBridge.RenderedField {
-        val (modelDimension, modelRelation) = generateModelDimension(contextModelName, dimensionName, relationName, context)
+        val (modelDimension, modelRelation) = generateModelDimension(contextDatasetName, dimensionName, relationName, context)
 
         val dimension = modelDimension.dimension
-        val isWindow = dimension.value is Model.Dimension.DimensionValue.Sql && dimension.value.window == true
+        val isWindow = dimension.value is Dataset.Dimension.DimensionValue.Sql && dimension.value.window == true
 
-        val modelAlias = modelAlias ?: context.getOrGenerateAlias(contextModelName, relationName)
+        val modelAlias = modelAlias ?: context.getOrGenerateAlias(contextDatasetName, relationName)
         val rawValue = when (dimension.value) {
-            is Model.Dimension.DimensionValue.Column -> context.getSQLReference(modelDimension.target, modelAlias, modelDimension.modelName, dimension.value.column)
-            is Model.Dimension.DimensionValue.Sql -> context.renderSQL(
+            is Dataset.Dimension.DimensionValue.Column -> context.getSQLReference(modelDimension.target, modelAlias, modelDimension.datasetName, dimension.value.column)
+            is Dataset.Dimension.DimensionValue.Sql -> context.renderSQL(
                 dimension.value.sql,
-                context.getOrGenerateAlias(contextModelName, relationName),
-                modelName = modelDimension.modelName,
+                context.getOrGenerateAlias(contextDatasetName, relationName),
+                datasetName = modelDimension.datasetName,
                 renderAlias = dimension.value.window != null
             )
         }
 
-        val value = metricRenderHook.dimensionBeforePostOperation(context, metricPositionType, dimension, postOperation, rawValue)
+        val value = metricRenderHook.dimensionBeforePostOperation(context, metricPositionType, dimension, timeframe, rawValue)
 
-        val postProcessedDimension = if (postOperation != null) { // && modelDimension.dimension.fieldType != null
-            val template = when (postOperation.type) {
-                ReportMetric.PostOperation.Type.TIMESTAMP -> timeframes.timestampPostOperations[postOperation.value]
-                ReportMetric.PostOperation.Type.DATE -> timeframes.datePostOperations[postOperation.value]
-                ReportMetric.PostOperation.Type.TIME -> timeframes.timePostOperations[postOperation.value]
+        val postProcessedDimension = if (timeframe != null) { // && modelDimension.dimension.fieldType != null
+            val template = when (timeframe.type) {
+                ReportMetric.Timeframe.Type.TIMESTAMP -> timeframes.timestampPostOperations[timeframe.value]
+                ReportMetric.Timeframe.Type.DATE -> timeframes.datePostOperations[timeframe.value]
+                ReportMetric.Timeframe.Type.TIME -> timeframes.timePostOperations[timeframe.value]
             } ?: throw MetriqlException("Post operation is not supported", HttpResponseStatus.BAD_REQUEST)
-            metricRenderHook.dimensionAfterPostOperation(context, metricPositionType, dimension, postOperation, String.format(template, value))
+            metricRenderHook.dimensionAfterPostOperation(context, metricPositionType, dimension, timeframe, String.format(template, value))
         } else {
             value
         }
 
         val joinRelations = if (modelRelation != null) generateJoinStatement(context, modelRelation) else null
 
-        val alias = context.getDimensionAlias(dimensionName, relationName, postOperation)
+        val alias = context.getDimensionAlias(dimensionName, relationName, timeframe)
         val dimensionValue = when (metricPositionType) {
             MetricPositionType.FILTER -> postProcessedDimension
             MetricPositionType.PROJECTION -> "$postProcessedDimension AS ${quoteIdentifier(alias)}"
@@ -560,47 +525,49 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     ): String {
         val relation = modelRelation.relation
         val joinType = when (relation.joinType) {
-            Model.Relation.JoinType.LEFT_JOIN -> "LEFT JOIN"
-            Model.Relation.JoinType.INNER_JOIN -> "INNER JOIN"
-            Model.Relation.JoinType.RIGHT_JOIN -> "RIGHT JOIN"
-            Model.Relation.JoinType.FULL_JOIN -> "FULL JOIN"
+            Dataset.Relation.JoinType.LEFT_JOIN -> "LEFT JOIN"
+            Dataset.Relation.JoinType.INNER_JOIN -> "INNER JOIN"
+            Dataset.Relation.JoinType.RIGHT_JOIN -> "RIGHT JOIN"
+            Dataset.Relation.JoinType.FULL_JOIN -> "FULL JOIN"
         }
-        val targetAlias = context.getOrGenerateAlias(modelRelation.sourceModelName, modelRelation.relation.name)
-        val sourceAlias = context.getOrGenerateAlias(modelRelation.sourceModelName, null)
+        val targetAlias = context.getOrGenerateAlias(modelRelation.sourceDatasetName, modelRelation.relation.name)
+        val sourceAlias = context.getOrGenerateAlias(modelRelation.sourceDatasetName, null)
 
-        val joinModel = context.getSQLReference(modelRelation.targetModelTarget, targetAlias, modelRelation.targetModelName, null)
+        val joinModel = context.getSQLReference(modelRelation.targetDatasetTarget, targetAlias, modelRelation.targetDatasetName, null)
         val joinExpression = when (relation.value) {
-            is Model.Relation.RelationValue.SqlValue -> {
+            is Dataset.Relation.RelationValue.SqlValue -> {
                 context.renderSQL(
                     relation.value.sql,
                     targetAlias,
-                    modelRelation.targetModelName,
-                    extraContext = mapOf("TARGET" to context.getOrGenerateAlias(modelRelation.sourceModelName, modelRelation.relation.name))
+                    modelRelation.targetDatasetName,
+                    extraContext = mapOf("TARGET" to context.getOrGenerateAlias(modelRelation.sourceDatasetName, modelRelation.relation.name))
                 )
             }
-            is Model.Relation.RelationValue.ColumnValue -> {
+
+            is Dataset.Relation.RelationValue.ColumnValue -> {
                 val columnTypeRelation = relation.value
                 "${
                 context.getSQLReference(
-                    modelRelation.sourceModelTarget,
+                    modelRelation.sourceDatasetTarget,
                     sourceAlias,
-                    modelRelation.sourceModelName,
+                    modelRelation.sourceDatasetName,
                     columnTypeRelation.sourceColumn
                 )
                 } = ${
                 context.getSQLReference(
-                    modelRelation.targetModelTarget,
+                    modelRelation.targetDatasetTarget,
                     targetAlias,
-                    modelRelation.targetModelName,
+                    modelRelation.targetDatasetName,
                     columnTypeRelation.targetColumn
                 )
                 }"
             }
-            is Model.Relation.RelationValue.DimensionValue -> {
+
+            is Dataset.Relation.RelationValue.DimensionValue -> {
                 "${
                 renderDimension(
                     context,
-                    modelRelation.sourceModelName,
+                    modelRelation.sourceDatasetName,
                     relation.value.sourceDimension,
                     null,
                     null,
@@ -609,7 +576,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                 } = ${
                 renderDimension(
                     context,
-                    modelRelation.targetModelName,
+                    modelRelation.targetDatasetName,
                     relation.value.targetDimension,
                     null,
                     null,
@@ -623,7 +590,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     }
 
     // Append viewModels as WITH model AS (), model_other as ()
-    override fun generateQuery(viewModels: Map<ModelName, String>, rawQuery: String, comments: List<String>): String {
+    override fun generateQuery(viewModels: Map<DatasetName, String>, rawQuery: String, comments: List<String>): String {
         val comments = if (comments.isEmpty()) "" else
             """/*
 ${comments.joinToString("\n") { "   * $it" }}
