@@ -67,8 +67,10 @@ class ReportService(
                 reportFilters,
             )
 
-            val queryTaskGenerator = (queryTaskGenerators.find { it.javaClass == target.java }
-                ?: throw MetriqlException("Unable to find task generator $target", HttpResponseStatus.INTERNAL_SERVER_ERROR))
+            val queryTaskGenerator = (
+                queryTaskGenerators.find { it.javaClass == target.java }
+                    ?: throw MetriqlException("Unable to find task generator $target", HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                )
 
             val queryOptions = sqlQueryOptions ?: SqlQuery.QueryOptions(DEFAULT_LIMIT, null, null, useCache)
             return queryTaskGenerator.createTask(

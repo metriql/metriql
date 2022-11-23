@@ -28,33 +28,33 @@ object UnirestHelper {
             .connectTimeout(1_200_000)
             .socketTimeout(2_800_000)
             /** Setting the object mapper is required to use our own helpers and annotations */
-            .setObjectMapper( object : ObjectMapper {
-            private val mapper = JsonHelper.getMapper().copy()
+            .setObjectMapper(object : ObjectMapper {
+                private val mapper = JsonHelper.getMapper().copy()
 
-            override fun <T> readValue(value: String, valueType: Class<T>): T {
-                try {
-                    return mapper.readValue(value, valueType)
-                } catch (e: IOException) {
-                    throw RuntimeException(e)
+                override fun <T> readValue(value: String, valueType: Class<T>): T {
+                    try {
+                        return mapper.readValue(value, valueType)
+                    } catch (e: IOException) {
+                        throw RuntimeException(e)
+                    }
                 }
-            }
 
-            override fun <T : Any?> readValue(value: String, genericType: GenericType<T>): T {
-                try {
-                    return mapper.readValue(value, mapper.constructType(genericType.type))
-                } catch (e: IOException) {
-                    throw RuntimeException(e)
+                override fun <T : Any?> readValue(value: String, genericType: GenericType<T>): T {
+                    try {
+                        return mapper.readValue(value, mapper.constructType(genericType.type))
+                    } catch (e: IOException) {
+                        throw RuntimeException(e)
+                    }
                 }
-            }
 
-            override fun writeValue(value: Any): String {
-                try {
-                    return mapper.writeValueAsString(value)
-                } catch (e: JsonProcessingException) {
-                    throw RuntimeException(e)
+                override fun writeValue(value: Any): String {
+                    try {
+                        return mapper.writeValueAsString(value)
+                    } catch (e: JsonProcessingException) {
+                        throw RuntimeException(e)
+                    }
                 }
-            }
-        }).interceptor(object : Interceptor {
+            }).interceptor(object : Interceptor {
                 override fun onRequest(request: HttpRequest<*>, config: Config?) {
                     logger.info("Sending request to ${request.url}")
                 }

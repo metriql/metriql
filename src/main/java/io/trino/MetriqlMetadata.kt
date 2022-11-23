@@ -5,9 +5,9 @@ import com.google.common.collect.ImmutableList
 import com.metriql.db.FieldType
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
-import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.dataset.Dataset
+import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.jdbc.extractModelNameFromPropertiesTable
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.toSnakeCase

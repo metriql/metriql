@@ -16,10 +16,8 @@ import io.trino.spi.connector.ConnectorSplitManager
 import io.trino.spi.connector.ConnectorTransactionHandle
 import io.trino.spi.session.PropertyMetadata
 import io.trino.spi.transaction.IsolationLevel
-import io.trino.spi.type.MapType
 import io.trino.transaction.InternalConnector
 import io.trino.transaction.TransactionId
-import io.trino.type.MapParametricType
 
 class MetriqlConnectorFactory(private val internalNodeManager: InternalNodeManager, val datasetService: IDatasetService) : ConnectorFactory {
     override fun getName() = "metriql"

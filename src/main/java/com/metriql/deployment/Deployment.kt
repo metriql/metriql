@@ -17,7 +17,7 @@ interface Deployment {
     fun getApps(auth: ProjectAuth) = JinjaApps(listOf())
     fun getAuth(context: UserContext): ProjectAuth
 
-    fun getTaskGenerators() : List<QueryTaskGenerator> = listOf()
+    fun getTaskGenerators(): List<QueryTaskGenerator> = listOf()
     fun getCacheService(): SuggestionCacheService
 
     enum class AuthType {

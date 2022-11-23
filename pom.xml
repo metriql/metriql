@@ -42,7 +42,6 @@
         <postgresql.version>42.2.8</postgresql.version>
         <java.version>11</java.version>
         <aws.library>1.10.66</aws.library>
-        <swagger.version>1.5.16</swagger.version>
 
         <!--Plugin versions-->
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
@@ -264,12 +263,6 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>13.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.swagger</groupId>
-            <artifactId>swagger-core</artifactId>
-            <version>1.5.16</version>
         </dependency>
 
         <dependency>
@@ -582,18 +575,6 @@
                     <artifactId>kotlin-stdlib</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>openapi-generator</artifactId>
-            <version>6.2.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>openapi-generator-cli</artifactId>
-            <version>6.2.0</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

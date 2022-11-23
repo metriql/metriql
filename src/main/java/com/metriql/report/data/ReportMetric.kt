@@ -2,10 +2,10 @@ package com.metriql.report.data
 
 import com.metriql.db.FieldType
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.dataset.DimensionName
-import com.metriql.service.dataset.MeasureName
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.MeasureName
 import com.metriql.service.dataset.RelationName
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
@@ -68,7 +68,7 @@ sealed class ReportMetric {
         val value: Enum<*>
     ) {
         @UppercaseEnum
-        enum class Type(val clazz: KClass<out Enum<*>>, val fieldType : FieldType) : StrValueEnum {
+        enum class Type(val clazz: KClass<out Enum<*>>, val fieldType: FieldType) : StrValueEnum {
             TIMESTAMP(TimestampPostOperation::class, FieldType.TIMESTAMP),
             DATE(DatePostOperation::class, FieldType.DATE),
             TIME(TimePostOperation::class, FieldType.TIME);

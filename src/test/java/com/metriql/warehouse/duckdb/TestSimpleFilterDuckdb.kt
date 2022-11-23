@@ -11,6 +11,6 @@ class TestSimpleFilterDuckdb : JdbcTestSimpleFilter() {
     }
 
     override fun populate() {
-       // no-op
+        // no-op
     }
 }

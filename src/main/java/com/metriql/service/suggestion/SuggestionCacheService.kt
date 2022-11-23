@@ -1,8 +1,8 @@
 package com.metriql.service.suggestion
 
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.dataset.DimensionName
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
 import java.time.Instant
 
 interface SuggestionCacheService {

@@ -21,54 +21,45 @@ class DiscoverService(private val dataSource: DataSource) {
         val measures = mutableListOf<Dataset.Measure>()
         measures.add(
             Dataset.Measure(
-                "count_of_rows",
-                null,
-                null,
-                null,
-                Dataset.Measure.Type.COLUMN,
-                Dataset.Measure.MeasureValue.Column(Dataset.Measure.AggregationType.COUNT, null),
-                null, null
+                "count_of_rows", null, null, null, Dataset.Measure.Type.COLUMN, Dataset.Measure.MeasureValue.Column(Dataset.Measure.AggregationType.COUNT, null), null, null
             )
         )
 
-        Dataset.MappingDimensions.CommonMappings.values()
-            .mapNotNull { mapping -> mappings.get(mapping)?.let { mapping.discoveredMeasure.invoke(it) } }
-            .forEach {
-                measures.add(it)
-            }
+        Dataset.MappingDimensions.CommonMappings.values().mapNotNull { mapping -> mappings.get(mapping)?.let { mapping.discoveredMeasure.invoke(it) } }.forEach {
+            measures.add(it)
+        }
 
         // Add numeric dimensions of SUM(col)
-        dimensions
-            .filter { it.type == Dataset.Dimension.Type.COLUMN }
-            .filter { it.fieldType?.isNumeric == true }
-            .forEach {
-                measures.add(
-                    Dataset.Measure(
-                        toMetriqlConventionalName("sum_of_${it.name}"),
-                        null,
-                        it.description,
-                        null,
-                        Dataset.Measure.Type.DIMENSION,
-                        Dataset.Measure.MeasureValue.Dimension(Dataset.Measure.AggregationType.SUM, it.name),
-                        null, null
-                    )
+        dimensions.filter { it.type == Dataset.Dimension.Type.COLUMN }.filter { it.fieldType?.isNumeric == true }.forEach {
+            measures.add(
+                Dataset.Measure(
+                    toMetriqlConventionalName("sum_of_${it.name}"),
+                    null,
+                    it.description,
+                    null,
+                    Dataset.Measure.Type.DIMENSION,
+                    Dataset.Measure.MeasureValue.Dimension(Dataset.Measure.AggregationType.SUM, it.name),
+                    null,
+                    null
                 )
-            }
+            )
+        }
 
         return measures
     }
 
-    fun discoverDimensionFieldTypes(context: IQueryGeneratorContext, modelName: String, datasetTarget: Dataset.Target, dimensions: List<Dataset.Dimension>): List<Dataset.Dimension> {
-        val dimensionsWithoutFieldType = dimensions
-            .filter { it.fieldType == null && it.hidden != true }
+    fun discoverDimensionFieldTypes(
+        context: IQueryGeneratorContext,
+        modelName: String,
+        datasetTarget: Dataset.Target,
+        dimensions: List<Dataset.Dimension>
+    ): List<Dataset.Dimension> {
+        val dimensionsWithoutFieldType = dimensions.filter { it.fieldType == null && it.hidden != true }
 
         if (dimensionsWithoutFieldType.isEmpty()) return dimensions
 
         val query = dataSource.warehouse.bridge.generateDimensionMetaQuery(
-            context,
-            modelName,
-            datasetTarget,
-            dimensionsWithoutFieldType
+            context, modelName, datasetTarget, dimensionsWithoutFieldType
         )
 
         logger.info("Discovering ${dimensionsWithoutFieldType.size} dimensions of model `$modelName`")
@@ -112,10 +103,12 @@ class DiscoverService(private val dataSource: DataSource) {
                         val defaultTimestampPostOperations = metriqlBridge.timeframes.timestampPostOperations
                         defaultTimestampPostOperations.keys.map { it.serializableName }
                     }
+
                     FieldType.DATE -> {
                         val defaultDatePostOperations = metriqlBridge.timeframes.datePostOperations
                         defaultDatePostOperations.keys.map { it.serializableName }
                     }
+
                     FieldType.TIME -> {
                         val defaultTimePostOperations = metriqlBridge.timeframes.timePostOperations
                         defaultTimePostOperations.keys.map { it.serializableName }
@@ -134,20 +127,13 @@ class DiscoverService(private val dataSource: DataSource) {
                 val value = if (it.sql == null) Dataset.Dimension.DimensionValue.Column(it.name) else Dataset.Dimension.DimensionValue.Sql(it.sql)
                 val dimensionName = toMetriqlConventionalName(it.name)
                 Dataset.Dimension(
-                    dimensionName,
-                    type,
-                    value,
-                    null,
+                    dimensionName, type, value, null,
                     when {
                         it.label != null && it.label.lowercase() != it.name -> it.label
                         dimensionName != it.name.lowercase() -> it.name
                         else -> null
                     },
-                    null,
-                    false,
-                    null,
-                    null,
-                    it.type
+                    null, false, null, null, it.type
                 )
             }
         }
@@ -171,8 +157,7 @@ class DiscoverService(private val dataSource: DataSource) {
         private fun discoverMapping(dimensions: List<Dataset.Dimension>): Dataset.MappingDimensions {
             val userId = dimensions.find { it.name.contains("user") && it.fieldType == FieldType.STRING }
             val eventTimestamp = dimensions.find {
-                it.name.contains("time") && it.fieldType == FieldType.TIMESTAMP ||
-                    it.name.contains("date") && it.fieldType == FieldType.DATE
+                it.name.contains("time") && it.fieldType == FieldType.TIMESTAMP || it.name.contains("date") && it.fieldType == FieldType.DATE
             }
 
             val mappings = Dataset.MappingDimensions()

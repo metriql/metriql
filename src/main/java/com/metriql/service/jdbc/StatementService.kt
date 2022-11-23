@@ -39,7 +39,6 @@ import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.tree.Execute
 import io.trino.sql.tree.Query
 import io.trino.sql.tree.Statement
-import io.trino.testing.TestingGroupProvider
 import org.rakam.server.http.HttpService
 import org.rakam.server.http.RakamHttpRequest
 import org.rakam.server.http.annotations.QueryParam
@@ -63,7 +62,7 @@ class StatementService(
     private val taskQueueService: TaskQueueService,
     private val reportService: ReportService,
     private val deployment: Deployment,
-    private val runner : LightweightQueryRunner,
+    private val runner: LightweightQueryRunner,
 ) : HttpService() {
     private val mapper = ObjectMapperProvider().get()
 

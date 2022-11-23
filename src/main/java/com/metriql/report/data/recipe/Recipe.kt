@@ -356,7 +356,8 @@ data class Recipe(
                                         filter.datasetName ?: modelName,
                                         filter.relationName,
                                         filter.timeframe
-                                    ).toMetricReference(), filter.operator!!.name, filter.value
+                                    ).toMetricReference(),
+                                    filter.operator!!.name, filter.value
                                 )
                             }
 

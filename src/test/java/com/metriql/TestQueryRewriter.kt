@@ -1,12 +1,12 @@
 package com.metriql
 
-import com.metriql.tests.Helper.assertJsonEquals
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationMaterialize
-import com.metriql.report.segmentation.SegmentationQueryReWriter
 import com.metriql.report.segmentation.SegmentationQuery
+import com.metriql.report.segmentation.SegmentationQueryReWriter
 import com.metriql.service.auth.ProjectAuth.Companion.systemUser
 import com.metriql.service.jinja.JinjaRendererService
+import com.metriql.tests.Helper.assertJsonEquals
 import com.metriql.tests.TestDatasetService
 import com.metriql.util.JsonHelper
 import com.metriql.warehouse.postgresql.PostgresqlDataSource

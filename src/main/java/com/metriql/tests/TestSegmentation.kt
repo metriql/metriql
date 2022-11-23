@@ -512,7 +512,8 @@ abstract class TestSegmentation {
             "dataset":  "_table", 
             "measures": ["measure"],
             "dimensions": ["_time"]
-          }""", SegmentationQuery::class.java
+          }""",
+            SegmentationQuery::class.java
         )
         val reportFilters = generateReportFilter(DateRange(LocalDate.ofEpochDay(0), LocalDate.ofEpochDay(99)))
         val context = getContext()

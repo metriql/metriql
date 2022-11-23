@@ -8,15 +8,14 @@ import com.metriql.UserContext
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifestParser
 import com.metriql.dbt.DbtProfiles
-import com.metriql.dbt.DbtYamlParser
 import com.metriql.dbt.ProjectYaml
-import com.metriql.report.jinja.JinjaApps
 import com.metriql.report.data.recipe.Recipe
+import com.metriql.report.jinja.JinjaApps
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.ProjectAuth.Companion.PASSWORD_CREDENTIAL
-import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.UpdatableDatasetService
+import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.suggestion.InMemorySuggestionCacheService
 import com.metriql.service.suggestion.SuggestionCacheService
 import com.metriql.util.JsonHelper
@@ -86,7 +85,7 @@ class SingleTenantDbtDeployment(
         return WarehouseLocator.getDataSource(config)
     }
 
-    override fun getApps(auth : ProjectAuth): JinjaApps {
+    override fun getApps(auth: ProjectAuth): JinjaApps {
         val projectDirectory = File(projectDir)
         val apps = File(projectDirectory, "applications/").walk().filter {
             it.extension == "sql"
@@ -106,7 +105,7 @@ class SingleTenantDbtDeployment(
                 YamlHelper.mapper.readValue(vars, object : TypeReference<Map<String, Any?>>() {})
             } else mapOf()
         }
-        fun getProfileConfigForSingleTenant(projectDir: String, profilesContent: String?, profilesDir: String?, varMap : Map<String, Any?>, profile: String?): WarehouseConfig {
+        fun getProfileConfigForSingleTenant(projectDir: String, profilesContent: String?, profilesDir: String?, varMap: Map<String, Any?>, profile: String?): WarehouseConfig {
             val dbtProjectFile = File(projectDir, "dbt_project.yml")?.let {
                 if (it.exists()) {
                     YamlHelper.mapper.readValue(it.readBytes(), ProjectYaml::class.java)

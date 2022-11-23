@@ -13,10 +13,10 @@ import com.metriql.report.retention.RetentionQuery.DateUnit.WEEK
 import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.util.MetriqlException
 import com.metriql.util.serializableName
 import com.metriql.warehouse.spi.function.TimestampPostOperation
@@ -69,13 +69,13 @@ class RetentionService @Inject constructor(
 
             return Retention.Step(
                 model = "(${
-                    segmentationService.renderQuery(
-                        auth,
-                        context,
-                        SegmentationQuery(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters),
-                        reportFilters,
-                        useAggregate = false, forAccumulator = false
-                    ).second
+                segmentationService.renderQuery(
+                    auth,
+                    context,
+                    SegmentationQuery(contextModelName, dimensionsToRender, listOf(), filters = aStep.filters),
+                    reportFilters,
+                    useAggregate = false, forAccumulator = false
+                ).second
                 }) AS $contextModelName",
                 // While the modelReference is rendered by the segmentation service, these dimension values must always refer to dimension aliases.
                 connector = context.warehouseBridge.quoteIdentifier(context.getDimensionAlias(connectorDimensionName, null, null)),

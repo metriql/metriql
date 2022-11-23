@@ -4,10 +4,6 @@ import com.metriql.db.FieldType
 import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.ReportMetric.ReportMeasure
-import com.metriql.service.jinja.MetriqlJinjaContext
-import com.metriql.service.jinja.SQLRenderable
-import com.metriql.service.dataset.DimensionName
-import com.metriql.service.dataset.MeasureName
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.Dataset.Measure.AggregationType
 import com.metriql.service.dataset.Dataset.Measure.AggregationType.AVERAGE
@@ -22,10 +18,14 @@ import com.metriql.service.dataset.Dataset.Measure.AggregationType.SUM_DISTINCT
 import com.metriql.service.dataset.Dataset.Relation.RelationType.MANY_TO_MANY
 import com.metriql.service.dataset.Dataset.Relation.RelationType.MANY_TO_ONE
 import com.metriql.service.dataset.Dataset.Relation.RelationType.ONE_TO_MANY
-import com.metriql.service.dataset.ModelDimension
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.MeasureName
+import com.metriql.service.dataset.ModelDimension
 import com.metriql.service.dataset.ModelRelation
 import com.metriql.service.dataset.RelationName
+import com.metriql.service.jinja.MetriqlJinjaContext
+import com.metriql.service.jinja.SQLRenderable
 import com.metriql.util.DefaultJinja
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
@@ -96,7 +96,8 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         return when (filter) {
             is FilterValue.NestedFilter -> {
                 val renderedSubFilters = filter.filters.map { renderFilter(it, contextDatasetName, context) }
-                RenderedFilter(renderedSubFilters.flatMap { it.joins },
+                RenderedFilter(
+                    renderedSubFilters.flatMap { it.joins },
                     renderedSubFilters.mapNotNull { it.whereFilter }.joinToString(" ${filter.connector} "),
                     renderedSubFilters.mapNotNull { it.havingFilter }.joinToString(" ${filter.connector} ")
                 )
@@ -109,16 +110,16 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
             is FilterValue.MetricFilter -> {
                 val joins = mutableListOf<String>()
-                var wheres : String? = null
-                var havings : String? = null
+                var wheres: String? = null
+                var havings: String? = null
 
                 val (clazz, type) = filter.metric.getType(context, contextDatasetName)
                 when (clazz) {
                     ReportMetric.ReportDimension::class -> {
 
-                        val dimension =  filter.metric.toDimension(contextDatasetName, type)
+                        val dimension = filter.metric.toDimension(contextDatasetName, type)
 
-                        val (dim, _) = generateModelDimension(contextDatasetName,  filter.metric.name,  filter.metric.relation, context)
+                        val (dim, _) = generateModelDimension(contextDatasetName, filter.metric.name, filter.metric.relation, context)
 
                         val renderedMetric = renderDimension(
                             context,
@@ -129,7 +130,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                             MetricPositionType.FILTER
                         )
 
-                        val value = if ( filter.value is SQLRenderable) {
+                        val value = if (filter.value is SQLRenderable) {
                             context.renderSQL(filter.value, context.getOrGenerateAlias(contextDatasetName, filter.metric.relation), contextDatasetName)
                         } else {
                             filter.value
@@ -546,42 +547,42 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
             is Dataset.Relation.RelationValue.ColumnValue -> {
                 val columnTypeRelation = relation.value
                 "${
-                    context.getSQLReference(
-                        modelRelation.sourceDatasetTarget,
-                        sourceAlias,
-                        modelRelation.sourceDatasetName,
-                        columnTypeRelation.sourceColumn
-                    )
+                context.getSQLReference(
+                    modelRelation.sourceDatasetTarget,
+                    sourceAlias,
+                    modelRelation.sourceDatasetName,
+                    columnTypeRelation.sourceColumn
+                )
                 } = ${
-                    context.getSQLReference(
-                        modelRelation.targetDatasetTarget,
-                        targetAlias,
-                        modelRelation.targetDatasetName,
-                        columnTypeRelation.targetColumn
-                    )
+                context.getSQLReference(
+                    modelRelation.targetDatasetTarget,
+                    targetAlias,
+                    modelRelation.targetDatasetName,
+                    columnTypeRelation.targetColumn
+                )
                 }"
             }
 
             is Dataset.Relation.RelationValue.DimensionValue -> {
                 "${
-                    renderDimension(
-                        context,
-                        modelRelation.sourceDatasetName,
-                        relation.value.sourceDimension,
-                        null,
-                        null,
-                        MetricPositionType.FILTER
-                    ).value
+                renderDimension(
+                    context,
+                    modelRelation.sourceDatasetName,
+                    relation.value.sourceDimension,
+                    null,
+                    null,
+                    MetricPositionType.FILTER
+                ).value
                 } = ${
-                    renderDimension(
-                        context,
-                        modelRelation.targetDatasetName,
-                        relation.value.targetDimension,
-                        null,
-                        null,
-                        MetricPositionType.FILTER,
-                        modelAlias = targetAlias
-                    ).value
+                renderDimension(
+                    context,
+                    modelRelation.targetDatasetName,
+                    relation.value.targetDimension,
+                    null,
+                    null,
+                    MetricPositionType.FILTER,
+                    modelAlias = targetAlias
+                ).value
                 }"
             }
         }

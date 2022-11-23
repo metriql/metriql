@@ -5,9 +5,9 @@ import com.metriql.report.IAdHocService
 import com.metriql.report.data.FilterValue
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
+import com.metriql.service.dataset.DatasetName
 import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
 import com.metriql.service.jdbc.StatementService.Companion.isMetadataQuery
-import com.metriql.service.dataset.DatasetName
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.WarehouseQueryTask.Companion.MAX_LIMIT
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
@@ -32,7 +32,7 @@ class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : 
         val statement = parser.createStatement(reportOptions.query, defaultParsingOptions)
         val parameterMap: Map<NodeRef<Parameter>, Expression> = ParameterUtils.parameterExtractor(statement, reportOptions.variables ?: listOf())
 
-        val compiledQuery = if(isMetadataQuery(statement, "metriql")) {
+        val compiledQuery = if (isMetadataQuery(statement, "metriql")) {
             reportOptions.query
         } else {
             try {

@@ -3,10 +3,10 @@ package com.metriql.warehouse.spi.bridge
 import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
-import com.metriql.service.dataset.DimensionName
-import com.metriql.service.dataset.MeasureName
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.DimensionName
+import com.metriql.service.dataset.MeasureName
 import com.metriql.service.dataset.ModelRelation
 import com.metriql.service.dataset.RelationName
 import com.metriql.util.ValidationUtil
@@ -85,7 +85,6 @@ interface WarehouseMetriqlBridge {
     ): RenderedField
 
     data class RenderedFilter(val joins: List<String>, val whereFilter: String?, val havingFilter: String?)
-
 
     /**
      * Renders where, having and a join expression.

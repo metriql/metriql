@@ -33,6 +33,6 @@ interface ICacheService {
     }
 
     interface CacheValue {
-        fun calculateSize() : Int
+        fun calculateSize(): Int
     }
 }

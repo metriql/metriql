@@ -23,9 +23,9 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
         }
 
         return FilterValue.NestedFilter(
-                FilterValue.NestedFilter.Connector.OR,
-                orFilters
-            )
+            FilterValue.NestedFilter.Connector.OR,
+            orFilters
+        )
     }
 
     class FilterReferenceSerializer : JsonSerializer<OrFilters>() {

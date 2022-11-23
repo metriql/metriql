@@ -13,8 +13,6 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap
 import io.trino.server.HttpRequestSessionContext
 import io.trino.spi.security.Identity
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import java.util.Optional
 import javax.ws.rs.core.MultivaluedMap
 

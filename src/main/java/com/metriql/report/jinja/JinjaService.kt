@@ -12,6 +12,4 @@ class JinjaService(val apps: List<JinjaApp>) : IAdHocService<ObjectNode> {
     override fun renderQuery(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: ObjectNode, reportFilters: FilterValue?): IAdHocService.RenderedQuery {
         TODO("not implemented")
     }
-
-
 }

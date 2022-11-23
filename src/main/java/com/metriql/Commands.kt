@@ -22,8 +22,8 @@ import com.metriql.deployment.SingleTenantDbtDeployment.Companion.parseRecipe
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.util.JsonHelper
 import com.metriql.util.TextUtil
 import com.metriql.warehouse.WarehouseLocator
@@ -225,9 +225,11 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
                 apiSecretBase64 != null -> {
                     String(Base64.getDecoder().decode(apiSecretBase64), StandardCharsets.UTF_8)
                 }
+
                 apiSecretFile != null -> {
                     File(apiSecretFile).readText(StandardCharsets.UTF_8)
                 }
+
                 else -> null
             }
 
@@ -237,7 +239,19 @@ open class Commands(help: String? = null) : CliktCommand(help = help ?: "", prin
             val deployment = deployment ?: if (multiTenantUrl != null) {
                 MultiTenantDbtDeployment(multiTenantUrl!!, Duration.valueOf(multiTenantCacheDuration), cacheSpec)
             } else {
-                SingleTenantDbtDeployment(arg, models, passCredentialsToDatasource, timezone, usernamePass, projectDir, super.profilesContent, profilesDir, vars, profile, cacheSpec)
+                SingleTenantDbtDeployment(
+                    arg,
+                    models,
+                    passCredentialsToDatasource,
+                    timezone,
+                    usernamePass,
+                    projectDir,
+                    super.profilesContent,
+                    profilesDir,
+                    vars,
+                    profile,
+                    cacheSpec
+                )
             }
 
             val catalogFile = when {

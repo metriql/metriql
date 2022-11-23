@@ -1,6 +1,5 @@
 package com.metriql.warehouse.duckdb
 
-import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
 import com.metriql.warehouse.spi.Warehouse
 import java.sql.DriverManager
 

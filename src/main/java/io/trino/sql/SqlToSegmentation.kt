@@ -11,13 +11,13 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.mql.MqlService
 import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
-import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
-import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.Dataset.Measure.AggregationType.APPROXIMATE_UNIQUE
 import com.metriql.service.dataset.Dataset.Measure.AggregationType.COUNT_UNIQUE
 import com.metriql.service.dataset.Dataset.Measure.AggregationType.SUM
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.ValidationUtil
@@ -146,7 +146,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             model.name,
             measures.toSet().map { Recipe.FieldReference.fromName(it) },
             dimensions.toSet().map { Recipe.FieldReference.fromName(it) },
-            FilterValue.NestedFilter(FilterValue.NestedFilter.Connector.AND,  whereFiltersPushdown + havingFiltersPushdown),
+            FilterValue.NestedFilter(FilterValue.NestedFilter.Connector.AND, whereFiltersPushdown + havingFiltersPushdown),
             limit = parseLimit(limit.orElse(null)),
             orders = orders
         )

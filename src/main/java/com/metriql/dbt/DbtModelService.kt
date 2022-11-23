@@ -9,10 +9,10 @@ import com.metriql.report.data.recipe.Recipe.Dependencies.DbtDependency
 import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.dataset.UpdatableDatasetService
+import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.util.JsonHelper
 import com.metriql.util.MetriqlException
 import com.metriql.util.YamlHelper
@@ -65,50 +65,52 @@ class DbtModelService @Inject constructor(
         val errors = mutableListOf<HttpServer.JsonAPIError>()
 
         recipe.models?.forEach { model ->
-            model.materializes?.entries?.forEach { entry -> entry.value.entries.forEach { materialize ->
-                val modelName = model.name!!
-                val (target, rawRenderedSql) = try {
-                    segmentationService.generateMaterializeQuery(auth.projectId, context, modelName, materialize.key, materialize.value)
-                } catch (e: MetriqlException) {
-                    errors.add(HttpServer.JsonAPIError.title("Unable to create materialize ${model.name}.${materialize.key}: $e"))
-                    return@forEach
-                }
+            model.materializes?.entries?.forEach { entry ->
+                entry.value.entries.forEach { materialize ->
+                    val modelName = model.name!!
+                    val (target, rawRenderedSql) = try {
+                        segmentationService.generateMaterializeQuery(auth.projectId, context, modelName, materialize.key, materialize.value)
+                    } catch (e: MetriqlException) {
+                        errors.add(HttpServer.JsonAPIError.title("Unable to create materialize ${model.name}.${materialize.key}: $e"))
+                        return@forEach
+                    }
 
-                val renderedQuery = context.datasource.warehouse.bridge.generateQuery(context.viewModels, rawRenderedSql)
+                    val renderedQuery = context.datasource.warehouse.bridge.generateQuery(context.viewModels, rawRenderedSql)
 
-                val eventTimestamp = model.mappings?.get(TIME_SERIES)
+                    val eventTimestamp = model.mappings?.get(TIME_SERIES)
 
-                val (materialized, renderedSql) = if (eventTimestamp != null) {
-                    val eventTimestampDim = materialize.value.dimensions?.find { d -> d.name == eventTimestamp && d.relation == null }
-                        ?.toDimension(modelName, FieldType.TIMESTAMP)!!
-                    val eventDimensionAlias = context.getDimensionAlias(
-                        eventTimestamp,
-                        null,
-                        eventTimestampDim.timeframe
-                    )
+                    val (materialized, renderedSql) = if (eventTimestamp != null) {
+                        val eventTimestampDim = materialize.value.dimensions?.find { d -> d.name == eventTimestamp && d.relation == null }
+                            ?.toDimension(modelName, FieldType.TIMESTAMP)!!
+                        val eventDimensionAlias = context.getDimensionAlias(
+                            eventTimestamp,
+                            null,
+                            eventTimestampDim.timeframe
+                        )
 
-                    val renderedEventTimestampDimension = dataSource.warehouse.bridge.renderDimension(
-                        context, modelName, eventTimestamp, null, null,
-                        WarehouseMetriqlBridge.MetricPositionType.FILTER
-                    )
+                        val renderedEventTimestampDimension = dataSource.warehouse.bridge.renderDimension(
+                            context, modelName, eventTimestamp, null, null,
+                            WarehouseMetriqlBridge.MetricPositionType.FILTER
+                        )
 
-                    val query = """SELECT * FROM ($renderedQuery) AS $modelName
+                        val query = """SELECT * FROM ($renderedQuery) AS $modelName
 {% if is_incremental() %}
    WHERE ${renderedEventTimestampDimension.value} > (select max($eventDimensionAlias) from {{ this }})
 {% endif %}
-                    """.trimIndent()
+                        """.trimIndent()
 
-                    "incremental" to query
-                } else {
-                    "table" to renderedQuery
+                        "incremental" to query
+                    } else {
+                        "table" to renderedQuery
+                    }
+
+                    val materializedModelName = materialize.value.getModelName() ?: defaultModelName(modelName, SegmentationReportType, materialize.key)
+                    val schema = recipe.getDependenciesWithFallback().dbtDependency().aggregateSchema()
+                    val config = modelConfigMapper.invoke(Triple(materializedModelName, target.copy(schema = schema), mapOf("materialized" to materialized)))
+                    val configs = jinja.render(CONFIG_TEMPLATE, mapOf("configs" to config, "tagName" to tagName))
+                    committer.addFile("$directory/$materializedModelName.sql", configs + "\n" + renderedSql)
                 }
-
-                val materializedModelName = materialize.value.getModelName() ?: defaultModelName(modelName, SegmentationReportType, materialize.key)
-                val schema = recipe.getDependenciesWithFallback().dbtDependency().aggregateSchema()
-                val config = modelConfigMapper.invoke(Triple(materializedModelName, target.copy(schema = schema), mapOf("materialized" to materialized)))
-                val configs = jinja.render(CONFIG_TEMPLATE, mapOf("configs" to config, "tagName" to tagName))
-                committer.addFile("$directory/$materializedModelName.sql", configs + "\n" + renderedSql)
-            } }
+            }
         }
 
         return errors

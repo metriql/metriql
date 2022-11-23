@@ -22,7 +22,7 @@ data class QueryResult @JsonCreator constructor(
     val error: QueryError?,
     var properties: Map<String, Any>?,
     var responseHeaders: Map<String, String>? = null
-) : ICacheService.CacheValue  {
+) : ICacheService.CacheValue {
 
     constructor(metadata: List<QueryColumn>, result: List<List<Any?>>) : this(metadata, result, null, null)
     constructor(metadata: List<QueryColumn>, result: List<List<Any?>>, properties: Map<String, Any>?) : this(

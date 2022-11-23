@@ -1,7 +1,6 @@
 package com.metriql
 
 import com.google.common.cache.CacheBuilderSpec
-import com.google.common.collect.ImmutableMap
 import com.google.common.net.HostAndPort
 import com.metriql.bootstrap.OptionMethodHttpService
 import com.metriql.deployment.Deployment
@@ -27,14 +26,14 @@ import com.metriql.service.auth.UserAttribute
 import com.metriql.service.auth.UserAttributeDefinition
 import com.metriql.service.auth.UserAttributeValues
 import com.metriql.service.cache.InMemoryCacheService
+import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.integration.IntegrationHttpService
 import com.metriql.service.jdbc.LightweightQueryRunner
 import com.metriql.service.jdbc.NodeInfoService
 import com.metriql.service.jdbc.QueryService
 import com.metriql.service.jdbc.StatementService
 import com.metriql.service.jinja.JinjaRendererService
-import com.metriql.service.dataset.DatasetName
-import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.suggestion.SuggestionService
 import com.metriql.service.task.TaskExecutorService
 import com.metriql.service.task.TaskHttpService
@@ -52,7 +51,6 @@ import io.netty.channel.epoll.EpollEventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpResponseStatus
-import io.swagger.util.PrimitiveType
 import io.trino.sql.SqlToSegmentation
 import org.rakam.server.http.HttpRequestException
 import org.rakam.server.http.HttpServerBuilder
@@ -75,7 +73,6 @@ object HttpServer {
 
         services.add(TaskHttpService(queryService.taskQueueService))
 
-
         if (enableJdbc) {
             val jdbcServices = jdbcServices(queryService, runner)
             jdbcServices.forEach { services.add(it) }
@@ -97,7 +94,7 @@ object HttpServer {
         val services = getReportServices(deployment.getDatasetService())
 
         val reportService = ReportService(
-            deployment.getDatasetService(), JinjaRendererService(),  taskGenerators, services, this::getAttributes,
+            deployment.getDatasetService(), JinjaRendererService(), taskGenerators, services, this::getAttributes,
             object : DependencyFetcher {
                 override fun fetch(context: IQueryGeneratorContext, model: DatasetName): Recipe.Dependencies {
                     return Recipe.Dependencies()
@@ -184,7 +181,7 @@ object HttpServer {
                     LogService.logException(request, ex)
                 }
             }
-            .setOverridenMappings(ImmutableMap.of(ZoneId::class.java, PrimitiveType.STRING))
+//            .setOverridenMappings(ImmutableMap.of(ZoneId::class.java, PrimitiveType.STRING))
             .setCustomRequestParameters(
                 mapOf("userContext" to MetriqlAuthRequestParameterFactory(oauthApiSecret, deployment, timezone))
             )

@@ -11,10 +11,10 @@ import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.service.auth.ProjectAuth
-import com.metriql.service.dataset.IDatasetService
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.TIME_SERIES
 import com.metriql.service.dataset.Dataset.MappingDimensions.CommonMappings.USER_ID
 import com.metriql.service.dataset.DatasetName
+import com.metriql.service.dataset.IDatasetService
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import com.metriql.warehouse.spi.services.funnel.Funnel
@@ -102,19 +102,19 @@ class FunnelService @Inject constructor(
 
             // To support join relations, we use segmentation query
             model = "(${
-                segmentationService.renderQuery(
-                    auth,
-                    context,
-                    SegmentationQuery(
-                        contextModelName,
-                        dimensionsToRender,
-                        listOf(),
-                        filters = step.filters
-                    ),
-                    reportFilters,
-                    useAggregate = false,
-                    forAccumulator = false
-                ).second
+            segmentationService.renderQuery(
+                auth,
+                context,
+                SegmentationQuery(
+                    contextModelName,
+                    dimensionsToRender,
+                    listOf(),
+                    filters = step.filters
+                ),
+                reportFilters,
+                useAggregate = false,
+                forAccumulator = false
+            ).second
             }) AS ${context.datasource.warehouse.bridge.quoteIdentifier(contextModelName)}",
 
             connector = context.datasource.warehouse.bridge.quoteIdentifier(connectorDimensionName),

@@ -64,5 +64,4 @@ class BaseHttpService : HttpService() {
     fun version(): String? {
         return TextUtil.version()
     }
-
 }

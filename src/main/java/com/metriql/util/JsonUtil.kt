@@ -8,12 +8,11 @@ import com.fasterxml.jackson.databind.exc.InvalidDefinitionException
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException
-import com.metriql.report.data.recipe.OrFilters
 
 typealias JsonPath = String
 
 object JsonUtil {
-    fun serializeAsArrayOrSingle(value: List<*>, gen: JsonGenerator, serializers: SerializerProvider, serializer : Class<*>) {
+    fun serializeAsArrayOrSingle(value: List<*>, gen: JsonGenerator, serializers: SerializerProvider, serializer: Class<*>) {
         val serializer = serializers.findValueSerializer(serializer)
         when {
             value.size > 1 -> {

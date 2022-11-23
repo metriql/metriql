@@ -4,8 +4,8 @@ import com.metriql.db.FieldType
 import com.metriql.report.IAdHocService
 import com.metriql.report.data.FilterValue
 import com.metriql.report.data.FilterValue.Companion.extractDateRangeForEventTimestamp
-import com.metriql.report.data.FilterValue.NestedFilter.Connector.AND
 import com.metriql.report.data.FilterValue.NestedFilter
+import com.metriql.report.data.FilterValue.NestedFilter.Connector.AND
 import com.metriql.report.data.ReportMetric.ReportDimension
 import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.report.data.recipe.Recipe
@@ -376,7 +376,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
         return aggregateModel?.target?.value as? Table to dsl
     }
 
-    private fun getOrders(orders: Map<Recipe.FieldReference, Recipe.OrderType>, source : Dataset, context : IQueryGeneratorContext): List<SegmentationQuery.Order> {
+    private fun getOrders(orders: Map<Recipe.FieldReference, Recipe.OrderType>, source: Dataset, context: IQueryGeneratorContext): List<SegmentationQuery.Order> {
         return orders?.entries?.map { order ->
             val fieldModel = if (order.key.relation != null) {
                 source.relations.find { it.name == order.key.relation }!!.datasetName
@@ -384,11 +384,17 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
             val targetModel = context.getModel(fieldModel)
             when {
                 targetModel.dimensions.any { it.name == order.key.name } -> {
-                    SegmentationQuery.Order(SegmentationQuery.Order.Type.DIMENSION, order.key.toDimension(source.name, order.key.getType(context, source.name).second), order.value == Recipe.OrderType.ASC)
+                    SegmentationQuery.Order(
+                        SegmentationQuery.Order.Type.DIMENSION,
+                        order.key.toDimension(source.name, order.key.getType(context, source.name).second),
+                        order.value == Recipe.OrderType.ASC
+                    )
                 }
+
                 targetModel.measures.any { it.name == order.key.name } -> {
                     SegmentationQuery.Order(SegmentationQuery.Order.Type.MEASURE, order.key.toMeasure(source.name), order.value == Recipe.OrderType.ASC)
                 }
+
                 else -> {
                     throw MetriqlException("Ordering field ${order.key} not found in $fieldModel", HttpResponseStatus.BAD_REQUEST)
                 }

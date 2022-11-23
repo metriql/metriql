@@ -46,5 +46,10 @@ interface IAdHocService<T : ServiceQuery> {
         throw MetriqlException("This report type doesn't support materialization", HttpResponseStatus.NOT_IMPLEMENTED)
     }
 
-    data class RenderedQuery(val query: String, val postProcessors: List<PostProcessor> = listOf(), val queryOptions: SqlQuery.QueryOptions? = null, val target: KClass<out QueryTaskGenerator> = SqlQueryTaskGenerator::class)
+    data class RenderedQuery(
+        val query: String,
+        val postProcessors: List<PostProcessor> = listOf(),
+        val queryOptions: SqlQuery.QueryOptions? = null,
+        val target: KClass<out QueryTaskGenerator> = SqlQueryTaskGenerator::class
+    )
 }

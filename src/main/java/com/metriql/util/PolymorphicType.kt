@@ -26,7 +26,6 @@ annotation class PolymorphicTypeStr<E>(
     val name: String = ""
 ) where E : Enum<E>, E : StrValueEnum
 
-
 @Inherited
 @JacksonAnnotation
 annotation class SealedClassInference()

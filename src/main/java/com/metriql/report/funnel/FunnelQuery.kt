@@ -22,7 +22,7 @@ data class FunnelQuery(
 ) : ServiceQuery() {
 
     data class ExcludedStep(val start: Int?, val step: Dataset)
-    data class FunnelDimension(val step: Int, val reference : Recipe.FieldReference)
+    data class FunnelDimension(val step: Int, val reference: Recipe.FieldReference)
 
     @UppercaseEnum
     enum class WindowType(val duration: Duration) {
