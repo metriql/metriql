@@ -2,34 +2,19 @@ package com.metriql
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeName
-import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator
 import com.metriql.db.FieldType
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.recipe.Recipe
-import com.metriql.service.jdbc.IsMetriqlQueryVisitor
 import com.metriql.service.dataset.Dataset
-import com.metriql.service.dataset.DatasetName
-import com.metriql.service.dataset.DimensionName
+import com.metriql.service.jdbc.IsMetriqlQueryVisitor
 import com.metriql.util.JsonHelper
-import com.metriql.util.StrValueEnum
-import com.metriql.util.UppercaseEnum
 import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
-import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.parser.core.models.ParseOptions
 import io.trino.sql.parser.ParsingOptions
 import io.trino.sql.parser.SqlParser
 import org.intellij.lang.annotations.Language
-import org.openapitools.codegen.ClientOptInput
-import org.openapitools.codegen.DefaultGenerator
-import org.openapitools.codegen.languages.TypeScriptAxiosClientCodegen
-import org.testcontainers.shaded.com.fasterxml.jackson.core.type.TypeReference
-import org.testng.Assert.assertEquals
 import org.testng.annotations.Test
-import java.io.File
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.reflect.KClass
 
 class Test {
     val sqlParser = SqlParser()
@@ -87,30 +72,45 @@ class Test {
     }
 
     @Test
-    fun segmentatisonRewriter() {
-
-        val readText = File("/Users/bkabak/Code/rakam-subproject/metriql/static/schema/openapi.json").bufferedReader().readText()
-        val readContents = OpenAPIParser().readContents(readText, listOf(), ParseOptions())
-        val api = readContents.openAPI
-
-        val typeScriptAxiosClientCodegen = TypeScriptAxiosClientCodegen()
-        typeScriptAxiosClientCodegen.outputDir = "/Users/bkabak/Code/rakam-subproject/rakam-bi-backend/metriql/client"
-        val generate = DefaultGenerator().opts(ClientOptInput().openAPI(api).config(typeScriptAxiosClientCodegen)).generate()
-        println(generate)
-    }
-
-    @Test
     fun main() {
         val json = "{\"and\": [{\"dimension\": \"test\", \"operator\": \"equals\", \"value\": \"test\"}, {\"or\": []}]}"
-        val zooPen = JsonHelper.read(json, ReportFilter::class.java)
+        val zooPen = JsonHelper.read(json, FilterValue::class.java)
         println(zooPen)
     }
 
     @Test
     fun small() {
-        val json = "[{\"dimension\": \"test\", \"operator\": \"equals\", \"value\": \"operator\"}]"
-        val zooPen = JsonHelper.read(json, ReportFilter::class.java)
+        @Language("JSON5")
+        val json = """
+            {
+               "and":[
+                  {
+                     "dimension":"gender",
+                     "operator":"equals",
+                     "value":"female"
+                  },
+                  {
+                     "or":[
+                        {
+                           "dimension":"age",
+                           "operator":"is_set"
+                        },
+                        {
+                           "dimension":"country",
+                           "operator":"equals",
+                           "value":"UK"
+                        }
+                     ]
+                  }
+               ]
+            }
+        """.trimIndent()
+        val zooPen = JsonHelper.read(json, FilterValue::class.java)
         println(zooPen)
+    }
+
+    @Test
+    fun deductiona() {
     }
 
     @Test
@@ -131,6 +131,4 @@ class Test {
             var name = "mahmut"
         }
     }
-
-
 }
