@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.CaseFormat
 import com.metriql.db.FieldType
 import com.metriql.db.JSONBSerializable
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.recipe.OrFilters
 import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.util.JsonHelper
@@ -27,7 +27,7 @@ typealias DatasetName = String
 typealias RelationName = String
 
 data class ModelDimension(val datasetName: DatasetName, val target: Dataset.Target, val dimension: Dataset.Dimension)
-data class ModelMeasure(val datasetName: DatasetName, val target: Dataset.Target, val measure: Dataset.Measure, val extraFilters: List<ReportFilter>? = null)
+data class ModelMeasure(val datasetName: DatasetName, val target: Dataset.Target, val measure: Dataset.Measure, val extraFilters: List<FilterValue>? = null)
 data class ModelRelation(
     val sourceDatasetTarget: Dataset.Target,
     val sourceDatasetName: DatasetName,
@@ -182,7 +182,7 @@ data class Dataset(
         val type: Type,
         @PolymorphicTypeStr<Type>(externalProperty = "type", valuesEnum = Type::class)
         val value: MeasureValue,
-        val filters: List<ReportFilter>? = null,
+        val filters: List<FilterValue>? = null,
         val reportOptions: ObjectNode? = null,
         val fieldType: FieldType? = FieldType.DOUBLE,
         val hidden: Boolean? = null,

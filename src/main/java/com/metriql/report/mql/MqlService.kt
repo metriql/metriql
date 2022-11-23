@@ -2,7 +2,7 @@ package com.metriql.report.mql
 
 import com.google.inject.Inject
 import com.metriql.report.IAdHocService
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jdbc.StatementService.Companion.defaultParsingOptions
@@ -27,7 +27,7 @@ class MqlService @Inject constructor(private val reWriter: SqlToSegmentation) : 
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: MqlQuery,
-        reportFilters: ReportFilter?,
+        reportFilters: FilterValue?,
     ): IAdHocService.RenderedQuery {
         val statement = parser.createStatement(reportOptions.query, defaultParsingOptions)
         val parameterMap: Map<NodeRef<Parameter>, Expression> = ParameterUtils.parameterExtractor(statement, reportOptions.variables ?: listOf())

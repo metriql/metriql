@@ -4,7 +4,7 @@ import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.IAdHocService
 import com.metriql.report.data.Dataset
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.retention.RetentionQuery.DateUnit.DAY
@@ -37,7 +37,7 @@ class RetentionService @Inject constructor(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         report: RetentionQuery,
-        reportFilters: ReportFilter?,
+        reportFilters: FilterValue?,
     ): IAdHocService.RenderedQuery {
         fun stepForRetentionStep(aStep: Dataset, isFirst: Boolean): Retention.Step {
             val mappings = datasetService.getDataset(auth, aStep.dataset)?.mappings

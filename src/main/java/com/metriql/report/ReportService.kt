@@ -2,13 +2,13 @@ package com.metriql.report
 
 import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.QueryStats.State.FINISHED
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.audit.MetriqlEvents
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.auth.UserAttributeFetcher
-import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.dataset.IDatasetService
+import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.service.task.Task
 import com.metriql.util.MetriqlException
 import com.metriql.warehouse.WarehouseQueryTask.Companion.DEFAULT_LIMIT
@@ -54,7 +54,7 @@ class ReportService(
         reportType: ReportType,
         dataSource: DataSource,
         options: T,
-        reportFilters: ReportFilter? = null,
+        reportFilters: FilterValue? = null,
         isBackgroundTask: Boolean = false,
         useCache: Boolean = true,
         context: IQueryGeneratorContext = createContext(auth, dataSource)

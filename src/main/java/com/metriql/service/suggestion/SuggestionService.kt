@@ -4,8 +4,7 @@ import com.metriql.deployment.Deployment
 import com.metriql.report.QueryTask
 import com.metriql.report.ReportService
 import com.metriql.report.SqlQueryTaskGenerator
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQuery
@@ -121,18 +120,10 @@ class SuggestionService @Inject constructor(
             useIncrementalDateFilter
 
         val filters = if (canUseIncrementalFilter) {
-            ReportFilter(
-                MetricFilter(
-                    MetricFilter.Connector.AND,
-                    listOf(
-                        MetricFilter.Filter(
-                            Recipe.FieldReference.mappingDimension(TIME_SERIES, null),
-                            TimestampOperatorType.BETWEEN.name,
-                            "P2W"
-                        )
-
-                    )
-                )
+            FilterValue.MetricFilter(
+                Recipe.FieldReference.mappingDimension(TIME_SERIES, null),
+                TimestampOperatorType.BETWEEN.name,
+                "P2W"
             )
         } else null
 
@@ -169,8 +160,8 @@ class SuggestionService @Inject constructor(
     }
 
     data class SuggestionQuery(
-        val type: MetricFilter.MetricType,
-        @PolymorphicTypeStr<MetricFilter.MetricType>(externalProperty = "type", valuesEnum = MetricFilter.MetricType::class)
+        val type: FilterValue.MetricType,
+        @PolymorphicTypeStr<FilterValue.MetricType>(externalProperty = "type", valuesEnum = FilterValue.MetricType::class)
         val value: ReportMetric,
         val filter: String?,
     )

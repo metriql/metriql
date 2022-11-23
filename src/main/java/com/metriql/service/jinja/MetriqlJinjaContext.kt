@@ -1,7 +1,7 @@
 package com.metriql.service.jinja
 
 import com.hubspot.jinjava.interpret.TemplateStateException
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.service.auth.UserAttributeValues
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.ModelDimension
@@ -226,7 +226,7 @@ sealed class MetriqlJinjaContext : HashMap<String, Any?>() {
         private val renderAlias: Boolean,
         private val modelAlias: String?,
     ) : MetriqlJinjaContext() {
-        var pushdownFilters: List<ReportFilter>? = null
+        var pushdownFilters: List<FilterValue>? = null
 
         override fun get(key: String): Any? {
             val modelMeasure = try {

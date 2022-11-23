@@ -5,11 +5,8 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportMetric
-import com.metriql.service.dataset.Dataset
+import com.metriql.report.data.FilterValue
 import com.metriql.service.dataset.DatasetName
-import com.metriql.util.JsonHelper
 import com.metriql.util.JsonUtil
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
@@ -20,17 +17,15 @@ class OrFilters : ArrayList<Recipe.FilterReference>() {
     fun toReportFilter(
         context: IQueryGeneratorContext,
         datasetName: DatasetName,
-    ): ReportFilter {
+    ): FilterValue {
         val orFilters = map { filter ->
             filter.toFilter(context, datasetName)
         }
 
-        return ReportFilter(
-            ReportFilter.FilterValue.MetricFilter(
-                ReportFilter.FilterValue.MetricFilter.Connector.OR,
+        return FilterValue.NestedFilter(
+                FilterValue.NestedFilter.Connector.OR,
                 orFilters
             )
-        )
     }
 
     class FilterReferenceSerializer : JsonSerializer<OrFilters>() {

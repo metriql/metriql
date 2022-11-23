@@ -1,7 +1,7 @@
 package com.metriql.warehouse.spi.bridge
 
 import com.metriql.db.FieldType
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.service.jinja.MetriqlJinjaContext
@@ -41,7 +41,6 @@ import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.MetricPositionTyp
 import com.metriql.warehouse.spi.bridge.WarehouseMetriqlBridge.RenderedFilter
 import com.metriql.warehouse.spi.filter.DateRange
 import com.metriql.warehouse.spi.filter.FilterOperator
-import com.metriql.warehouse.spi.function.IPostOperation
 import com.metriql.warehouse.spi.function.RFunction
 import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -90,106 +89,94 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
     )
 
     override fun renderFilter(
-        filter: ReportFilter,
+        filter: FilterValue,
         contextDatasetName: DatasetName,
         context: IQueryGeneratorContext
     ): RenderedFilter {
-        return when (filter.value) {
-            is ReportFilter.FilterValue.NestedFilter -> {
-                val renderedSubFilters = filter.value.filters.map { renderFilter(it, contextDatasetName, context) }
+        return when (filter) {
+            is FilterValue.NestedFilter -> {
+                val renderedSubFilters = filter.filters.map { renderFilter(it, contextDatasetName, context) }
                 RenderedFilter(renderedSubFilters.flatMap { it.joins },
-                    renderedSubFilters.mapNotNull { it.whereFilter }.joinToString(" ${filter.value.connector} "),
-                    renderedSubFilters.mapNotNull { it.havingFilter }.joinToString(" ${filter.value.connector} ")
+                    renderedSubFilters.mapNotNull { it.whereFilter }.joinToString(" ${filter.connector} "),
+                    renderedSubFilters.mapNotNull { it.havingFilter }.joinToString(" ${filter.connector} ")
                 )
             }
 
-            is ReportFilter.FilterValue.SqlFilter -> {
-                val renderedQuery = context.renderSQL(filter.value.sql, context.getOrGenerateAlias(contextDatasetName, null), contextDatasetName)
+            is FilterValue.SqlFilter -> {
+                val renderedQuery = context.renderSQL(filter.sql, context.getOrGenerateAlias(contextDatasetName, null), contextDatasetName)
                 RenderedFilter(listOf(), renderedQuery, null)
             }
 
-            is ReportFilter.FilterValue.MetricFilter -> {
+            is FilterValue.MetricFilter -> {
                 val joins = mutableListOf<String>()
-                val wheres = mutableListOf<String>()
-                val havings = mutableListOf<String>()
+                var wheres : String? = null
+                var havings : String? = null
 
-                filter.value.filters.forEach {
-                    val (clazz, type) = it.metric.getType(context, contextDatasetName)
-                    when (clazz) {
-                        ReportMetric.ReportDimension::class -> {
+                val (clazz, type) = filter.metric.getType(context, contextDatasetName)
+                when (clazz) {
+                    ReportMetric.ReportDimension::class -> {
 
-                            val dimension = it.metric.toDimension(contextDatasetName, type)
+                        val dimension =  filter.metric.toDimension(contextDatasetName, type)
 
-                            val (dim, _) = generateModelDimension(contextDatasetName, it.metric.name, it.metric.relation, context)
+                        val (dim, _) = generateModelDimension(contextDatasetName,  filter.metric.name,  filter.metric.relation, context)
 
-                            val renderedMetric = renderDimension(
-                                context,
-                                contextDatasetName,
-                                dimension.name,
-                                dimension.relation,
-                                dimension.timeframe,
-                                MetricPositionType.FILTER
-                            )
+                        val renderedMetric = renderDimension(
+                            context,
+                            contextDatasetName,
+                            dimension.name,
+                            dimension.relation,
+                            dimension.timeframe,
+                            MetricPositionType.FILTER
+                        )
 
-                            val value = if (it.value is SQLRenderable) {
-                                context.renderSQL(it.value, context.getOrGenerateAlias(contextDatasetName, it.metric.relation), contextDatasetName)
-                            } else {
-                                it.value
-                            }
-
-                            if (renderedMetric.join != null) {
-                                joins.add(renderedMetric.join)
-                            }
-
-                            val timeframeType = ((it.metric as? ReportMetric.ReportDimension)?.timeframe?.value as? IPostOperation)?.valueType
-                            val (_, operator) = getOperation(timeframeType ?: dim.dimension.fieldType, it.operator)
-
-                            wheres.add(
-                                filters.generateFilter(
-                                    context,
-                                    operator as FilterOperator,
-                                    renderedMetric.value,
-                                    value
-                                )
-                            )
+                        val value = if ( filter.value is SQLRenderable) {
+                            context.renderSQL(filter.value, context.getOrGenerateAlias(contextDatasetName, filter.metric.relation), contextDatasetName)
+                        } else {
+                            filter.value
                         }
-                        ReportMeasure::class -> {
-                            val renderedMetric = renderMeasure(
-                                context,
-                                contextDatasetName,
-                                it.metric.name,
-                                it.metric.relation,
-                                MetricPositionType.FILTER,
-                                ADHOC
-                            )
 
-                            val (_, operator) = getOperation(FieldType.DOUBLE, it.operator)
+                        if (renderedMetric.join != null) {
+                            joins.add(renderedMetric.join)
+                        }
 
-                            val havingFilters = filter.value.filters.joinToString(" ${filter.value.connector.name} ") { measureFilter ->
-                                filters.generateFilter(
-                                    context,
-                                    operator as FilterOperator,
-                                    renderedMetric.value,
-                                    measureFilter.value
-                                )
-                            }
+                        val (_, operator) = getOperation(dimension.timeframe?.type?.fieldType ?: dim.dimension.fieldType, filter.operator)
 
-                            if (renderedMetric.join != null) {
-                                joins.add(renderedMetric.join)
-                            }
+                        wheres = filters.generateFilter(
+                            context,
+                            operator as FilterOperator,
+                            renderedMetric.value,
+                            value
+                        )
+                    }
+                    ReportMeasure::class -> {
+                        val renderedMetric = renderMeasure(
+                            context,
+                            contextDatasetName,
+                            filter.metric.name,
+                            filter.metric.relation,
+                            MetricPositionType.FILTER,
+                            ADHOC
+                        )
 
-                            havings.add(havingFilters)
+                        val (_, operator) = getOperation(FieldType.DOUBLE, filter.operator)
+
+                        havings = filters.generateFilter(
+                            context,
+                            operator as FilterOperator,
+                            renderedMetric.value,
+                            filter.value
+                        )
+
+                        if (renderedMetric.join != null) {
+                            joins.add(renderedMetric.join)
                         }
                     }
                 }
 
-                val whereFilters = wheres.joinToString(" ${filter.value.connector}")
-                val havingFilters = havings.joinToString(" ${filter.value.connector} ")
-
                 RenderedFilter(
                     joins,
-                    if (wheres.size > 1) "($whereFilters)" else if (wheres.size == 1) whereFilters else null,
-                    if (havings.size > 1) "($havingFilters)" else if (havings.size == 1) havingFilters else null
+                    if (wheres != null) "($wheres)" else null,
+                    if (havings != null) "($havings)" else null
                 )
             }
         }
@@ -239,7 +226,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         relationName: RelationName?,
         metricPositionType: MetricPositionType,
         queryType: WarehouseMetriqlBridge.AggregationContext,
-        extraFilters: List<ReportFilter>?,
+        extraFilters: List<FilterValue>?,
         modelAlias: String?
     ): WarehouseMetriqlBridge.RenderedField {
         val (modelMeasure, modelRelation) = if (relationName != null) {
@@ -329,16 +316,12 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
                     HttpResponseStatus.BAD_REQUEST
                 )
             }
-            val renderedFilters = filters.flatMap {
-                // Measure filters only have metric filter
-                (it.value as ReportFilter.FilterValue.MetricFilter).filters.map { metricValue ->
-                    renderFilter(
-                        it,
-                        contextDatasetName,
-                        context
-                    )
-                }
-
+            val renderedFilters = filters.map {
+                renderFilter(
+                    it,
+                    contextDatasetName,
+                    context
+                )
             }
 
             val measureFilterExpression = renderedFilters

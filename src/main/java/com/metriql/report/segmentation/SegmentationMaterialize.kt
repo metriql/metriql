@@ -1,6 +1,6 @@
 package com.metriql.report.segmentation
 
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.dataset.DatasetName
 import com.metriql.util.JsonHelper
@@ -13,7 +13,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 data class SegmentationMaterialize(
     val measures: List<Recipe.FieldReference>,
     val dimensions: List<Recipe.FieldReference>?,
-    val filters: ReportFilter?,
+    val filters: FilterValue?,
     val tableName: String? = null
 ) : MaterializeQuery {
     override fun toQuery(modelName: DatasetName): ServiceQuery {

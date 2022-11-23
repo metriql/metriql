@@ -1,6 +1,6 @@
 package com.metriql.tests
 
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.util.JsonHelper
@@ -202,7 +202,7 @@ abstract class TestSimpleFilter<C> {
     }
 
     private fun check(column : String, filter : String, result : List<Any?>?) {
-        val filter = JsonHelper.read(filter, ReportFilter::class.java)
+        val filter = JsonHelper.read(filter, FilterValue::class.java)
         val generatedFilter = testingServer.bridge.renderFilter(filter, table, context)
         val query = "SELECT $column FROM ${testingServer.bridge.quoteIdentifier(table)} AS " +
             "${context.getOrGenerateAlias(table, null)} WHERE $generatedFilter"

@@ -7,7 +7,7 @@ import com.metriql.warehouse.spi.querycontext.IQueryGeneratorContext
 
 data class Dataset(
     val dataset: String,
-    val filters: ReportFilter?,
+    val filters: FilterValue?,
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     val dimension: Recipe.FieldReference?
 ) {

@@ -4,7 +4,7 @@ import com.google.common.cache.CacheBuilderSpec
 import com.metriql.db.FieldType
 import com.metriql.db.QueryResult
 import com.metriql.report.SqlQueryTaskGenerator
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.segmentation.SegmentationQuery
 import com.metriql.report.segmentation.SegmentationService
 import com.metriql.report.sql.SqlQuery
@@ -48,8 +48,8 @@ abstract class TestSegmentation {
     private val datasetService = TestDatasetService(getModels())
     private val service: SegmentationService get() = SegmentationService()
 
-    private fun generateReportFilter(dateRange: DateRange): ReportFilter {
-        return JsonHelper.read("""{"mapping":":time_series", "operator: "between", "value": ${JsonHelper.encode(dateRange)}}""", ReportFilter::class.java)
+    private fun generateReportFilter(dateRange: DateRange): FilterValue {
+        return JsonHelper.read("""{"mapping":":time_series", "operator: "between", "value": ${JsonHelper.encode(dateRange)}}""", FilterValue::class.java)
     }
 
     @Test

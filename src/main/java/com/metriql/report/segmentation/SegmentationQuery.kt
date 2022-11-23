@@ -1,8 +1,6 @@
 package com.metriql.report.segmentation
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.dataset.DatasetName
@@ -20,7 +18,7 @@ data class SegmentationQuery(
     val dataset: DatasetName,
     val dimensions: List<Recipe.FieldReference>?,
     val measures: List<Recipe.FieldReference>?,
-    val filters: ReportFilter? = null,
+    val filters: FilterValue? = null,
     val defaultDateRange: RPeriod? = null,
     val limit: Int? = null,
     val orders: Map<Recipe.FieldReference, Recipe.OrderType>? = null
@@ -44,11 +42,4 @@ data class SegmentationQuery(
             override fun getValueClass() = clazz.java
         }
     }
-
-    @JsonIgnoreProperties(ignoreUnknown = true) // TODO REMOVE THIS
-    data class ReportOptions(
-        val chartOptions: ObjectNode?,
-        val tableOptions: ObjectNode?,
-        val columnOptions: ObjectNode?
-    )
 }

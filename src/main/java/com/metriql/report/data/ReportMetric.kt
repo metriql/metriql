@@ -1,5 +1,6 @@
 package com.metriql.report.data
 
+import com.metriql.db.FieldType
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.dataset.DimensionName
 import com.metriql.service.dataset.MeasureName
@@ -67,10 +68,10 @@ sealed class ReportMetric {
         val value: Enum<*>
     ) {
         @UppercaseEnum
-        enum class Type(val clazz: KClass<out Enum<*>>) : StrValueEnum {
-            TIMESTAMP(TimestampPostOperation::class),
-            DATE(DatePostOperation::class),
-            TIME(TimePostOperation::class);
+        enum class Type(val clazz: KClass<out Enum<*>>, val fieldType : FieldType) : StrValueEnum {
+            TIMESTAMP(TimestampPostOperation::class, FieldType.TIMESTAMP),
+            DATE(DatePostOperation::class, FieldType.DATE),
+            TIME(TimePostOperation::class, FieldType.TIME);
 
             override fun getValueClass() = clazz.java
         }

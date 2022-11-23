@@ -1,6 +1,6 @@
 package com.metriql.report
 
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.report.sql.SqlQuery
 import com.metriql.service.auth.ProjectAuth
@@ -29,7 +29,7 @@ interface IAdHocService<T : ServiceQuery> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: T,
-        reportFilters: ReportFilter? = null
+        reportFilters: FilterValue? = null
     ): RenderedQuery
 
     fun getUsedDatasets(auth: ProjectAuth, context: IQueryGeneratorContext, reportOptions: T): Set<DatasetName> {

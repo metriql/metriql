@@ -1,7 +1,7 @@
 package com.metriql.warehouse.spi.bridge
 
 import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.service.dataset.DimensionName
 import com.metriql.service.dataset.MeasureName
@@ -61,7 +61,7 @@ interface WarehouseMetriqlBridge {
         relationName: RelationName?,
         metricPositionType: MetricPositionType,
         queryType: AggregationContext,
-        extraFilters: List<ReportFilter>? = null,
+        extraFilters: List<FilterValue>? = null,
         modelAlias: String? = null
     ): RenderedField
 
@@ -100,7 +100,7 @@ interface WarehouseMetriqlBridge {
      * */
     @Throws(IllegalArgumentException::class)
     fun renderFilter(
-        filter: ReportFilter,
+        filter: FilterValue,
         contextDatasetName: DatasetName,
         context: IQueryGeneratorContext,
     ): RenderedFilter

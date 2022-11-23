@@ -2,10 +2,10 @@ package com.metriql.report.segmentation
 
 import com.metriql.db.FieldType
 import com.metriql.report.IAdHocService
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.Companion.extractDateRangeForEventTimestamp
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.Connector.AND
-import com.metriql.report.data.ReportFilter.FilterValue.NestedFilter
+import com.metriql.report.data.FilterValue
+import com.metriql.report.data.FilterValue.Companion.extractDateRangeForEventTimestamp
+import com.metriql.report.data.FilterValue.NestedFilter.Connector.AND
+import com.metriql.report.data.FilterValue.NestedFilter
 import com.metriql.report.data.ReportMetric.ReportDimension
 import com.metriql.report.data.ReportMetric.ReportMeasure
 import com.metriql.report.data.recipe.Recipe
@@ -84,7 +84,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: SegmentationQuery,
-        reportFilters: ReportFilter?,
+        reportFilters: FilterValue?,
     ): IAdHocService.RenderedQuery {
         val (_, query, dsl) = renderQuery(
             auth,
@@ -108,7 +108,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         reportOptions: SegmentationQuery,
-        reportFilters: ReportFilter?,
+        reportFilters: FilterValue?,
         useAggregate: Boolean,
         forAccumulator: Boolean,
     ): Triple<Table?, String, Segmentation> {
@@ -137,7 +137,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
         dataSource: DataSource,
         context: IQueryGeneratorContext,
         reportOptions: SegmentationQuery,
-        reportFilters: ReportFilter?,
+        reportFilters: FilterValue?,
         useAggregate: Boolean,
         forAccumulator: Boolean,
     ): Pair<Table?, Segmentation> {
@@ -148,7 +148,7 @@ class SegmentationService : IAdHocService<SegmentationQuery> {
 
         val usedModels = getUsedDatasets(auth, context, reportOptions)
         val alwaysFilters = usedModels.flatMap { model -> context.getModel(model).alwaysFilters?.map { it.toReportFilter(context, model) } ?: listOf() }
-        val allFilters = ReportFilter(NestedFilter(AND, listOfNotNull(reportOptions.filters, reportFilters) + alwaysFilters))
+        val allFilters = NestedFilter(AND, listOfNotNull(reportOptions.filters, reportFilters) + alwaysFilters)
 
         val (materializeQuery, aggregateModel) = if (useAggregate) {
             try {

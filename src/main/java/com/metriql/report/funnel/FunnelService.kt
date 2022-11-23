@@ -5,7 +5,7 @@ import com.metriql.db.QueryResult
 import com.metriql.db.QueryResult.PropertyKey.SUMMARIZED
 import com.metriql.report.IAdHocService
 import com.metriql.report.data.Dataset
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.segmentation.SegmentationQuery
@@ -33,7 +33,7 @@ class FunnelService @Inject constructor(
         auth: ProjectAuth,
         context: IQueryGeneratorContext,
         options: FunnelQuery,
-        reportFilters: ReportFilter?,
+        reportFilters: FilterValue?,
     ): IAdHocService.RenderedQuery {
         val funnel = Funnel(
             steps = options.steps
@@ -68,7 +68,7 @@ class FunnelService @Inject constructor(
         idx: Int,
         auth: ProjectAuth,
         options: FunnelQuery,
-        reportFilters: ReportFilter?,
+        reportFilters: FilterValue?,
         isExcludeStep: Boolean,
     ): Step {
         val mappings by lazy { datasetService.getDataset(auth, step.dataset)?.mappings }

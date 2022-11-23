@@ -4,9 +4,9 @@ import com.google.common.base.Enums
 import com.google.inject.Inject
 import com.metriql.db.FieldType
 import com.metriql.dbt.DbtJinjaRenderer
-import com.metriql.report.data.ReportFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter
-import com.metriql.report.data.ReportFilter.FilterValue.MetricFilter.MetricType
+import com.metriql.report.data.FilterValue
+import com.metriql.report.data.FilterValue.MetricFilter
+import com.metriql.report.data.FilterValue.MetricType
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.report.mql.MqlService
 import com.metriql.report.segmentation.SegmentationQuery
@@ -138,15 +138,15 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         val whereFilters = where.orElse(null)?.let { processWhereExpression(context, rewriter, parameterMap, references, model, it) } ?: listOf()
         val havingFilters = having.orElse(null)?.let { processWhereExpression(context, rewriter, parameterMap, references, model, it) } ?: listOf()
 
-        val (havingFilterProjections, havingFiltersPushdown) = havingFilters.groupBy { it.value is ReportFilter.FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
-        val (whereFilterProjections, whereFiltersPushdown) = whereFilters.groupBy { it.value is ReportFilter.FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
+        val (havingFilterProjections, havingFiltersPushdown) = havingFilters.groupBy { it is FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
+        val (whereFilterProjections, whereFiltersPushdown) = whereFilters.groupBy { it is FilterValue.SqlFilter }?.let { Pair(it[true] ?: listOf(), it[false] ?: listOf()) }
 
         val (projectionOrders, orders) = parseOrders(rewriter, references, select.selectItems, projectionColumns, orderBy)
         val query = SegmentationQuery(
             model.name,
             measures.toSet().map { Recipe.FieldReference.fromName(it) },
             dimensions.toSet().map { Recipe.FieldReference.fromName(it) },
-            ReportFilter(ReportFilter.FilterValue.NestedFilter(MetricFilter.Connector.AND,  whereFiltersPushdown + havingFiltersPushdown)),
+            FilterValue.NestedFilter(FilterValue.NestedFilter.Connector.AND,  whereFiltersPushdown + havingFiltersPushdown),
             limit = parseLimit(limit.orElse(null)),
             orders = orders
         )
@@ -166,7 +166,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
             val orderBy = if (projectionOrders.any { it != null }) "\nORDER BY ${projectionOrders.joinToString(" ")}" else ""
 
             // We don't need to use HAVING as we have sub-query
-            val whereFilters = (whereFilterProjections + havingFilterProjections).map { it.value as ReportFilter.FilterValue.SqlFilter }.joinToString(" AND ") { it.sql }
+            val whereFilters = (whereFilterProjections + havingFilterProjections).map { it as FilterValue.SqlFilter }.joinToString(" AND ") { it.sql }
 
             """SELECT ${if (select.isDistinct) "DISTINCT " else ""}$projections FROM (
                 |$renderedQuery
@@ -373,7 +373,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         metricReference: Reference,
         operatorFunction: (FieldType) -> Enum<*>,
         value: Any?
-    ): List<ReportFilter> {
+    ): List<FilterValue> {
         val (type, metricValue) = when (metricReference.first) {
             MetricType.DIMENSION -> {
                 val fromName = Recipe.FieldReference.fromName(metricReference.second)
@@ -385,12 +385,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         }
 
         return listOf(
-            ReportFilter(
-                MetricFilter(
-                    MetricFilter.Connector.AND,
-                    listOf(MetricFilter.Filter(metricValue, operatorFunction.invoke(type).name, value))
-                )
-            )
+            MetricFilter(metricValue, operatorFunction.invoke(type).name, value)
         )
     }
 
@@ -401,7 +396,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
         references: Map<Node, Reference>,
         dataset: Dataset,
         exp: Expression
-    ): List<ReportFilter>? {
+    ): List<FilterValue>? {
 
         return when (exp) {
             is IsNullPredicate -> {
@@ -454,13 +449,13 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     LogicalBinaryExpression.Operator.AND -> allFilters
                     LogicalBinaryExpression.Operator.OR -> {
                         val filters = allFilters.flatMap { filter ->
-                            when (filter.value) {
-                                is ReportFilter.FilterValue.SqlFilter -> throw UnsupportedOperationException()
-                                is MetricFilter -> filter.value.filters
-                                is ReportFilter.FilterValue.NestedFilter -> TODO()
+                            when (filter) {
+                                is FilterValue.SqlFilter -> throw UnsupportedOperationException()
+                                is MetricFilter -> listOf(filter)
+                                is FilterValue.NestedFilter -> TODO()
                             }
                         }
-                        listOf(ReportFilter(MetricFilter(MetricFilter.Connector.OR, filters = filters)))
+                        listOf(FilterValue.NestedFilter(FilterValue.NestedFilter.Connector.OR, filters = filters))
                     }
                 }
             }
@@ -482,7 +477,7 @@ class SqlToSegmentation @Inject constructor(val segmentationService: Segmentatio
                     false -> null
                     else -> {
                         val metricReference =
-                            references[exp.left] ?: references[exp.right] ?: return listOf(ReportFilter(ReportFilter.FilterValue.SqlFilter(rewriter.process(exp))))
+                            references[exp.left] ?: references[exp.right] ?: return listOf(FilterValue.SqlFilter(rewriter.process(exp)))
                         val value = getFilterValue(parameterMap, if (references.containsKey(exp.left)) exp.right else exp.left)
                         getReportFilter(context, dataset, metricReference, { convertMetriqlOperator(exp.operator, it.operatorClass.java) }, value)
                     }

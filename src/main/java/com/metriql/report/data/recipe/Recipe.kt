@@ -14,7 +14,7 @@ import com.metriql.dbt.DbtJinjaRenderer
 import com.metriql.dbt.DbtManifest
 import com.metriql.dbt.DbtManifest.Companion.extractFields
 import com.metriql.report.ReportType
-import com.metriql.report.data.ReportFilter
+import com.metriql.report.data.FilterValue
 import com.metriql.report.data.ReportMetric
 import com.metriql.report.segmentation.SegmentationMaterialize
 import com.metriql.service.dataset.Dataset
@@ -350,44 +350,29 @@ data class Recipe(
                     val filters = filters?.map { filter ->
                         when {
                             filter.dimension != null -> {
-                                ReportFilter(
-                                    ReportFilter.FilterValue.MetricFilter(
-                                        ReportFilter.FilterValue.MetricFilter.Connector.AND,
-                                        listOf(
-                                            ReportFilter.FilterValue.MetricFilter.Filter(
-                                                ReportMetric.ReportDimension(
-                                                    filter.dimension,
-                                                    filter.datasetName ?: modelName,
-                                                    filter.relationName,
-                                                    filter.timeframe
-                                                ).toMetricReference(), filter.operator!!.name, filter.value
-                                            )
-                                        )
-                                    )
+                                FilterValue.MetricFilter(
+                                    ReportMetric.ReportDimension(
+                                        filter.dimension,
+                                        filter.datasetName ?: modelName,
+                                        filter.relationName,
+                                        filter.timeframe
+                                    ).toMetricReference(), filter.operator!!.name, filter.value
                                 )
                             }
 
                             filter.mappingDimension != null -> {
-                                ReportFilter(
-                                    ReportFilter.FilterValue.MetricFilter(
-                                        ReportFilter.FilterValue.MetricFilter.Connector.AND,
-                                        listOf(
-                                            ReportFilter.FilterValue.MetricFilter.Filter(
-                                                ReportMetric.ReportMappingDimension(
-                                                    filter.mappingDimension,
-                                                    filter.timeframe
-                                                ).toMetricReference(),
-                                                filter.operator!!.name, filter.value
-                                            )
-                                        )
-                                    )
+                                FilterValue.MetricFilter(
+                                    ReportMetric.ReportMappingDimension(
+                                        filter.mappingDimension,
+                                        filter.timeframe
+                                    ).toMetricReference(),
+                                    filter.operator!!.name, filter.value
+
                                 )
                             }
 
                             filter.sql != null -> {
-                                ReportFilter(
-                                    ReportFilter.FilterValue.SqlFilter(filter.sql)
-                                )
+                                FilterValue.SqlFilter(filter.sql)
                             }
 
                             else -> throw IllegalStateException("dimension, mappingDimension or sql must be present in a measure filter")
@@ -418,7 +403,7 @@ data class Recipe(
                     val timeframe: ReportMetric.Timeframe? = null,
                     val valueType: FieldType? = null,
                     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "valueType", include = JsonTypeInfo.As.EXTERNAL_PROPERTY)
-                    @JsonTypeIdResolver(ReportFilter.FilterValue.MetricFilter.Filter.OperatorTypeResolver::class)
+                    @JsonTypeIdResolver(FilterValue.MetricFilter.OperatorTypeResolver::class)
                     val operator: Enum<*>? = null,
                     val value: Any? = null,
                 ) {
@@ -520,21 +505,24 @@ data class Recipe(
         fun toFilter(
             context: IQueryGeneratorContext,
             datasetName: DatasetName,
-        ): ReportFilter.FilterValue.MetricFilter.Filter {
+        ): FilterValue.MetricFilter {
             var metricValue = when {
                 dimension != null ->
                     dimension.toDimension(datasetName, dimension.getType(context, datasetName).second)
+
                 measure != null ->
                     measure.toMeasure(datasetName)
+
                 mapping != null -> {
                     val type = JsonHelper.convert(mapping, Dataset.MappingDimensions.CommonMappings::class.java)
                     ReportMetric.ReportMappingDimension(type, null)
                 }
+
                 else -> {
                     throw IllegalStateException("One of dimension, measure or mapping is required")
                 }
             }
-            return ReportFilter.FilterValue.MetricFilter.Filter(metricValue.toMetricReference(), operator, value)
+            return FilterValue.MetricFilter(metricValue.toMetricReference(), operator, value)
         }
     }
 
@@ -545,7 +533,6 @@ data class Recipe(
             return if (timeframe != null) "$ref::$timeframe" else ref
         }
 
-
         fun getType(context: IQueryGeneratorContext, datasetName: DatasetName): Pair<KClass<out ReportMetric>, FieldType> {
             val currentModel = context.getModel(datasetName)
 
@@ -555,7 +542,7 @@ data class Recipe(
                 context.getModel(targetModelName)
             } else currentModel
 
-            val dimensionName =  getMappingDimensionIfApplicable()?.let {
+            val dimensionName = getMappingDimensionIfApplicable()?.let {
                 targetModel.mappings[name.substring(1)]
             } ?: name
 
@@ -566,9 +553,9 @@ data class Recipe(
             val measure = measureModel.measures.find { it.name == name }
             val dimension = targetModel.dimensions.find { dimension -> dimension.name == dimensionName }
 
-            val type = if(measure != null) {
+            val type = if (measure != null) {
                 ReportMetric.ReportMeasure::class
-            } else if(dimension != null) {
+            } else if (dimension != null) {
                 ReportMetric.ReportDimension::class
             } else {
                 throw MetriqlException("Metric `$this` could not found", BAD_REQUEST)
@@ -578,8 +565,8 @@ data class Recipe(
         }
 
         @JsonIgnore
-        fun getMappingDimensionIfApplicable() : String? {
-            return if(name.startsWith(":")) {
+        fun getMappingDimensionIfApplicable(): String? {
+            return if (name.startsWith(":")) {
                 return name.substring(1)
             } else null
         }
