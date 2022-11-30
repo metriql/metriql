@@ -42,6 +42,7 @@
         <postgresql.version>42.2.8</postgresql.version>
         <java.version>11</java.version>
         <aws.library>1.10.66</aws.library>
+        <swagger.version>1.6.9</swagger.version>
 
         <!--Plugin versions-->
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
@@ -386,6 +387,19 @@
             <groupId>com.amazon.redshift</groupId>
             <artifactId>redshift-jdbc42</artifactId>
             <version>${redshift.version}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-core</artifactId>
+            <version>${swagger.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>jackson-datatype-joda</artifactId>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
