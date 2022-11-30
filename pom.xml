@@ -675,7 +675,7 @@
                         </goals>
                         <configuration>
                             <ignoredUnusedDeclaredDependencies>
-                                <ignoredUnusedDeclaredDependency>io.swagger:swagger-core:1.6.9
+                                <ignoredUnusedDeclaredDependency>io.swagger:swagger-core
                                 </ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>io.sentry:sentry-log4j2
                                 </ignoredUnusedDeclaredDependency>
