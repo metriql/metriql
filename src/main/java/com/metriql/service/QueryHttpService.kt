@@ -7,6 +7,8 @@ import com.metriql.deployment.Deployment
 import com.metriql.report.IAdHocService
 import com.metriql.report.ReportService
 import com.metriql.report.ReportType
+import com.metriql.report.segmentation.SegmentationQuery
+import com.metriql.report.segmentation.SegmentationReportType
 import com.metriql.service.auth.ProjectAuth
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.dataset.IDatasetService
@@ -90,6 +92,7 @@ open class QueryHttpService(
         return SuccessMessage.success()
     }
 
+    @Deprecated("Use /compile")
     @ApiOperation(value = "Generate SQL")
     @JsonRequest
     @Path("/sql")
@@ -104,6 +107,7 @@ open class QueryHttpService(
         return compiled.query
     }
 
+    @Deprecated("Use /execute")
     @ApiOperation(value = "Run metriql internal queries")
     @JsonRequest
     @Path("/query")
@@ -116,6 +120,40 @@ open class QueryHttpService(
         val context = reportService.createContext(auth, deployment.getDataSource(auth))
         val task = reportService.queryTask(
             auth, query.type, context.datasource, query.report,
+            isBackgroundTask = false,
+            useCache = useCache ?: true,
+            context = context
+        )
+
+        return taskQueueService.execute(task, initialWaitInSeconds ?: 60).thenApply { it.taskTicket() }
+    }
+
+    @ApiOperation(value = "Compile SQL")
+    @JsonRequest
+    @Path("/compile/segmentation")
+    fun compile(@Named("userContext") auth: ProjectAuth, @BodyParam query: SegmentationQuery): String {
+        val context = reportService.createContext(auth, deployment.getDataSource(auth))
+        val compiled = reportService.getServiceForReportType(SegmentationReportType).renderQuery(
+            auth,
+            context,
+            query,
+        )
+
+        return compiled.query
+    }
+
+    @ApiOperation(value = "Run metriql internal queries")
+    @JsonRequest
+    @Path("/execute/segmentation")
+    fun execute(
+        @Named("userContext") auth: ProjectAuth,
+        @BodyParam query: SegmentationQuery,
+        @QueryParam("useCache", required = false) useCache: Boolean?,
+        @QueryParam("initialWaitInSeconds", required = false) initialWaitInSeconds: Long?
+    ): CompletableFuture<Task.TaskTicket<QueryResult>> {
+        val context = reportService.createContext(auth, deployment.getDataSource(auth))
+        val task = reportService.queryTask(
+            auth, SegmentationReportType, context.datasource, query,
             isBackgroundTask = false,
             useCache = useCache ?: true,
             context = context
