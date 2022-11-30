@@ -8,6 +8,7 @@ import com.metriql.report.data.FilterValue
 import com.metriql.report.data.recipe.Recipe
 import com.metriql.service.dataset.Dataset
 import com.metriql.service.jdbc.IsMetriqlQueryVisitor
+import com.metriql.service.jinja.JinjaRendererService
 import com.metriql.util.JsonHelper
 import com.metriql.warehouse.postgresql.PostgresqlMetriqlBridge
 import io.trino.sql.parser.ParsingOptions
@@ -72,63 +73,8 @@ class Test {
     }
 
     @Test
-    fun main() {
-        val json = "{\"and\": [{\"dimension\": \"test\", \"operator\": \"equals\", \"value\": \"test\"}, {\"or\": []}]}"
-        val zooPen = JsonHelper.read(json, FilterValue::class.java)
-        println(zooPen)
-    }
-
-    @Test
-    fun small() {
-        @Language("JSON5")
-        val json = """
-            {
-               "and":[
-                  {
-                     "dimension":"gender",
-                     "operator":"equals",
-                     "value":"female"
-                  },
-                  {
-                     "or":[
-                        {
-                           "dimension":"age",
-                           "operator":"is_set"
-                        },
-                        {
-                           "dimension":"country",
-                           "operator":"equals",
-                           "value":"UK"
-                        }
-                     ]
-                  }
-               ]
-            }
-        """.trimIndent()
-        val zooPen = JsonHelper.read(json, FilterValue::class.java)
-        println(zooPen)
-    }
-
-    @Test
-    fun deductiona() {
-    }
-
-    @Test
-    fun deduction() {
-        val json = "[{\"wingspan\": 1}, {\"name\": \"equals\"}]"
-        val zooPen = JsonHelper.read(json, object : com.fasterxml.jackson.core.type.TypeReference<List<Animal>>() {}) // Currently throws InvalidTypeIdException
-    }
-
-    @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION, defaultImpl = Animal::class)
-    @JsonSubTypes(*[JsonSubTypes.Type(value = Animal.Bird::class), JsonSubTypes.Type(value = Animal.WildAnimal::class)])
-    sealed class Animal {
-
-        class Bird : Animal() {
-            var wingspan = 0.0
-        }
-
-        class WildAnimal : Animal() {
-            var name = "mahmut"
-        }
+    fun testName() {
+        val jinjaRendererService = JinjaRendererService()
+//        jinjaRendererService.render("{{adapter.dispatch('my_macro')(1, 2)}}")
     }
 }
