@@ -96,9 +96,10 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
         return when (filter) {
             is FilterValue.NestedFilter -> {
                 val renderedSubFilters = filter.filters.map { renderFilter(it, contextDatasetName, context) }
+                val whereFilter = renderedSubFilters.mapNotNull { it.whereFilter }.joinToString(" ${filter.connector} ")
                 RenderedFilter(
                     renderedSubFilters.flatMap { it.joins },
-                    renderedSubFilters.mapNotNull { it.whereFilter }.joinToString(" ${filter.connector} "),
+                    if (renderedSubFilters.size > 1) "($whereFilter)" else whereFilter,
                     renderedSubFilters.mapNotNull { it.havingFilter }.joinToString(" ${filter.connector} ")
                 )
             }
@@ -176,7 +177,7 @@ abstract class ANSISQLMetriqlBridge : WarehouseMetriqlBridge {
 
                 RenderedFilter(
                     joins,
-                    if (wheres != null) "($wheres)" else null,
+                    if (wheres != null) "$wheres" else null,
                     if (havings != null) "($havings)" else null
                 )
             }
