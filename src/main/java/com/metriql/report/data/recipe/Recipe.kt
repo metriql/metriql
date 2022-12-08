@@ -544,7 +544,7 @@ data class Recipe(
             } else currentModel
 
             val dimensionName = getMappingDimensionIfApplicable()?.let {
-                targetModel.mappings[name.substring(1)]
+                targetModel.mappings.get(name.substring(1))
             } ?: name
 
             val measureModel = if (relation != null) {

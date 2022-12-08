@@ -72,6 +72,7 @@ data class Dataset(
                 is TargetValue.Table -> {
                     false
                 }
+
                 is TargetValue.Sql -> {
                     value.sql.contains(' ')
                 }
@@ -95,6 +96,10 @@ data class Dataset(
     class MappingDimensions : HashMap<String, DimensionName?>() {
         fun get(type: CommonMappings): DimensionName? {
             return get(JsonHelper.convert(type, String::class.java))
+        }
+
+        override fun get(key: String): DimensionName? {
+            return super.get(key) ?: super.get(CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, key))
         }
 
         fun put(type: CommonMappings, value: String): DimensionName? {
