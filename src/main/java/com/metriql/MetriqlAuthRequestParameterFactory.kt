@@ -66,7 +66,7 @@ class MetriqlAuthRequestParameterFactory(
                 }
                 "basic" -> {
                     val userPass = String(Base64.getDecoder().decode(token[1]), StandardCharsets.UTF_8).split(":".toRegex(), 2)
-                    deployment.getAuth(UserContext(userPass[0], userPass[1], null, null, request))
+                    deployment.getAuth(UserContext(userPass[0], userPass[1], userPass[1], null, request))
                 }
                 else -> null
             }
