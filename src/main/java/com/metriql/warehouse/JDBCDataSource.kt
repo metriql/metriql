@@ -247,7 +247,7 @@ abstract class JDBCDataSource(
                 targetBuilder.add(warehouse.bridge.quoteIdentifier(table))
                 targetBuilder.joinToString(".")
             }
-        } + "AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
+        } + " AS ${warehouse.bridge.quoteIdentifier(aliasName)}"
     }
 
     override fun fillDefaultsToTarget(target: Dataset.Target): Dataset.Target {
